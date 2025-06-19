@@ -90,8 +90,11 @@ minute_data = agent.get_minute_chart("005930", "093000")  # 9시 30분 데이터
 - `get_index_chart(code)`: 지수 차트 정보 조회
 
 ### 프로그램 매매
-- `get_program_trade_trend(code)`: 프로그램 매매 추이 조회
+- `get_program_trade_by_stock(code, date)`: 종목별 프로그램매매추이(체결) 조회
 - `get_program_trade_hourly_trend(code)`: 시간별 프로그램 매매 추이 조회
+- `get_program_trade_daily_summary(code, date)`: 일별 프로그램 매매 집계 조회
+- `get_program_trade_period_detail(start_date, end_date)`: 기간별 프로그램 매매 상세 조회
+- `get_pgm_trade(code, ref_date)`: 프로그램 매매 정보 종합 분석 (29일 누적, 비율 등)
 
 ### 조건검색
 - `get_condition_stocks(condition_code)`: 조건검색 결과 조회
@@ -134,6 +137,10 @@ overseas_price = agent.get_overseas_price("AAPL")  # 애플
 volume_rank = agent.get_volume_power_ranking()  # 거래량 파워 순위
 price_rank = agent.get_price_rank()    # 등락률 순위
 power_rank = agent.get_volume_power_ranking()  # 체결강도 랭킹(거래량 파워)
+
+# 프로그램 매매 정보 조회
+program_trade = agent.get_program_trade_by_stock("005930")  # 종목별 프로그램매매추이(체결)
+program_analysis = agent.get_pgm_trade("005930")  # 프로그램 매매 종합 분석
 
 # 재무정보 조회
 income = agent.get_stock_income("005930")  # 손익계산서

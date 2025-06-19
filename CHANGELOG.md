@@ -2,6 +2,27 @@
 
 모든 주요 변경사항이 이 파일에 기록됩니다.
 
+## [0.1.3] - 2024-06-19
+
+### 변경됨
+- ProgramTradeAPI 클래스 중복 제거 및 통합
+  - `pykis/program/api.py`, `pykis/program/trade.py`, `pykis/stock/program_trade.py`의 중복 클래스 통합
+  - 모든 import를 `pykis.program.trade`로 통일
+  - deprecated 파일들에 안내 메시지 추가
+
+### 개선됨
+- 메서드명 개선
+  - `get_program_trade_summary` → `get_program_trade_by_stock`으로 변경
+  - 메서드명이 실제 기능과 일치하도록 수정
+- `get_program_trade_by_stock`이 실제 API를 직접 호출하도록 수정
+  - 종목별프로그램매매추이(체결) API 직접 호출
+  - 날짜 파라미터 지원 추가
+
+### 문서화
+- README.md 업데이트
+  - 프로그램 매매 관련 메서드 목록 업데이트
+  - 사용 예시에 프로그램 매매 관련 예시 추가
+
 ## [0.1.2] - 2024-06-16
 
 ### 변경됨
