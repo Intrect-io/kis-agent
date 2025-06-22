@@ -15,7 +15,7 @@ agent_stock.py - 종목 단위 시세 조회 및 주문 전용 모듈
 🔗 연관 모듈:
 - program_trade_api.py: 프로그램 매매 정보 필터링
 - account_api.py: 잔고 및 주문 가능 금액 확인
-- strategy_trigger.py: 실전 조건 기반 매수 트리거 실행
+- (전략 관련 모듈은 deprecated되어 제거됨)
 
 💡 사용 예시:
 client = KISClient()
@@ -349,24 +349,22 @@ class StockAPI:
             Optional[Dict[str, Any]]: 체결강도 순위 정보
         """
         try:
+            # [변경 이유] Postman에서 확인된 올바른 체결강도 API 사용
             params = {
-                "FID_RSFL_RATE1": "",
-                "FID_RSFL_RATE2": "",
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_COND_SCR_DIV_CODE": "20170",
-                "FID_INPUT_ISCD": "0000",
-                "FID_DIV_CLS_CODE": "0",
-                "FID_BLNG_CLS_CODE": "0",
-                "FID_TRGT_CLS_CODE": "111111111",
-                "FID_TRGT_EXLS_CLS_CODE": "000000",
-                "FID_INPUT_PRICE_1": "",
-                "FID_INPUT_PRICE_2": "",
-                "FID_VOL_CNT": str(volume)
+                "fid_cond_mrkt_div_code": "J",
+                "fid_cond_scr_div_code": "20168",
+                "fid_input_iscd": "0000",
+                "fid_div_cls_code": "0",
+                "fid_input_price_1": "",
+                "fid_input_price_2": "",
+                "fid_vol_cnt": str(volume),
+                "fid_trgt_exls_cls_code": "0",
+                "fid_trgt_cls_code": "0"
             }
             
             return self.client.make_request(
-                endpoint=API_ENDPOINTS['STOCK_FLUCTUATION'],
-                tr_id="FHPST01710000",
+                endpoint="/uapi/domestic-stock/v1/ranking/volume-power",
+                tr_id="FHPST01680000",
                 params=params
             )
         except Exception as e:
@@ -374,29 +372,29 @@ class StockAPI:
             return None
 
     def get_market_fluctuation(self) -> Optional[Dict[str, Any]]:
-        """등락률 순위 조회"""
+        """국내주식 등락률 순위 조회"""
         params = {
-            "FID_COND_MRKT_DIV_CODE": "J",
-            "FID_COND_SCR_DIV_CODE": "20170",
-            "FID_INPUT_ISCD": "0000",
-            "FID_RANK_SORT_CLS_CODE": "0",
-            "FID_INPUT_CNT_1": "0",
-            "FID_PRC_CLS_CODE": "0",
-            "FID_INPUT_PRICE_1": "",
-            "FID_INPUT_PRICE_2": "",
-            "FID_VOL_CNT": "3000000",
-            "FID_TRGT_CLS_CODE": "0",
-            "FID_TRGT_EXLS_CLS_CODE": "0",
-            "FID_DIV_CLS_CODE": "0",
-            "FID_RSFL_RATE1": "",
-            "FID_RSFL_RATE2": ""
+            "fid_cond_mrkt_div_code": "J",
+            "fid_cond_scr_div_code": "20170",
+            "fid_input_iscd": "0000",
+            "fid_rank_sort_cls_code": "0",
+            "fid_input_cnt_1": "0",
+            "fid_prc_cls_code": "0",
+            "fid_input_price_1": "",
+            "fid_input_price_2": "",
+            "fid_vol_cnt": "3000000",
+            "fid_trgt_cls_code": "0",
+            "fid_trgt_exls_cls_code": "0",
+            "fid_div_cls_code": "0",
+            "fid_rsfl_rate1": "",
+            "fid_rsfl_rate2": ""
         }
         response = self.client.make_request(
-            endpoint=API_ENDPOINTS['MARKET_FLUCTUATION'],
+            endpoint="/uapi/domestic-stock/v1/ranking/fluctuation",
             tr_id="FHPST01700000",
             params=params
         )
-        return response  # Return raw response for debugging
+        return response
 
     def get_market_rankings(self, volume: int = 5000000) -> Optional[Dict[str, Any]]:
         """거래량 순위 조회"""

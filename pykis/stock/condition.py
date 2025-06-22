@@ -12,7 +12,7 @@
 연관 모듈:
 - kis.stock: 주식 시세 및 주문 처리
 - kis.account: 계좌 정보 관리
-- kis.strategy: 전략 실행 및 모니터링
+- (전략 관련 모듈은 deprecated되어 제거됨)
 
 사용 예시:
     >>> client = KISClient()
@@ -181,16 +181,25 @@ def get_condition_stocks_dict(agent) -> Dict[str, List[Dict]]:
         dict: {조건검색식명: [종목정보리스트]} 형태의 딕셔너리
     """
     try:
-        # 조건검색식 종목 목록 조회
-        stocks = agent.get_condition_stocks()
+        # 재귀 호출 방지를 위해 직접 stock_api.get_condition_stocks 호출
+        stocks = agent.stock_api.get_condition_stocks("test_user", seq=0, tr_cont="N")
         
-        if not stocks or stocks.get('rt_cd') != '0':
-            logger.warning("조건검색식 종목 조회 실패")
+        if not stocks:
+            logging.warning("조건검색식 종목 조회 실패")
             return {}
             
-        stock_list = stocks.get('output2', [])
+        # stocks가 리스트 형태로 반환되는 경우 처리
+        if isinstance(stocks, list):
+            stock_list = stocks
+        else:
+            # API 응답 형태인 경우
+            if stocks.get('rt_cd') != '0':
+                logging.warning("조건검색식 종목 조회 실패")
+                return {}
+            stock_list = stocks.get('output2', [])
+            
         if not stock_list:
-            logger.warning("조건검색식 종목이 없습니다.")
+            logging.warning("조건검색식 종목이 없습니다.")
             return {}
         
         # StockMonitor.py에서 기대하는 형태로 변환
@@ -214,5 +223,5 @@ def get_condition_stocks_dict(agent) -> Dict[str, List[Dict]]:
         return condition_stocks
         
     except Exception as e:
-        logger.error(f"조건검색식 종목 조회 중 오류 발생: {e}")
+        logging.error(f"조건검색식 종목 조회 중 오류 발생: {e}")
         return {} 

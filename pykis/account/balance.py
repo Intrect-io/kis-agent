@@ -12,7 +12,7 @@
 연관 모듈:
 - kis.stock: 종목 단위 시세 및 주문 API 담당
 - kis.program: 프로그램 매매 추이 및 순매수량 확인
-- kis.strategy: 조건부 매수 실행 트리거 로직
+- (전략 관련 모듈은 deprecated되어 제거됨)
 
 사용 예시:
     >>> client = KISClient()

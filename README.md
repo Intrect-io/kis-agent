@@ -28,28 +28,37 @@ minute_data = agent.get_minute_chart("005930", "093000")  # 9시 30분 데이터
 
 ## 주요 기능
 
-- 계좌 잔고 조회
-- 주식 시세 조회
-  - 국내주식: 현재가, 일별시세, 호가정보
-  - 해외주식: 기간별시세, 뉴스, 권리정보
-  - 채권: 기간별시세
-- 시장 분석
-  - 거래량/등락률/수익률 순위
-  - 체결강도 랭킹(거래량 파워)
-  - 투자자별 매매 동향
-  - 증권사별 투자의견
-- 재무정보
-  - 손익계산서
-  - 재무비율
-  - 성장성/안정성 지표
-- 프로그램 매매 정보 조회
-- 조건검색식 종목 조회
-- 실시간 시세 조회
+- **계좌 관리**: 잔고 조회, 주문 가능 금액, 총 자산 조회
+- **주식 시세**: 국내/해외 주식 현재가, 일별/분봉 시세, 호가 정보
+- **시장 분석**: 체결강도 순위, 등락률 순위, 거래량 순위, 투자자별 매매 동향
+- **재무 정보**: 손익계산서, 재무비율, 성장성/안정성 지표
+- **프로그램 매매**: 종목별/시장별 프로그램 매매 추이 및 독립 분석 도구
+- **조건검색**: 조건검색식 종목 조회
+- **실시간 데이터**: 실시간 시세 조회
+
+## 최신 업데이트 (v0.1.4)
+
+### 🔧 API 정확성 향상
+- **체결강도 API**: 올바른 엔드포인트 적용 (`/uapi/domestic-stock/v1/ranking/volume-power`)
+- **등락률 순위**: 국내주식 전용 API로 수정 (`/uapi/domestic-stock/v1/ranking/fluctuation`)
+- **프로그램 매매**: 종목별/시장별 API 명확히 분리
+
+### 🐛 버그 수정
+- 조건검색 무한 재귀 호출 문제 해결
+- 로깅 관련 `logger` 미정의 오류 수정
+- 중복 메서드 제거 및 통합
+
+### 🚀 기능 개선
+- 프로그램 매매 분석 로직을 독립 스크립트로 분리 (`examples/program_trade_analysis.py`)
+- Strategy 모듈 완전 제거 (deprecated)
+- 50개 이상 메서드에 대한 종합 테스트 추가
 
 ## API 메서드 목록
 
 ### 계좌 관련
 - `get_balance()`: 계좌 잔고 조회
+- `get_cash_available()`: 주문 가능 현금 조회
+- `get_total_asset()`: 총 자산 조회
 - `get_possible_order(code, price)`: 주문 가능 수량 조회
 - `order_stock_cash(code, price, quantity, order_type)`: 현금 주식 주문
 - `cancel_order(order_id)`: 주문 취소
@@ -70,10 +79,8 @@ minute_data = agent.get_minute_chart("005930", "093000")  # 9시 30분 데이터
 - `get_stock_investor(ticker)`: 투자자별 매매 동향 조회
 - `get_foreign_broker_net_buy(code, foreign_brokers, date)`: 외국계 증권사 순매수 조회
 - `get_pbar_tratio(code)`: 시간대별 체결강도 조회
-- `get_time_conclusion(code, hour)`: 시간별 체결 정보 조회
-- `get_overtime_conclusion(code)`: 시간외 체결 정보 조회
+- `get_overtime(code)`: 시간외 체결 정보 조회
 - `get_daily_chart(code, start_date, end_date)`: 일별 차트 정보 조회
-- `get_expected_closing_price(code)`: 예상 종가 정보 조회
 
 ### 해외주식 관련
 - `get_overseas_price(code)`: 해외주식 현재가 조회
@@ -83,24 +90,21 @@ minute_data = agent.get_minute_chart("005930", "093000")  # 9시 30분 데이터
 - `get_overseas_right(code)`: 해외주식 권리 정보 조회
 
 ### 시장 분석
-- `get_market_fluctuation()`: 시장 변동성 정보 조회
+- `get_market_fluctuation()`: 등락률 순위 조회 (국내주식 전용)
 - `get_market_rankings(volume)`: 시장 순위 정보 조회
-- `get_volume_power(volume)`: 거래량 파워 정보 조회
-- `get_volume_power_ranking()`: 거래량 파워 순위 조회
-- `get_index_chart(code)`: 지수 차트 정보 조회
+- `get_volume_power()`: 체결강도 순위 조회 (올바른 API 적용)
+- `get_top_gainers()`: 상승률 상위 종목 조회
+- `get_top_losers()`: 하락률 상위 종목 조회
+- `get_top_volume()`: 거래량 상위 종목 조회
 
 ### 프로그램 매매
 - `get_program_trade_by_stock(code, date)`: 종목별 프로그램매매추이(체결) 조회
-- `get_program_trade_hourly_trend(code)`: 시간별 프로그램 매매 추이 조회
-- `get_program_trade_daily_summary(code, date)`: 일별 프로그램 매매 집계 조회
+- `get_program_trade_daily_summary(code, date)`: 종목별 일별 프로그램 매매 집계 조회
+- `get_program_trade_market_daily(start_date, end_date)`: 시장 전체 프로그램 매매 현황 조회
 - `get_program_trade_period_detail(start_date, end_date)`: 기간별 프로그램 매매 상세 조회
-- `get_pgm_trade(code, ref_date)`: 프로그램 매매 정보 종합 분석 (29일 누적, 비율 등)
 
 ### 조건검색
-- `get_condition_stocks(condition_code)`: 조건검색 결과 조회
-- `get_top_gainers(limit)`: 상승률 상위 종목 조회
-- `get_top_losers(limit)`: 하락률 상위 종목 조회
-- `get_top_volume(limit)`: 거래량 상위 종목 조회
+- `get_condition_stocks()`: 조건검색 결과 조회 (재귀 문제 해결)
 
 ### 회원사/거래원 관련
 - `get_stock_member(ticker)`: 주식 회원사 정보 조회
@@ -133,26 +137,40 @@ balance = agent.get_balance()
 # 해외주식 시세 조회
 overseas_price = agent.get_overseas_price("AAPL")  # 애플
 
-# 시장 순위 조회
-volume_rank = agent.get_volume_power_ranking()  # 거래량 파워 순위
-price_rank = agent.get_price_rank()    # 등락률 순위
-power_rank = agent.get_volume_power_ranking()  # 체결강도 랭킹(거래량 파워)
+# 시장 순위 조회 (v0.1.4에서 개선됨)
+volume_power = agent.get_volume_power()  # 체결강도 순위 (올바른 API)
+fluctuation = agent.get_market_fluctuation()  # 등락률 순위 (국내주식 전용)
 
-# 프로그램 매매 정보 조회
-program_trade = agent.get_program_trade_by_stock("005930")  # 종목별 프로그램매매추이(체결)
-program_analysis = agent.get_pgm_trade("005930")  # 프로그램 매매 종합 분석
+# 프로그램 매매 정보 조회 (v0.1.4에서 분리됨)
+program_trade_stock = agent.get_program_trade_by_stock("005930")  # 종목별
+program_trade_market = agent.get_program_trade_market_daily("20240601", "20240630")  # 시장 전체
 
 # 재무정보 조회
 income = agent.get_stock_income("005930")  # 손익계산서
 financial = agent.get_stock_financial("005930")  # 재무비율
+
+# 조건검색 (v0.1.4에서 재귀 문제 해결)
+condition_stocks = agent.get_condition_stocks()
+```
+
+## 독립 분석 도구
+
+v0.1.4부터 프로그램 매매 분석 기능이 독립적인 도구로 분리되었습니다:
+
+```python
+# examples/program_trade_analysis.py 사용
+from examples.program_trade_analysis import ProgramTradeAnalyzer
+
+analyzer = ProgramTradeAnalyzer()
+analysis = analyzer.analyze_program_trade("005930", "20240622")
 ```
 
 ## 개발 환경 설정
 
 1. 저장소 클론
 ```bash
-git clone https://github.com/your-username/kis-agent.git
-cd kis-agent
+git clone https://github.com/your-username/pykis.git
+cd pykis
 ```
 
 2. 가상환경 설정
@@ -174,7 +192,11 @@ pip install -r requirements.txt
 ## 테스트 실행
 
 ```bash
+# 전체 테스트
 pytest tests/
+
+# 종합 테스트 노트북 (50+ 메서드)
+jupyter notebook examples/pykis.ipynb
 ```
 
 ## 주의사항
@@ -182,4 +204,10 @@ pytest tests/
 - 인증 정보는 반드시 안전하게 관리
 - API 호출 제한에 주의
 - 에러 발생 시 로그 확인 필수
-- 국내주식 엔드포인트는 실제 테스트 결과 대부분 정상 동작함 (일부 미지원/폐지 API 및 파라미터 오류 등은 실제 서비스 상태에 따라 다를 수 있음)
+- 한국투자증권 OpenAPI 정책 변경에 따라 일부 기능이 영향받을 수 있음
+
+## 라이선스
+MIT License
+
+## 기여하기
+이슈 리포트나 풀 리퀘스트는 언제든지 환영합니다.

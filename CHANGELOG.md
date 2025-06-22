@@ -2,6 +2,58 @@
 
 모든 주요 변경사항이 이 파일에 기록됩니다.
 
+## [0.1.4] - 2024-06-22
+
+### 수정됨
+- 체결강도 관련 API 통합 및 정리
+  - `get_volume_power` 메서드 중복 제거 및 통합
+  - 올바른 API 엔드포인트 및 TR 코드 적용 (`/uapi/domestic-stock/v1/ranking/volume-power`, `FHPST01680000`)
+  - 용어 통일: "거래량 파워" → "체결강도"로 변경
+  - 거래량 급증도 관련 기능 제거 (존재하지 않는 API)
+
+- 프로그램 매매 API 개선
+  - 종목별 프로그램 매매와 시장 전체 프로그램 매매 API 분리
+  - `get_program_trade_daily_summary`: 종목별 기능 유지
+  - `get_program_trade_market_daily`: 새로운 시장 전체 API 추가
+  - 올바른 엔드포인트 적용
+
+- 등락률 순위 API 수정
+  - `get_market_fluctuation` 메서드를 올바른 국내주식 등락률 순위 API로 수정
+  - 엔드포인트: `/uapi/domestic-stock/v1/ranking/fluctuation`, TR: `FHPST01700000`
+
+- 계좌 API 정리
+  - 주문가능금액조회 엔드포인트 수정
+  - `client.py`에 `INQUIRE_PSBL_ORDER` 상수 추가
+  - 존재하지 않는 `get_total_evaluation` 메서드 제거
+
+### 개선됨
+- 분석 로직 독립화
+  - `get_pgm_trade` 메서드를 `examples/program_trade_analysis.py`로 분리
+  - `ProgramTradeAnalyzer` 클래스로 분석 기능 캡슐화
+  - API와 분석 로직의 명확한 분리
+
+- 조건검색 관련 버그 수정
+  - `logger` 미정의 오류 수정: `logger` → `logging`으로 변경
+  - 무한 재귀 호출 문제 해결: `get_condition_stocks_dict`에서 직접 API 호출하도록 수정
+
+- Strategy 모듈 완전 제거
+  - deprecated된 strategy 관련 import 및 메서드 모두 제거
+  - `pykis/core/agent.py`에서 strategy 관련 코드 정리
+  - `tests/integration/test_strategy.py` 파일 삭제
+
+### 추가됨
+- 종합 테스트 노트북 확장
+  - 50개 이상의 메서드에 대한 포괄적인 테스트 추가
+  - 계좌, 주식, 시장, 프로그램 매매, 조건검색 등 모든 영역 커버
+  - 에러 처리 및 경계 조건 테스트 포함
+  - 성능 및 캐싱 테스트 추가
+
+### 제거됨
+- 중복된 `get_volume_power` 메서드들 제거
+- 존재하지 않는 거래량 급증도 API 관련 코드 제거
+- Strategy 모듈 및 관련 의존성 완전 제거
+- 미사용 및 잘못된 API 메서드들 정리
+
 ## [0.1.3] - 2024-06-19
 
 ### 변경됨

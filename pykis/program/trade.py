@@ -16,7 +16,7 @@ program_trade_api.py - 프로그램 매매 정보 조회 전용 모듈
 🔗 연관 모듈:
 - agent_stock.py: 종목 시세 및 주문 처리
 - account_api.py: 계좌 상태 및 주문 가능 금액 확인
-- strategy_trigger.py: 실매수 조건 트리거 및 전략 연결
+- (전략 관련 모듈은 deprecated되어 제거됨)
 
 💡 사용 예시:
 client = KISClient()
@@ -116,6 +116,33 @@ class ProgramTradeAPI:
             }
         )
 
+    def get_program_trade_market_daily(self, start_date: str, end_date: str) -> Optional[Dict[str, Any]]:
+        """
+        프로그램 매매 종합현황 (일별)을 조회합니다.
+
+        Args:
+            start_date (str): 시작 일자 (YYYYMMDD 형식)
+            end_date (str): 종료 일자 (YYYYMMDD 형식)
+
+        Returns:
+            Optional[Dict[str, Any]]: API 응답 데이터
+                - 성공 시: 일별 프로그램 매매 종합현황 정보를 포함한 응답 데이터
+                - 실패 시: None
+
+        Example:
+            >>> api.get_program_trade_market_daily("20240701", "20240726")
+        """
+        return self.client.make_request(
+            endpoint="/uapi/domestic-stock/v1/quotations/comp-program-trade-daily",
+            tr_id="FHPPG04600000", # 프로그램매매종합현황(일별)
+            params={
+                "FID_MRKT_CLS_CODE": "", # 시장 분류 코드 (전체는 공백)
+                "FID_INPUT_DATE_1": start_date,
+                "FID_INPUT_DATE_2": end_date,
+                "FID_COND_MRKT_DIV_CODE": "J" # J: 주식
+            }
+        )
+
     def get_program_trade_period_detail(self, start_date: str, end_date: str) -> Optional[Dict[str, Any]]:
         """
         프로그램 매매 일별 상세 (기간별)를 조회합니다.
@@ -133,7 +160,7 @@ class ProgramTradeAPI:
             >>> api.get_program_trade_period_detail("20240701", "20240726")
         """
         return self.client.make_request(
-            endpoint=API_ENDPOINTS['PROGRAM_TRADE_PERIOD'],
+            endpoint=API_ENDPOINTS['COMP_PROGRAM_TRADE_DAILY'],
             tr_id="FHPPG04600000", # 프로그램매매종합추이(기간)
             params={
                 "FID_MRKT_CLS_CODE": "", # 시장 분류 코드 (전체는 공백)
@@ -142,94 +169,6 @@ class ProgramTradeAPI:
                 "FID_COND_MRKT_DIV_CODE": "J" # J: 주식
             }
         )
-
-    def get_pgm_trade(self, code: str, ref_date: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """
-        프로그램 매매 정보를 종합적으로 조회합니다.
-
-        Args:
-            code (str): 종목 코드 (예: "005930")
-            ref_date (Optional[str]): 기준 일자 (YYYYMMDD 형식, 기본값: 현재 일자)
-
-        Returns:
-            Optional[Dict[str, Any]]: 프로그램 매매 정보
-                - net29: 29일 누적 순매수량
-                - today: 당일 순매수량
-                - today_ratio: 당일 매수 비율
-                - program_today_volume: 당일 프로그램 매매량
-                - program_ratio: 프로그램 매매 비율
-                - net29_amt: 29일 누적 순매수금액
-                - today_amt: 당일 순매수금액
-                - today_amt_ratio: 당일 순매수금액 비율
-                - program_day_shnu_vol: 당일 프로그램 매수량
-                - program_day_seln_vol: 당일 프로그램 매도량
-                - program_day_total_volume: 당일 프로그램 총 거래량
-                - program_day_buy_ratio: 당일 프로그램 매수 비율
-
-        Note:
-            최대 5번까지 재시도하며, 각 시도 간 0.05~0.15초의 랜덤한 대기 시간을 가집니다.
-
-        Example:
-            >>> api.get_pgm_trade("005930", "20240726")
-        """
-        if ref_date is None:
-            from datetime import datetime
-            ref_date = datetime.now().strftime("%Y%m%d")
-
-        import time
-        import random
-
-        max_retries = 5
-        res = None
-        for attempt in range(max_retries):
-            res = self.get_program_trade_daily_summary(code, ref_date)
-            if res and isinstance(res, dict) and 'output' in res and isinstance(res['output'], list):
-                break
-            time.sleep(random.uniform(0.05, 0.15))  # 초당 7~20개 사이
-        if not res or 'output' not in res or not isinstance(res['output'], list) or len(res['output']) == 0:
-            return None
-
-        rows = res['output']
-        target_row = None
-        net29_qty = 0
-        net29_amt = 0
-
-        for row in rows:
-            date = row.get('stck_bsop_date')
-            if date == ref_date:
-                target_row = row
-            elif date and date < ref_date:
-                net29_qty += int(row.get('whol_smtn_ntby_qty', 0))
-                net29_amt += abs(int(row.get('whol_smtn_ntby_tr_pbmn', 0)))
-
-        if not target_row:
-            return None
-
-        try:
-            today_net_qty = int(target_row.get('whol_smtn_ntby_qty', 0))
-            today_net_amt = int(target_row.get('whol_smtn_ntby_tr_pbmn', 0))
-            shnu_vol = int(target_row.get('whol_smtn_shnu_vol', 0))
-            seln_vol = int(target_row.get('whol_smtn_seln_vol', 0))
-        except ValueError:
-            return None
-
-        total_vol = shnu_vol + seln_vol
-        buy_ratio = (shnu_vol / total_vol * 100) if total_vol > 0 else None
-
-        return {
-            'net29': net29_qty,
-            'today': today_net_qty,
-            'today_ratio': round(buy_ratio, 2) if buy_ratio is not None else None,
-            'program_today_volume': today_net_qty,
-            'program_ratio': round(buy_ratio, 2) if buy_ratio is not None else None,
-            'net29_amt': net29_amt,
-            'today_amt': today_net_amt,
-            'today_amt_ratio': round(today_net_amt / net29_amt * 100, 2) if net29_amt else None,
-            'program_day_shnu_vol': shnu_vol,
-            'program_day_seln_vol': seln_vol,
-            'program_day_total_volume': total_vol,
-            'program_day_buy_ratio': round(buy_ratio, 2) if buy_ratio is not None else None
-        }
 
     def get_program_trade_by_stock(self, code: str, ref_date: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """

@@ -146,7 +146,7 @@ class StockMonitor:
             logging.error(f"회원사 매매 정보 조회 실패 ({code}): {e}")
             return None
 
-    def get_volume_power(self, code: str) -> Optional[float]:
+    def get_volume_ratio(self, code: str) -> Optional[float]:
         try:
             daily_price = self.get_daily_price(code)
             if daily_price is None:

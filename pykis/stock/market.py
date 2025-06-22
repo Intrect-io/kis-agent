@@ -20,7 +20,7 @@
 연관 모듈:
 - kis.account: 계좌 정보 관리
 - kis.program: 프로그램 매매
-- kis.strategy: 전략 실행 및 모니터링
+- (전략 관련 모듈은 deprecated되어 제거됨)
 
 사용 예시:
     >>> client = KISClient()
@@ -797,14 +797,6 @@ class StockAPI:
             }
         )
 
-    # 기존 거래량 파워 메서드는 실제로는 체결강도 랭킹 API가 아님을 확인하여 주석 처리합니다.
-    # def get_volume_power(self, code: str) -> Dict:
-    #     """
-    #     거래량 파워 정보를 조회합니다. (실제 미지원)
-    #     """
-    #     # 실제로는 체결강도 랭킹 API가 필요함
-    #     pass  # 미구현
-
     def get_volume_power_ranking(self,
                                  fid_cond_mrkt_div_code: str = "J",
                                  fid_cond_scr_div_code: str = "20168",
@@ -816,7 +808,7 @@ class StockAPI:
                                  fid_trgt_exls_cls_code: str = "0",
                                  fid_trgt_cls_code: str = "0") -> dict:
         """
-        체결강도(체결강도 랭킹) 조회 API
+        체결강도 순위 조회 API
         Postman 명세 기준으로 파라미터와 헤더를 맞춰 요청합니다.
         
         Args:
@@ -830,9 +822,9 @@ class StockAPI:
             fid_trgt_exls_cls_code (str): 제외대상구분코드 (기본값: 0)
             fid_trgt_cls_code (str): 대상구분코드 (기본값: 0)
         Returns:
-            dict: 체결강도 랭킹 결과
+            dict: 체결강도 순위 결과
         """
-        # 변경 사유: 기존 거래량 파워 API는 실제로는 체결강도 랭킹 API임을 Postman 명세로 확인함
+        # [변경 이유] Postman에서 확인된 올바른 체결강도 API 사용
         return self.client.make_request(
             endpoint="/uapi/domestic-stock/v1/ranking/volume-power",
             tr_id="FHPST01680000",

@@ -1,5 +1,5 @@
 import pandas as pd
-from ..core.client import KISClient
+from ..core.client import KISClient, API_ENDPOINTS
 from typing import Optional, Dict, Any
 import logging
 
@@ -17,7 +17,7 @@ account.py - 계좌 정보 조회 전용 모듈
 🔗 연관 모듈:
 - stock.py: 종목 단위 시세 및 주문 API 담당
 - program.py: 프로그램 매매 추이 및 순매수량 확인
-- strategy.py: 조건부 매수 실행 트리거 로직
+- (전략 관련 모듈은 deprecated되어 제거됨)
 
 💡 사용 예시:
 client = KISClient()
@@ -157,7 +157,7 @@ class AccountAPI:
         """주문 가능 금액 조회"""
         try:
             return self.client.make_request(
-                endpoint="/uapi/domestic-stock/v1/trading/inquire-possible-order-amount",
+                endpoint=API_ENDPOINTS['INQUIRE_PSBL_ORDER'],
                 tr_id="TTTC8908R",
                 params={
                     "CANO": self.account['CANO'],
@@ -173,24 +173,7 @@ class AccountAPI:
             logging.error(f"주문 가능 금액 조회 실패: {e}")
             return None
 
-    def get_total_evaluation(self) -> Optional[Dict]:
-        """총 평가 금액 조회"""
-        try:
-            return self.client.make_request(
-                endpoint="/uapi/domestic-stock/v1/trading/inquire-total-evaluation",
-                tr_id="TTTC8494R",
-                params={
-                    "CANO": self.account['CANO'],
-                    "ACNT_PRDT_CD": self.account['ACNT_PRDT_CD'],
-                    "OVRS_EXCG_CD": "KRX",
-                    "TR_CRCY_CD": "KRW",
-                    "CTX_AREA_FK200": "",
-                    "CTX_AREA_NK200": ""
-                }
-            )
-        except Exception as e:
-            logging.error(f"총 평가 금액 조회 실패: {e}")
-            return None
+
 
 # Expose facade class for flat import
 __all__ = ['AccountAPI']

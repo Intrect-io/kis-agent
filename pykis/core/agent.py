@@ -4,7 +4,6 @@ from ..account.balance import AccountBalanceAPI as AccountAPI
 from ..stock.api import StockAPI
 from ..stock.market import StockMarketAPI
 from ..program.trade import ProgramTradeAPI
-from ..strategy.trigger import StrategyTrigger
 from typing import Optional, Dict
 import logging
 import datetime
@@ -75,7 +74,6 @@ class Agent:
         self.account_api = AccountAPI(self.client, self.account_info)
         self.stock_api = StockAPI(self.client, self.account_info)
         self.program_api = ProgramTradeAPI(self.client, self.account_info)
-        self.strategy_api = StrategyTrigger(self.client, self.account_info)
         
     # ============================================================================
     # 주식 시세 관련 메서드들 (StockAPI 위임)
@@ -134,9 +132,7 @@ class Agent:
         """주문 가능 금액 조회"""
         return self.account_api.get_possible_order_amount()
     
-    def get_total_evaluation(self):
-        """총 평가 금액 조회"""
-        return self.account_api.get_total_evaluation()
+
     
     def get_account_order_quantity(self, code: str):
         """계좌별 주문 수량 조회"""
@@ -151,36 +147,18 @@ class Agent:
         return self.program_api.get_program_trade_hourly_trend(code)
     
     def get_program_trade_daily_summary(self, code: str, date_str: str):
-        """일별 프로그램 매매 집계 조회"""
+        """종목별 일별 프로그램 매매 집계 조회"""
         return self.program_api.get_program_trade_daily_summary(code, date_str)
     
     def get_program_trade_period_detail(self, start_date: str, end_date: str):
         """기간별 프로그램 매매 상세 조회"""
         return self.program_api.get_program_trade_period_detail(start_date, end_date)
     
-    def get_pgm_trade(self, code: str, ref_date: str = None):
-        """프로그램 매매 정보 종합 조회"""
-        return self.program_api.get_pgm_trade(code, ref_date)
+    def get_program_trade_market_daily(self, start_date: str, end_date: str):
+        """시장 전체 프로그램 매매 종합현황 (일별) 조회"""
+        return self.program_api.get_program_trade_market_daily(start_date, end_date)
     
-    # ============================================================================
-    # 전략 관련 메서드들 (StrategyTrigger 위임)
-    # ============================================================================
-    
-    def check_entry_condition(self, code: str):
-        """매수 진입 조건 체크"""
-        return self.strategy_api.check_entry_condition(code)
-    
-    def execute_buy_order(self, code: str, quantity: int):
-        """매수 주문 실행"""
-        return self.strategy_api.execute_buy_order(code, quantity)
-    
-    def monitor_strategy(self, code: str):
-        """전략 모니터링"""
-        return self.strategy_api.monitor_strategy(code)
-    
-    def check_exit_condition(self, code: str):
-        """매도 진출 조건 체크"""
-        return self.strategy_api.check_exit_condition(code)
+
     
     # ============================================================================
     # 기타 유틸리티 메서드들
@@ -442,10 +420,9 @@ class Agent:
             return {}
 
     def get_top_gainers(self):
-        """상승률 상위 종목 조회"""
+        """상승률 상위 종목 조회 (국내주식 등락률 순위)"""
         try:
-            # 간단한 구현 예시
-            return self.stock_api.get_top_gainers()
+            return self.stock_api.get_market_fluctuation()
         except Exception as e:
             logging.error(f"상승률 상위 종목 조회 실패: {e}")
             return []
@@ -461,7 +438,6 @@ class Agent:
         1. StockAPI - 주식 관련 기본 API (최우선)
         2. AccountAPI - 계좌 관련 API
         3. ProgramTradeAPI - 프로그램매매 관련 API
-        4. StrategyTrigger - 전략 관련 API
         """
         # StockAPI를 최우선으로 확인 (메인 주식 API)
         if hasattr(self.stock_api, name):
@@ -471,7 +447,7 @@ class Agent:
             return attr
             
         # 나머지 API 모듈에서 메서드 찾기
-        for api in (self.account_api, self.program_api, self.strategy_api):
+        for api in (self.account_api, self.program_api):
             if hasattr(api, name):
                 attr = getattr(api, name)
                 if not callable(attr):

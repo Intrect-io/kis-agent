@@ -178,16 +178,6 @@ class StockData:
             }
         )
 
-    def get_volume_power(self, volume: int) -> Optional[Dict[str, Any]]:
-        return self.client.make_request(
-            endpoint="/uapi/domestic-stock/v1/quotations/inquire-volume-power",
-            tr_id="FHKST01010800",
-            params={
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_VOLUME": str(volume)
-            }
-        )
-
     def get_market_fluctuation(self) -> Optional[Dict[str, Any]]:
         return self.client.make_request(
             endpoint="/uapi/domestic-stock/v1/quotations/inquire-market-fluctuation",
@@ -500,35 +490,6 @@ class StockAPI:
                 "CTAC_TLNO": "",
                 "ORD_SVR_DVSN_CD": "0",
                 "ORD_DVSN_CD": "00"
-            }
-        )
-
-    def get_overtime(self, code: str) -> Optional[Dict[str, Any]]:
-        return self.client.make_request(
-            endpoint="/uapi/domestic-stock/v1/quotations/inquire-time-price",
-            tr_id="FHKST03010100",
-            params={
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_ISCD": code
-            }
-        )
-
-    def get_volume_power(self, volume: int) -> Optional[Dict[str, Any]]:
-        return self.client.make_request(
-            endpoint="/uapi/domestic-stock/v1/quotations/inquire-volume-power",
-            tr_id="FHKST01010800",
-            params={
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_VOLUME": str(volume)
-            }
-        )
-
-    def get_market_fluctuation(self) -> Optional[Dict[str, Any]]:
-        return self.client.make_request(
-            endpoint="/uapi/domestic-stock/v1/quotations/inquire-market-fluctuation",
-            tr_id="FHKST01010300",
-            params={
-                "FID_COND_MRKT_DIV_CODE": "J"
             }
         )
 
