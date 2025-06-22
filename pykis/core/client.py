@@ -19,77 +19,171 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 API_ENDPOINTS = {
-    # === 주식 기본 API ===
-    'STOCK_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-price',
-    'STOCK_DAILY': '/uapi/domestic-stock/v1/quotations/inquire-daily-price',
-    'STOCK_MINUTE': '/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice',
-    'STOCK_MEMBER': '/uapi/domestic-stock/v1/quotations/inquire-member',
-    'STOCK_INVESTOR': '/uapi/domestic-stock/v1/quotations/inquire-investor',
-    'STOCK_INFO': '/uapi/domestic-stock/v1/quotations/search-stock-info',
-    'STOCK_BASIC': '/uapi/domestic-stock/v1/quotations/inquire-basic-info',
+    # === OAuth 인증 ===
+    'TOKEN': '/oauth2/tokenP',
+    'APPROVAL': '/oauth2/Approval',
+    'REVOKE': '/oauth2/revokeP',
+    'HASHKEY': '/uapi/hashkey',
     
-    # === 프로그램매매 API ===
-    'PROGRAM_TRADE_BY_STOCK_DAILY': '/uapi/domestic-stock/v1/quotations/program-trade-by-stock-daily',  # 종목별 프로그램매매추이(일별)
-    'PROGRAM_TRADE_BY_STOCK': '/uapi/domestic-stock/v1/quotations/program-trade-by-stock',  # 종목별 프로그램매매추이(체결)
-    'PROGRAM_TRADE_SUMMARY': '/uapi/domestic-stock/v1/quotations/inquire-program-trade',  # 프로그램매매 요약
-    'PROGRAM_TRADE_PERIOD': '/uapi/domestic-stock/v1/quotations/comp-program-trade-daily',  # 프로그램매매종합추이(기간)
-    'NET_BUY_VOLUME': '/uapi/domestic-stock/v1/quotations/inquire-net-buy-volume',  # 순매수량
+    # === 국내주식 시세 ===
+    'INQUIRE_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-price',  # 주식현재가 시세 (TR: FHKST01010100)
+    'INQUIRE_DAILY_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-daily-price',  # ELW 당일급변종목 (TR: FHPEW02870000)
+    'INQUIRE_TIME_ITEMCHARTPRICE': '/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice',  # 주식당일분봉조회(주식) (TR: FHKST03010200)
+    'INQUIRE_MEMBER': '/uapi/domestic-stock/v1/quotations/inquire-member',  # 주식현재가 회원사 (TR: FHKST01010600)
+    'INQUIRE_INVESTOR': '/uapi/domestic-stock/v1/quotations/inquire-investor',  # 주식현재가 투자자 (TR: FHKST01010900)
+    'INQUIRE_ASKING_PRICE_EXP_CCN': '/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn',  # 주식현재가 호가 예상체결 (TR: FHKST01010200)
+    'INQUIRE_CCNL': '/uapi/domestic-stock/v1/quotations/inquire-ccnl',  # 주식현재가 체결(최근30건) (TR: FHKST01010300)
+    'INQUIRE_DAILY_ITEMCHARTPRICE': '/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice',  # 국내주식기간별시세(일/주/월/년) (TR: FHKST03010100)
+    'INQUIRE_DAILY_INDEXCHARTPRICE': '/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice',  # 국내주식업종기간별시세(일/주/월/년) (TR: FHKUP03500100)
+    'INQUIRE_DAILY_OVERTIMEPRICE': '/uapi/domestic-stock/v1/quotations/inquire-daily-overtimeprice',  # 주식현재가 시간외 일자별주가 (TR: FHPST02320000)
+    'INQUIRE_TIME_ITEMCONCLUSION': '/uapi/domestic-stock/v1/quotations/inquire-time-itemconclusion',  # 주식현재가 당일시간대별체결 (TR: FHPST01060000)
+    'INQUIRE_TIME_OVERTIMECONCLUSION': '/uapi/domestic-stock/v1/quotations/inquire-time-overtimeconclusion',  # 주식현재가 시간외 시간별체결 (TR: FHPST02310000)
+    'INQUIRE_OVERTIME_ASKING_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-overtime-asking-price',  # 국내주식 시간외호가 (TR: FHPST02300400)
+    'INQUIRE_OVERTIME_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-overtime-price',  # 국내주식 시간외현재가 (TR: FHPST02300000)
+    'INQUIRE_PRICE_2': '/uapi/domestic-stock/v1/quotations/inquire-price-2',  # 주식현재가 시세2 (TR: FHPST01010000)
     
-    # === 거래/주문 API ===
-    'ACCOUNT_BALANCE': '/uapi/domestic-stock/v1/trading/inquire-balance',
-    'POSSIBLE_ORDER': '/uapi/domestic-stock/v1/trading/inquire-psbl-order',
-    'ORDER_CASH': '/uapi/domestic-stock/v1/trading/order-cash',
-    'MEMBER_TRANSACTION': '/uapi/domestic-stock/v1/quotations/inquire-member-daily',
+    # === 프로그램매매 ===
+    'PROGRAM_TRADE_BY_STOCK_DAILY': '/uapi/domestic-stock/v1/quotations/program-trade-by-stock-daily',  # 종목별 프로그램매매추이(일별) (TR: FHPPG04650200)
+    'PROGRAM_TRADE_BY_STOCK': '/uapi/domestic-stock/v1/quotations/program-trade-by-stock',  # 종목별프로그램매매추이(체결) (TR: FHPPG04650101)
+    'COMP_PROGRAM_TRADE_DAILY': '/uapi/domestic-stock/v1/quotations/comp-program-trade-daily',  # 프로그램매매 종합현황(일별) (TR: FHPPG04600000)
+    'COMP_PROGRAM_TRADE_TODAY': '/uapi/domestic-stock/v1/quotations/comp-program-trade-today',  # 프로그램매매 종합현황(시간) (TR: FHPPG04600100)
+    'INVESTOR_PROGRAM_TRADE_TODAY': '/uapi/domestic-stock/v1/quotations/investor-program-trade-today',  # 프로그램매매 투자자매매동향(당일) (TR: HHPPG046600C0)
     
-    # === 기타 시세 API ===
-    'PBAR_TRATIO': '/uapi/domestic-stock/v1/quotations/inquire-price-by-time',
-    'ORDERBOOK': '/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn',
-    'OVERTIME': '/uapi/domestic-stock/v1/quotations/inquire-daily-overtimeprice',
-    'CCNL': '/uapi/domestic-stock/v1/quotations/inquire-ccnl',
-    'MINUTE_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-minute-price',
-    'TIME_CONCLUSION': '/uapi/domestic-stock/v1/quotations/inquire-time-itemconclusion',
-    'OVERTIME_CONCLUSION': '/uapi/domestic-stock/v1/quotations/inquire-time-overtimeconclusion',
-    'DAILY_CHART': '/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice',
-    'INDEX_CHART': '/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice',
-    'EXPECTED_CLOSING_PRICE': '/uapi/domestic-stock/v1/quotations/exp-closing-price',
+    # === 투자자별 ===
+    'INQUIRE_INVESTOR_TIME_BY_MARKET': '/uapi/domestic-stock/v1/quotations/inquire-investor-time-by-market',  # 시장별 투자자매매동향(시세) (TR: FHPTJ04030000)
+    'INQUIRE_INVESTOR_DAILY_BY_MARKET': '/uapi/domestic-stock/v1/quotations/inquire-investor-daily-by-market',  # 시장별 투자자매매동향(일별) (TR: FHPTJ04040000)
+    'INQUIRE_MEMBER_DAILY': '/uapi/domestic-stock/v1/quotations/inquire-member-daily',  # 주식현재가 회원사 종목매매동향 (TR: FHPST04540000)
+    'INVESTOR_TREND_ESTIMATE': '/uapi/domestic-stock/v1/quotations/investor-trend-estimate',  # 종목별 외인기관 추정가집계 (TR: HHPTJ04160200)
+    'FOREIGN_INSTITUTION_TOTAL': '/uapi/domestic-stock/v1/quotations/foreign-institution-total',  # 국내기관_외국인 매매종목가집계 (TR: FHPTJ04400000)
+    'FRGNMEM_PCHS_TREND': '/uapi/domestic-stock/v1/quotations/frgnmem-pchs-trend',  # 종목별 외국계 순매수추이 (TR: FHKST644400C0)
+    'FRGNMEM_TRADE_ESTIMATE': '/uapi/domestic-stock/v1/quotations/frgnmem-trade-estimate',  # 외국계 매매종목 가집계 (TR: FHKST644100C0)
+    'FRGNMEM_TRADE_TREND': '/uapi/domestic-stock/v1/quotations/frgnmem-trade-trend',  # 회원사 실시간 매매동향(틱) (TR: FHPST04320000)
     
-    # === 시장 정보 API ===
-    'MARKET_FLUCTUATION': '/uapi/domestic-stock/v1/quotations/inquire-market-index',
-    'MARKET_RANKINGS': '/uapi/domestic-stock/v1/quotations/volume-rank',
-    'VOLUME_RANK': '/uapi/domestic-stock/v1/quotations/inquire-volume-rank',
-    'PRICE_RANK': '/uapi/domestic-stock/v1/quotations/inquire-price-rank',
-    'PROFIT_RANK': '/uapi/domestic-stock/v1/quotations/inquire-profit-rank',
-    'MARKET_MONEY': '/uapi/domestic-stock/v1/quotations/inquire-market-money',
+    # === 거래/주문 ===
+    'INQUIRE_BALANCE': '/uapi/domestic-stock/v1/trading/inquire-balance',  # 주식잔고조회 (TR: TTTC8434R)
+    'INQUIRE_PSBL_ORDER': '/uapi/domestic-stock/v1/trading/inquire-psbl-order',  # 매수가능조회 (TR: TTTC8908R)
+    'INQUIRE_PSBL_SELL': '/uapi/domestic-stock/v1/trading/inquire-psbl-sell',  # 매도가능수량조회 (TR: TTTC8408R)
+    'INQUIRE_DAILY_CCLD': '/uapi/domestic-stock/v1/trading/inquire-daily-ccld',  # 주식일별주문체결조회 (TR: TTTC8001R)
+    'INQUIRE_ACCOUNT_BALANCE': '/uapi/domestic-stock/v1/trading/inquire-account-balance',  # 투자계좌자산현황조회 (TR: CTRP6548R)
+    'INQUIRE_BALANCE_RLZ_PL': '/uapi/domestic-stock/v1/trading/inquire-balance-rlz-pl',  # 주식잔고조회_실현손익 (TR: TTTC8494R)
+    'INQUIRE_PERIOD_PROFIT': '/uapi/domestic-stock/v1/trading/inquire-period-profit',  # 기간별손익일별합산조회 (TR: TTTC8708R)
+    'INQUIRE_PERIOD_TRADE_PROFIT': '/uapi/domestic-stock/v1/trading/inquire-period-trade-profit',  # 기간별매매손익현황조회 (TR: TTTC8715R)
+    'ORDER_CASH': '/uapi/domestic-stock/v1/trading/order-cash',  # 주식주문(현금) (TR: TTTC0802U)
+    'INQUIRE_CREDIT_PSAMOUNT': '/uapi/domestic-stock/v1/trading/inquire-credit-psamount',  # 신용매수가능조회 (TR: TTTC8909R)
+    'INQUIRE_PSBL_RVSECNCL': '/uapi/domestic-stock/v1/trading/inquire-psbl-rvsecncl',  # 주식정정취소가능주문조회 (TR: TTTC8036R)
+    'ORDER_RESV_CCNL': '/uapi/domestic-stock/v1/trading/order-resv-ccnl',  # 주식예약주문조회 (TR: CTSC0004R)
     
-    # === 투자자별 API ===
-    'DOMESTIC_INVESTOR': '/uapi/domestic-stock/v1/quotations/inquire-domestic-investor',
-    'FOREIGN_INVESTOR': '/uapi/domestic-stock/v1/quotations/inquire-foreign-investor',
-    'FOREIGN_TRADE': '/uapi/domestic-stock/v1/quotations/inquire-foreign-trade',
-    'FOREIGN_NET_BUY': '/uapi/domestic-stock/v1/quotations/inquire-foreign-net-buy',
+    # === 시장정보/순위 ===
+    'VOLUME_RANK': '/uapi/domestic-stock/v1/quotations/volume-rank',  # 거래량순위 (TR: FHPST01710000)
+    'FLUCTUATION': '/uapi/domestic-stock/v1/ranking/fluctuation',  # 국내주식 등락률 순위 (TR: FHPST01700000)
+    'MARKET_CAP': '/uapi/domestic-stock/v1/ranking/market-cap',  # 국내주식 시가총액 상위 (TR: FHPST01740000)
+    'VOLUME_POWER': '/uapi/domestic-stock/v1/ranking/volume-power',  # 국내주식 체결강도 상위 (TR: FHPST01680000)
+    'AFTER_HOUR_BALANCE': '/uapi/domestic-stock/v1/ranking/after-hour-balance',  # 국내주식 시간외잔량 순위 (TR: FHPST01760000)
+    'SHORT_SALE': '/uapi/domestic-stock/v1/ranking/short-sale',  # 국내주식 공매도 상위종목 (TR: FHPST04820000)
+    'OVERTIME_FLUCTUATION': '/uapi/domestic-stock/v1/ranking/overtime-fluctuation',  # 국내주식 시간외등락율순위 (TR: FHPST02340000)
+    'OVERTIME_VOLUME': '/uapi/domestic-stock/v1/ranking/overtime-volume',  # 국내주식 시간외거래량순위 (TR: FHPST02350000)
     
-    # === 재무 정보 API ===
-    'STOCK_INCOME': '/uapi/domestic-stock/v1/quotations/inquire-income-statement',
-    'STOCK_FINANCIAL': '/uapi/domestic-stock/v1/quotations/inquire-financial-ratio',
-    'STOCK_STABILITY': '/uapi/domestic-stock/v1/quotations/inquire-stability-ratio',
-    'STOCK_GROWTH': '/uapi/domestic-stock/v1/quotations/inquire-growth-ratio',
-    'STOCK_ESTIMATE': '/uapi/domestic-stock/v1/quotations/inquire-estimate',
-    'STOCK_BROKER_OPINION': '/uapi/domestic-stock/v1/quotations/inquire-broker-opinion',
-    'STOCK_OPINION': '/uapi/domestic-stock/v1/quotations/inquire-stock-opinion',
+    # === 기타 시세정보 ===
+    'SEARCH_STOCK_INFO': '/uapi/domestic-stock/v1/quotations/search-stock-info',  # 주식기본조회 (TR: CTPF1002R)
+    'CHK_HOLIDAY': '/uapi/domestic-stock/v1/quotations/chk-holiday',  # 국내휴장일조회 (TR: CTCA0903R)
+    'PBAR_TRATIO': '/uapi/domestic-stock/v1/quotations/pbar-tratio',  # 국내주식 매물대/거래비중 (TR: FHPST01130000)
+    'CAPTURE_UPLOWPRICE': '/uapi/domestic-stock/v1/quotations/capture-uplowprice',  # 국내주식 상하한가 포착 (TR: FHKST130000C0)
+    'EXP_CLOSING_PRICE': '/uapi/domestic-stock/v1/quotations/exp-closing-price',  # 국내주식 장마감 예상체결가 (TR: FHKST117300C0)
+    'EXP_PRICE_TREND': '/uapi/domestic-stock/v1/quotations/exp-price-trend',  # 국내주식 예상체결가 추이 (TR: FHPST01810000)
+    'EXP_INDEX_TREND': '/uapi/domestic-stock/v1/quotations/exp-index-trend',  # 국내주식 예상체결지수 추이 (TR: FHPST01840000)
+    'INQUIRE_VI_STATUS': '/uapi/domestic-stock/v1/quotations/inquire-vi-status',  # 변동성완화장치(VI) 현황 (TR: FHPST01390000)
+    'INQUIRE_DAILY_TRADE_VOLUME': '/uapi/domestic-stock/v1/quotations/inquire-daily-trade-volume',  # 종목별일별매수매도체결량 (TR: FHKST03010800)
+    'NEWS_TITLE': '/uapi/domestic-stock/v1/quotations/news-title',  # 종합 시황/공시(제목) (TR: FHKST01011800)
+    'DAILY_CREDIT_BALANCE': '/uapi/domestic-stock/v1/quotations/daily-credit-balance',  # 국내주식 신용잔고 일별추이 (TR: FHPST04760000)
+    'DAILY_SHORT_SALE': '/uapi/domestic-stock/v1/quotations/daily-short-sale',  # 국내주식 공매도 일별추이 (TR: FHPST04830000)
+    'MKTFUNDS': '/uapi/domestic-stock/v1/quotations/mktfunds',  # 국내 증시자금 종합 (TR: FHKST649100C0)
     
-    # === 기타 ===
-    'HOLIDAY_CHECK': '/uapi/domestic-stock/v1/quotations/chk-holiday',
-    'HOLIDAY_INFO': '/uapi/domestic-stock/v1/quotations/chk-holiday',
-    'CONDITIONED_STOCK': '/uapi/domestic-stock/v1/quotations/psearch-result',
-    'STOCK_PRICE_2': '/uapi/domestic-stock/v1/quotations/inquire-price-2',
+    # === 재무정보 ===
+    'INCOME_STATEMENT': '/uapi/domestic-stock/v1/finance/income-statement',  # 국내주식 손익계산서 (TR: FHKST66430200)
+    'BALANCE_SHEET': '/uapi/domestic-stock/v1/finance/balance-sheet',  # 국내주식 대차대조표 (TR: FHKST66430100)
+    'FINANCIAL_RATIO': '/uapi/domestic-stock/v1/finance/financial-ratio',  # 국내주식 재무비율 (TR: FHKST66430300)
+    'PROFIT_RATIO': '/uapi/domestic-stock/v1/finance/profit-ratio',  # 국내주식 수익성비율 (TR: FHKST66430400)
+    'STABILITY_RATIO': '/uapi/domestic-stock/v1/finance/stability-ratio',  # 국내주식 안정성비율 (TR: FHKST66430600)
+    'GROWTH_RATIO': '/uapi/domestic-stock/v1/finance/growth-ratio',  # 국내주식 성장성비율 (TR: FHKST66430800)
+    'ESTIMATE_PERFORM': '/uapi/domestic-stock/v1/quotations/estimate-perform',  # 국내주식 종목추정실적 (TR: HHKST668300C0)
+    'INVEST_OPINION': '/uapi/domestic-stock/v1/quotations/invest-opinion',  # 국내주식 종목투자의견 (TR: FHKST663300C0)
+    'INVEST_OPBYSEC': '/uapi/domestic-stock/v1/quotations/invest-opbysec',  # 국내주식 증권사별 투자의견 (TR: FHKST663400C0)
     
-    # === 해외 API ===
-    'OVERSEAS_PRICE': '/uapi/overseas-price/v1/quotations/inquire-price',
-    'OVERSEAS_PRICE_DETAIL': '/uapi/overseas-price/v1/quotations/inquire-price-detail',
-    'OVERSEAS_NEWS': '/uapi/overseas-price/v1/quotations/inquire-news',
-    'OVERSEAS_RIGHT': '/uapi/overseas-price/v1/quotations/inquire-right',
+    # === 해외주식 ===
+    'OVERSEAS_PRICE': '/uapi/overseas-price/v1/quotations/price',  # 해외주식 현재체결가 (TR: HHDFS00000300)
+    'OVERSEAS_PRICE_DETAIL': '/uapi/overseas-price/v1/quotations/price-detail',  # 해외주식 현재가상세 (TR: HHDFS76200200)
+    'OVERSEAS_DAILYPRICE': '/uapi/overseas-price/v1/quotations/dailyprice',  # 해외주식 기간별시세 (TR: HHDFS76240000)
+    'OVERSEAS_INQUIRE_ASKING_PRICE': '/uapi/overseas-price/v1/quotations/inquire-asking-price',  # 해외주식 현재가 10호가 (TR: HHDFS76200100)
+    'OVERSEAS_SEARCH_INFO': '/uapi/overseas-price/v1/quotations/search-info',  # 해외주식 상품기본정보 (TR: CTPF1702R)
+    'OVERSEAS_NEWS_TITLE': '/uapi/overseas-price/v1/quotations/news-title',  # 해외뉴스종합(제목) (TR: HHPSTH60100C1)
+    'OVERSEAS_INQUIRE_TIME_ITEMCHARTPRICE': '/uapi/overseas-price/v1/quotations/inquire-time-itemchartprice',  # 해외주식분봉조회 (TR: HHDFS76950200)
+    'OVERSEAS_INQUIRE_DAILY_CHARTPRICE': '/uapi/overseas-price/v1/quotations/inquire-daily-chartprice',  # 해외주식 종목/지수/환율기간별시세 (TR: FHKST03030100)
     
-    # === 채권 API ===
-    'BOND_PRICE': '/uapi/domestic-bond/v1/quotations/inquire-price',
+    # === 해외주식 거래 ===
+    'OVERSEAS_INQUIRE_BALANCE': '/uapi/overseas-stock/v1/trading/inquire-balance',  # 해외주식 잔고 (TR: TTTS3012R)
+    'OVERSEAS_INQUIRE_CCNL': '/uapi/overseas-stock/v1/trading/inquire-ccnl',  # 해외주식 주문체결내역 (TR: TTTS3035R)
+    'OVERSEAS_INQUIRE_PSAMOUNT': '/uapi/overseas-stock/v1/trading/inquire-psamount',  # 해외주식 매수가능금액조회 (TR: TTTS3007R)
+    
+    # === 선물옵션 ===
+    'FUTUREOPTION_INQUIRE_PRICE': '/uapi/domestic-futureoption/v1/quotations/inquire-price',  # 선물옵션 시세 (TR: FHMIF10000000)
+    'FUTUREOPTION_INQUIRE_ASKING_PRICE': '/uapi/domestic-futureoption/v1/quotations/inquire-asking-price',  # 선물옵션 시세호가 (TR: FHMIF10010000)
+    'FUTUREOPTION_INQUIRE_BALANCE': '/uapi/domestic-futureoption/v1/trading/inquire-balance',  # 선물옵션 잔고현황 (TR: CTFO6118R)
+    
+    # === ETF/ETN ===
+    'ETF_INQUIRE_PRICE': '/uapi/etfetn/v1/quotations/inquire-price',  # ETF/ETN현재가 (TR: FHPST02400000)
+    'ETF_NAV_COMPARISON_TREND': '/uapi/etfetn/v1/quotations/nav-comparison-trend',  # NAV 비교추이(종목) (TR: FHPST02440000)
+    
+    # === 채권 ===
+    'BOND_INQUIRE_PRICE': '/uapi/domestic-bond/v1/quotations/inquire-price',  # 장내채권현재가(시세) (TR: FHKBJ773400C0)
+    'BOND_INQUIRE_BALANCE': '/uapi/domestic-bond/v1/trading/inquire-balance',  # 장내채권 잔고조회 (TR: CTSC8407R)
+    
+    # === 기존 호환성을 위한 별칭 ===
+    'STOCK_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-price',  # 별칭: INQUIRE_PRICE
+    'STOCK_DAILY': '/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice',  # 별칭: INQUIRE_DAILY_ITEMCHARTPRICE
+    'STOCK_MINUTE': '/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice',  # 별칭: INQUIRE_TIME_ITEMCHARTPRICE
+    'STOCK_MEMBER': '/uapi/domestic-stock/v1/quotations/inquire-member',  # 별칭: INQUIRE_MEMBER
+    'STOCK_INVESTOR': '/uapi/domestic-stock/v1/quotations/inquire-investor',  # 별칭: INQUIRE_INVESTOR
+    'STOCK_INFO': '/uapi/domestic-stock/v1/quotations/search-stock-info',  # 별칭: SEARCH_STOCK_INFO
+    'STOCK_BASIC': '/uapi/domestic-stock/v1/quotations/search-stock-info',  # 별칭: SEARCH_STOCK_INFO
+    'ACCOUNT_BALANCE': '/uapi/domestic-stock/v1/trading/inquire-balance',  # 별칭: INQUIRE_BALANCE
+    'POSSIBLE_ORDER': '/uapi/domestic-stock/v1/trading/inquire-psbl-order',  # 별칭: INQUIRE_PSBL_ORDER
+    'MEMBER_TRANSACTION': '/uapi/domestic-stock/v1/quotations/inquire-member-daily',  # 별칭: INQUIRE_MEMBER_DAILY
+    'PBAR_TRATIO': '/uapi/domestic-stock/v1/quotations/pbar-tratio',  # 매물대/거래비중
+    'ORDERBOOK': '/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn',  # 별칭: INQUIRE_ASKING_PRICE_EXP_CCN
+    'OVERTIME': '/uapi/domestic-stock/v1/quotations/inquire-daily-overtimeprice',  # 별칭: INQUIRE_DAILY_OVERTIMEPRICE
+    'CCNL': '/uapi/domestic-stock/v1/quotations/inquire-ccnl',  # 별칭: INQUIRE_CCNL
+    'MINUTE_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice',  # 별칭: INQUIRE_TIME_ITEMCHARTPRICE
+    'TIME_CONCLUSION': '/uapi/domestic-stock/v1/quotations/inquire-time-itemconclusion',  # 별칭: INQUIRE_TIME_ITEMCONCLUSION
+    'OVERTIME_CONCLUSION': '/uapi/domestic-stock/v1/quotations/inquire-time-overtimeconclusion',  # 별칭: INQUIRE_TIME_OVERTIMECONCLUSION
+    'DAILY_CHART': '/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice',  # 별칭: INQUIRE_DAILY_ITEMCHARTPRICE
+    'INDEX_CHART': '/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice',  # 별칭: INQUIRE_DAILY_INDEXCHARTPRICE
+    'EXPECTED_CLOSING_PRICE': '/uapi/domestic-stock/v1/quotations/exp-closing-price',  # 별칭: EXP_CLOSING_PRICE
+    'MARKET_FLUCTUATION': '/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn',  # 시장 정보
+    'MARKET_RANKINGS': '/uapi/domestic-stock/v1/quotations/volume-rank',  # 별칭: VOLUME_RANK
+    'VOLUME_RANK': '/uapi/domestic-stock/v1/quotations/volume-rank',  # 거래량순위
+    'PRICE_RANK': '/uapi/domestic-stock/v1/ranking/fluctuation',  # 별칭: FLUCTUATION
+    'PROFIT_RANK': '/uapi/domestic-stock/v1/ranking/market-cap',  # 별칭: MARKET_CAP
+    'MARKET_MONEY': '/uapi/domestic-stock/v1/quotations/mktfunds',  # 별칭: MKTFUNDS
+    'DOMESTIC_INVESTOR': '/uapi/domestic-stock/v1/quotations/inquire-investor-time-by-market',  # 별칭: INQUIRE_INVESTOR_TIME_BY_MARKET
+    'FOREIGN_INVESTOR': '/uapi/domestic-stock/v1/quotations/foreign-institution-total',  # 별칭: FOREIGN_INSTITUTION_TOTAL
+    'FOREIGN_TRADE': '/uapi/domestic-stock/v1/quotations/frgnmem-trade-trend',  # 별칭: FRGNMEM_TRADE_TREND
+    'FOREIGN_NET_BUY': '/uapi/domestic-stock/v1/quotations/frgnmem-pchs-trend',  # 별칭: FRGNMEM_PCHS_TREND
+    'STOCK_INCOME': '/uapi/domestic-stock/v1/finance/income-statement',  # 별칭: INCOME_STATEMENT
+    'STOCK_FINANCIAL': '/uapi/domestic-stock/v1/finance/financial-ratio',  # 별칭: FINANCIAL_RATIO
+    'STOCK_STABILITY': '/uapi/domestic-stock/v1/finance/stability-ratio',  # 별칭: STABILITY_RATIO
+    'STOCK_GROWTH': '/uapi/domestic-stock/v1/finance/growth-ratio',  # 별칭: GROWTH_RATIO
+    'STOCK_ESTIMATE': '/uapi/domestic-stock/v1/quotations/estimate-perform',  # 별칭: ESTIMATE_PERFORM
+    'STOCK_BROKER_OPINION': '/uapi/domestic-stock/v1/quotations/invest-opbysec',  # 별칭: INVEST_OPBYSEC
+    'STOCK_OPINION': '/uapi/domestic-stock/v1/quotations/invest-opinion',  # 별칭: INVEST_OPINION
+    'HOLIDAY_CHECK': '/uapi/domestic-stock/v1/quotations/chk-holiday',  # 별칭: CHK_HOLIDAY
+    'HOLIDAY_INFO': '/uapi/domestic-stock/v1/quotations/chk-holiday',  # 별칭: CHK_HOLIDAY
+    'CONDITIONED_STOCK': '/uapi/domestic-stock/v1/quotations/psearch-result',  # 별칭: PSEARCH_RESULT
+    'STOCK_PRICE_2': '/uapi/domestic-stock/v1/quotations/inquire-price-2',  # 별칭: INQUIRE_PRICE_2
+    'OVERSEAS_PRICE': '/uapi/overseas-price/v1/quotations/price',  # 해외주식 현재체결가
+    'OVERSEAS_PRICE_DETAIL': '/uapi/overseas-price/v1/quotations/price-detail',  # 해외주식 현재가상세
+    'OVERSEAS_NEWS': '/uapi/overseas-price/v1/quotations/news-title',  # 별칭: OVERSEAS_NEWS_TITLE
+    'OVERSEAS_RIGHT': '/uapi/overseas-price/v1/quotations/period-rights',  # 별칭: PERIOD_RIGHTS
+    'BOND_PRICE': '/uapi/domestic-bond/v1/quotations/inquire-price',  # 별칭: BOND_INQUIRE_PRICE
 }
 
 _shared_rate_limit_lock = threading.Lock()

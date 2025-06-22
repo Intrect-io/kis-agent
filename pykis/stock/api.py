@@ -615,14 +615,14 @@ class StockAPI:
         """
         try:
             return self.client.make_request(
-                endpoint=API_ENDPOINTS['MINUTE_PRICE'],
+                endpoint="/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
                 tr_id="FHKST03010200",
                 params={
-                    "FID_ETC_CLS_CODE": "",  # 기타분류코드 (빈값)
-                    "FID_COND_MRKT_DIV_CODE": "J",  # 시장구분코드(J: 주식)
-                    "FID_INPUT_ISCD": code,  # 종목코드
-                    "FID_INPUT_HOUR_1": hour,  # 시간 (HHMMSS)
-                    "FID_PW_DATA_INCU_YN": "Y"  # 시간외데이터포함여부(Y: 포함)
+                    "FID_ETC_CLS_CODE": "",
+                    "FID_COND_MRKT_DIV_CODE": "J", 
+                    "FID_INPUT_ISCD": code,
+                    "FID_INPUT_HOUR_1": hour,
+                    "FID_PW_DATA_INCU_YN": "Y"
                 }
             )
         except Exception as e:
