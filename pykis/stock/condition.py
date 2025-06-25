@@ -52,12 +52,12 @@ class ConditionAPI:
         """
         self.client = client
 
-    def get_condition_stocks(self, user_id: str, seq: int = 0, tr_cont: str = 'N') -> Optional[List[Dict]]:
+    def get_condition_stocks(self, user_id: str = "unohee", seq: int = 0, tr_cont: str = 'N') -> Optional[List[Dict]]:
         """
         조건검색 결과를 조회합니다.
         
         Args:
-            user_id (str): 사용자 ID
+            user_id (str): 사용자 ID (기본값: "unohee")
             seq (int, optional): 조건검색 시퀀스 번호. 기본값은 0.
             tr_cont (str, optional): 연속조회 여부. 기본값은 'N'.
                 - 'N': 연속조회 아님
@@ -71,9 +71,10 @@ class ConditionAPI:
         Note:
             - 조건검색 결과가 없는 경우 None을 반환합니다.
             - API 호출 실패 시 로그에 오류가 기록됩니다.
+            - rt_cd가 '1'인 경우 "조회가 계속 됩니다"는 정상적인 응답입니다.
 
         Example:
-            >>> api.get_condition_stocks("user123", seq=1)
+            >>> api.get_condition_stocks("unohee", seq=0)
         """
         try:
             # API 요청 파라미터
@@ -86,22 +87,32 @@ class ConditionAPI:
             # API 호출
             response = self.client.make_request(
                 endpoint=API_ENDPOINTS['CONDITIONED_STOCK'],
-                tr_id="CTCA0903R",
+                tr_id="HHKST03900400",
                 params=params
             )
             
-            if not response or response.get('rt_cd') != '0':
-                logging.error(f"조건검색 실패: {response}")
+            if not response:
+                logging.error("조건검색 응답이 없습니다.")
                 return None
                 
-            # output2 필드에서 결과 추출
-            stocks = response.get('output2', [])
-            if not stocks:
-                logging.warning("조건검색 결과가 없습니다.")
+            rt_cd = response.get('rt_cd')
+            if rt_cd == '0':
+                # 정상 응답
+                stocks = response.get('output2', [])
+                if not stocks:
+                    logging.warning("조건검색 결과가 없습니다.")
+                    return None
+                    
+                logging.info(f"조건검색 결과: {len(stocks)}개 종목")
+                return stocks
+            elif rt_cd == '1':
+                # "조회가 계속 됩니다" - 정상적인 응답이지만 추가 조회 필요
+                logging.info("조건검색 조회가 계속됩니다. 다음 seq로 조회하세요.")
+                stocks = response.get('output2', [])
+                return stocks if stocks else []
+            else:
+                logging.error(f"조건검색 실패: rt_cd={rt_cd}, msg={response.get('msg1', '')}")
                 return None
-                
-            logging.info(f"조건검색 결과: {len(stocks)}개 종목")
-            return stocks
             
         except Exception as e:
             logging.error(f"조건검색 중 오류 발생: {e}")
@@ -181,22 +192,15 @@ def get_condition_stocks_dict(agent) -> Dict[str, List[Dict]]:
         dict: {조건검색식명: [종목정보리스트]} 형태의 딕셔너리
     """
     try:
-        # 재귀 호출 방지를 위해 직접 stock_api.get_condition_stocks 호출
-        stocks = agent.stock_api.get_condition_stocks("test_user", seq=0, tr_cont="N")
+        # Agent를 통한 조건검색 결과 조회
+        stocks = agent.get_condition_stocks("unohee", seq=0, tr_cont="N")
         
         if not stocks:
             logging.warning("조건검색식 종목 조회 실패")
             return {}
             
-        # stocks가 리스트 형태로 반환되는 경우 처리
-        if isinstance(stocks, list):
-            stock_list = stocks
-        else:
-            # API 응답 형태인 경우
-            if stocks.get('rt_cd') != '0':
-                logging.warning("조건검색식 종목 조회 실패")
-                return {}
-            stock_list = stocks.get('output2', [])
+        # condition API에서 직접 리스트를 반환하므로 바로 사용
+        stock_list = stocks
             
         if not stock_list:
             logging.warning("조건검색식 종목이 없습니다.")

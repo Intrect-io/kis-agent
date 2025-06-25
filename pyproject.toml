@@ -1,34 +1,65 @@
 [build-system]
-requires = ["setuptools>=42", "wheel"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pykis"
-version = "0.1.0"
-description = "KIS API를 사용한 자동매매 에이전트"
+version = "0.1.5"
+description = "한국투자증권 OpenAPI Python Wrapper"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "unohee", email = "unohee@example.com"},
+    {name = "unohee", email = "unohee@github.com"},
 ]
+keywords = ["kis", "korean-investment", "stock", "trading", "api", "finance"]
 classifiers = [
-    "Programming Language :: Python :: 3",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "requests",
-    "python-dotenv",
-    "pandas",
-    "numpy",
-    "pytest",
-    "pytest-cov",
+    "requests>=2.26.0",
+    "pandas>=1.3.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=0.19.0",
+    "pycryptodome>=3.23",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=3.0.0",
+    "black>=22.0.0",
+    "isort>=5.10.0",
+    "flake8>=4.0.0",
+    "mypy>=0.910",
+]
+websocket = [
+    "websockets>=12.0",
+    "aiohttp>=3.9.0",
 ]
 
 [project.urls]
-Homepage = "https://github.com/unohee/KIS_AGENT"
-Repository = "https://github.com/unohee/KIS_AGENT.git"
+Homepage = "https://github.com/unohee/pykis"
+Repository = "https://github.com/unohee/pykis.git"
+Documentation = "https://github.com/unohee/pykis/blob/main/README.md"
+"Bug Tracker" = "https://github.com/unohee/pykis/issues"
+Changelog = "https://github.com/unohee/pykis/blob/main/CHANGELOG.md"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pykis*"]
+exclude = ["tests*", "examples*"]
 
 [tool.black]
 line-length = 88

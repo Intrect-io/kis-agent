@@ -24,6 +24,13 @@ price = agent.get_stock_price("005930")  # 삼성전자
 
 # 분봉 데이터 조회
 minute_data = agent.get_minute_chart("005930", "093000")  # 9시 30분 데이터
+
+# 조건검색 결과 조회 (통일된 방식)
+condition_stocks = agent.get_condition_stocks("unohee", 0, "N")
+
+# 휴장일 정보 조회 (새로 추가됨)
+holiday_info = agent.get_holiday_info()
+is_holiday = agent.is_holiday("20241225")  # 크리스마스 휴장일 여부
 ```
 
 ## 주요 기능
@@ -33,10 +40,30 @@ minute_data = agent.get_minute_chart("005930", "093000")  # 9시 30분 데이터
 - **시장 분석**: 체결강도 순위, 등락률 순위, 거래량 순위, 투자자별 매매 동향
 - **재무 정보**: 손익계산서, 재무비율, 성장성/안정성 지표
 - **프로그램 매매**: 종목별/시장별 프로그램 매매 추이 및 독립 분석 도구
-- **조건검색**: 조건검색식 종목 조회
+- **조건검색**: 조건검색식 종목 조회 (통일된 API 방식)
+- **휴장일 정보**: 휴장일 조회 및 특정 날짜 휴장일 여부 확인
 - **실시간 데이터**: 실시간 시세 조회
 
-## 최신 업데이트 (v0.1.4)
+## 최신 업데이트 (v0.1.5)
+
+### 🔧 조건검색 API 통일
+- **모든 조건검색 통일**: `condition.py`의 정확한 방식(`tr_id="HHKST03900400"`) 사용
+- **매개변수 통일**: 모든 호출 지점에서 `user_id="unohee"` 사용
+- **응답 처리 개선**: `rt_cd='1'` ("조회가 계속 됩니다") 응답을 정상 처리
+- **Facade 패턴 강화**: Agent를 통한 통합 접근 방식 확립
+
+### 📅 휴장일 기능 추가
+- **직접 API 접근**: `get_holiday_info()` 메서드로 휴장일 정보 조회
+- **편의 메서드**: `is_holiday(date)` 메서드로 특정 날짜 휴장일 여부 확인
+- **안정적인 구현**: 기준일 계산 로직 개선 및 재시도 메커니즘 포함
+- **Agent 통합**: 모든 휴장일 기능을 Agent 클래스를 통해 접근
+
+### 🏗️ 아키텍처 개선
+- **일관된 인터페이스**: 모든 기능을 Agent를 통해 접근하도록 통일
+- **적절한 캡슐화**: 내부 API 클래스는 숨기되 기능별 책임 분리 유지
+- **사용자 친화적**: 복잡한 내부 구현을 숨기고 간단한 메서드 제공
+
+## 이전 업데이트 (v0.1.4)
 
 ### 🔧 API 정확성 향상
 - **체결강도 API**: 올바른 엔드포인트 적용 (`/uapi/domestic-stock/v1/ranking/volume-power`)
@@ -103,8 +130,12 @@ minute_data = agent.get_minute_chart("005930", "093000")  # 9시 30분 데이터
 - `get_program_trade_market_daily(start_date, end_date)`: 시장 전체 프로그램 매매 현황 조회
 - `get_program_trade_period_detail(start_date, end_date)`: 기간별 프로그램 매매 상세 조회
 
-### 조건검색
-- `get_condition_stocks()`: 조건검색 결과 조회 (재귀 문제 해결)
+### 조건검색 (v0.1.5에서 통일됨)
+- `get_condition_stocks(user_id, seq, tr_cont)`: 조건검색 결과 조회 (통일된 API 방식)
+
+### 휴장일 정보 (v0.1.5에서 새로 추가됨)
+- `get_holiday_info()`: 휴장일 정보 조회 (직접 API 접근)
+- `is_holiday(date)`: 특정 날짜 휴장일 여부 확인 (편의 메서드)
 
 ### 회원사/거래원 관련
 - `get_stock_member(ticker)`: 주식 회원사 정보 조회
@@ -112,10 +143,9 @@ minute_data = agent.get_minute_chart("005930", "093000")  # 9시 30분 데이터
 - `get_member(code)`: 거래원 정보 조회
 
 ### 유틸리티
-- `is_holiday(date)`: 휴장일 여부 확인
-- `get_holiday_info()`: 휴장일 정보 조회
 - `init_minute_db(db_path)`: 분봉 데이터 DB 초기화
 - `migrate_minute_csv_to_db(code, db_path)`: CSV 분봉 데이터 DB 이관
+- `classify_broker(name)`: 거래원 분류 (정적 메서드)
 
 ## 사용 예시
 
@@ -149,8 +179,13 @@ program_trade_market = agent.get_program_trade_market_daily("20240601", "2024063
 income = agent.get_stock_income("005930")  # 손익계산서
 financial = agent.get_stock_financial("005930")  # 재무비율
 
-# 조건검색 (v0.1.4에서 재귀 문제 해결)
-condition_stocks = agent.get_condition_stocks()
+# 조건검색 (v0.1.5에서 통일된 방식)
+condition_stocks = agent.get_condition_stocks("unohee", 0, "N")
+
+# 휴장일 정보 (v0.1.5에서 새로 추가됨)
+holiday_info = agent.get_holiday_info()  # 휴장일 정보 조회
+is_xmas_holiday = agent.is_holiday("20241225")  # 크리스마스 휴장일 여부
+is_today_holiday = agent.is_holiday("20240625")  # 오늘이 휴장일인지 확인
 ```
 
 ## 독립 분석 도구

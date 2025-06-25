@@ -181,119 +181,32 @@ class Agent:
         else:
             return "기타"
 
-    def is_holiday(self, date: str, retries: int = 10) -> Optional[bool]:
+    def get_holiday_info(self):
+        """휴장일 정보를 조회합니다.
+        
+        Returns:
+            Dict: 휴장일 정보, 실패 시 None
+        """
+        try:
+            return self.stock_api.get_holiday_info()
+        except Exception as e:
+            logging.error(f"휴장일 정보 조회 실패: {e}")
+            return None
+
+    def is_holiday(self, date: str) -> Optional[bool]:
         """주어진 날짜(YYYYMMDD)가 한국 주식 시장 휴장일인지 확인합니다.
         
         Args:
             date: YYYYMMDD 형식의 날짜 문자열
-            retries: API 호출 실패 시 재시도 횟수
             
         Returns:
             bool: 휴장일이면 True, 거래일이면 False, 확인 불가면 None
         """
-        # 로깅 레벨 설정
-        logging.getLogger().setLevel(logging.DEBUG)
-        
-        # 캐시 디렉토리 생성
-        cache_dir = 'cache'
-        os.makedirs(cache_dir, exist_ok=True)
-        cache_file = os.path.join(cache_dir, 'holiday_cache.json')
-        
-        # 캐시 로드
-        holiday_cache = {}
-        if os.path.exists(cache_file):
-            try:
-                with open(cache_file, 'r', encoding='utf-8') as f:
-                    holiday_cache = json.load(f)
-            except Exception as e:
-                logging.warning(f"Failed to load holiday cache: {e}")
-        
-        # 캐시된 결과가 있으면 반환
-        if date in holiday_cache:
-            logging.debug(f"캐시에서 휴장일 정보 조회: {date} -> {holiday_cache[date]}")
-            return holiday_cache[date]
-        
-        # [변경 이유] 현재 월의 첫 거래일을 기준일로 사용
-        current_date = datetime.datetime.strptime(date, '%Y%m%d')
-        first_day_of_month = current_date.replace(day=1)
-        bass_dt = first_day_of_month.strftime('%Y%m%d')
-        logging.debug(f"기준일 계산: {date} -> {bass_dt}")
-        
-        # API 호출
-        params = {
-            "BASS_DT": bass_dt,  # 현재 월의 첫 거래일
-            "CTX_AREA_NK": "",
-            "CTX_AREA_FK": ""
-        }
-        
-        response = None  # response 변수 초기화
-        for attempt in range(retries):
-            try:
-                logging.debug(f"API 호출 시도 {attempt + 1}/{retries}")
-                logging.debug(f"요청 파라미터: {params}")
-                
-                response = self.client.make_request(
-                    endpoint=API_ENDPOINTS['HOLIDAY_CHECK'],
-                    tr_id="CTCA0903R",
-                    params=params,
-                    retries=1  # 이미 retries 루프가 있으므로 1로 설정
-                )
-                
-                logging.debug(f"API 응답: {json.dumps(response, ensure_ascii=False, indent=2)}")
-                
-                # [변경 이유] API 응답이 에러인 경우 처리
-                if response.get('rt_cd') != '0':
-                    error_msg = response.get('msg1', '알 수 없는 오류')
-                    logging.error(f"API 호출 실패: {error_msg}")
-                    if attempt < retries - 1:
-                        time.sleep(1)
-                        continue
-                    return None
-                
-                if response and response.get('output'):
-                    # [변경 이유] output 리스트에서 오늘 날짜(bass_dt==date) 항목을 찾아야 함
-                    today_info = next((item for item in response['output'] if item.get('bass_dt') == date), None)
-                    if today_info:
-                        opnd_yn = today_info.get('opnd_yn')
-                        is_holiday = opnd_yn == 'N'
-                        logging.debug(f"휴장일 정보 조회: {date} -> {is_holiday} (opnd_yn: {opnd_yn})")
-                    # 결과 캐시에 저장
-                    holiday_cache[date] = is_holiday
-                    try:
-                        with open(cache_file, 'w', encoding='utf-8') as f:
-                            json.dump(holiday_cache, f, ensure_ascii=False, indent=2)
-                    except Exception as e:
-                        logging.warning(f"Failed to save holiday cache: {e}")
-                    return is_holiday
-                    
-                    # [변경 이유] 오늘 날짜가 현재 페이지에 없으면 다음 페이지 확인
-                    ctx_area_nk = response.get('ctx_area_nk', '').strip()
-                    if ctx_area_nk:  # 다음 페이지가 있는 경우
-                        params['CTX_AREA_NK'] = ctx_area_nk
-                        params['CTX_AREA_FK'] = response.get('ctx_area_fk', '').strip()
-                        logging.debug(f"다음 페이지 요청: CTX_AREA_NK={ctx_area_nk}, CTX_AREA_FK={params['CTX_AREA_FK']}")
-                        continue
-                    
-                    # [변경 이유] 모든 페이지를 확인했는데도 오늘 날짜를 찾지 못한 경우
-                    logging.warning(f"output에 오늘 날짜({date}) 데이터가 없음: {response['output']}")
-                    return None
-                
-                # API 응답이 없거나 실패한 경우
-                if attempt < retries - 1:
-                    time.sleep(1)  # 재시도 전 대기
-                    continue
-                    
-            except Exception as e:
-                logging.error(f"Error checking holiday status for {date}: {e}")
-                if attempt < retries - 1:
-                    time.sleep(1)
-                    continue
-        
-        # 모든 재시도 실패
-        if response is None:
-            logging.warning(f"휴장일 상태를 확인할 수 없습니다 ({date}). API 응답 없음")
-        logging.warning(f"휴장일 상태를 확인할 수 없습니다 ({date}). 응답: {response}")
-        return None
+        try:
+            return self.stock_api.is_holiday(date)
+        except Exception as e:
+            logging.error(f"휴장일 확인 실패: {e}")
+            return None
 
     def init_minute_db(self, db_path='stonks_candles.db'):
         """분봉 데이터용 DB 및 테이블 생성 (최초 1회)"""
@@ -410,14 +323,24 @@ class Agent:
         
         return df
 
-    def get_condition_stocks(self):
-        """조건검색식 종목 조회"""
+    def get_condition_stocks(self, user_id: str = "unohee", seq: int = 0, tr_cont: str = 'N'):
+        """조건검색 결과를 조회합니다.
+        
+        Args:
+            user_id (str): 사용자 ID (기본값: "unohee")
+            seq (int): 조건검색 시퀀스 번호 (기본값: 0)
+            tr_cont (str): 연속조회 여부 (기본값: 'N')
+            
+        Returns:
+            List[Dict]: 조건검색 결과 리스트, 실패 시 None
+        """
         try:
-            from ..stock.condition import get_condition_stocks_dict
-            return get_condition_stocks_dict(self)
+            from ..stock.condition import ConditionAPI
+            condition_api = ConditionAPI(self.client)
+            return condition_api.get_condition_stocks(user_id, seq, tr_cont)
         except Exception as e:
-            logging.error(f"조건검색식 종목 조회 실패: {e}")
-            return {}
+            logging.error(f"조건검색 종목 조회 실패: {e}")
+            return None
 
     def get_top_gainers(self):
         """상승률 상위 종목 조회 (국내주식 등락률 순위)"""

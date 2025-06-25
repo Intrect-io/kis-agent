@@ -532,10 +532,10 @@ class StockAPI:
                 "tr_cont": tr_cont
             }
             
-            # API 호출
+            # API 호출 - condition.py와 동일한 tr_id 사용
             response = self.client.make_request(
                 endpoint=API_ENDPOINTS['CONDITIONED_STOCK'],
-                tr_id="CTCA0903R",
+                tr_id="HHKST03900400",
                 params=params
             )
             
@@ -605,26 +605,115 @@ class StockAPI:
 
     def get_minute_price(self, code: str, hour: str = "153000") -> Optional[Dict]:
         """
-        주식당일분봉조회 (Postman 검증된 방식)
+        분봉 데이터 조회
         
         Args:
-            code: 종목코드 (6자리)
+            code: 종목코드
             hour: 시간 (HHMMSS 형식, 기본값: 153000)
         """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['MINUTE_CHART'],
+            tr_id="FHKST03010200",
+            params={
+                "FID_COND_MRKT_DIV_CODE": "J", 
+                "FID_COND_SCR_DIV_CODE": "20171",
+                "FID_INPUT_ISCD": code,
+                "FID_INPUT_HOUR_1": hour,
+                "FID_PW_DATA_INCU_YN": "Y"
+            }
+        )
+
+    def get_holiday_info(self) -> Optional[Dict]:
+        """국내 휴장일 정보를 조회합니다.
+        
+        Returns:
+            Dict: 휴장일 정보, 실패 시 None
+        """
+        import logging
         try:
             return self.client.make_request(
-                endpoint="/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
-                tr_id="FHKST03010200",
-                params={
-                    "FID_ETC_CLS_CODE": "",
-                    "FID_COND_MRKT_DIV_CODE": "J", 
-                    "FID_INPUT_ISCD": code,
-                    "FID_INPUT_HOUR_1": hour,
-                    "FID_PW_DATA_INCU_YN": "Y"
-                }
+                endpoint="/uapi/domestic-stock/v1/quotations/chk-holiday",
+                tr_id="CTCA0903R",
+                params={}
             )
         except Exception as e:
-            logging.error(f"주식당일분봉조회 실패: {e}")
+            logging.error(f"국내 휴장일 정보 조회 실패: {e}")
+            return None
+
+    def is_holiday(self, date: str) -> Optional[bool]:
+        """주어진 날짜가 한국 주식 시장 휴장일인지 확인합니다.
+        
+        Args:
+            date: YYYYMMDD 형식의 날짜 문자열
+            
+        Returns:
+            bool: 휴장일이면 True, 거래일이면 False, 확인 불가면 None
+        """
+        import logging
+        from datetime import datetime, timedelta
+        
+        try:
+            # 기준일 계산: 입력 날짜가 포함된 월의 첫 번째 날
+            target_date = datetime.strptime(date, '%Y%m%d')
+            base_date = target_date.replace(day=1)
+            base_date_str = base_date.strftime('%Y%m%d')
+            
+            logging.debug(f"기준일 계산: {date} -> {base_date_str}")
+            
+            max_retries = 10
+            for attempt in range(max_retries):
+                try:
+                    logging.debug(f"API 호출 시도 {attempt + 1}/{max_retries}")
+                    params = {
+                        'BASS_DT': base_date_str,
+                        'CTX_AREA_NK': '',
+                        'CTX_AREA_FK': ''
+                    }
+                    logging.debug(f"요청 파라미터: {params}")
+                    
+                    response = self.client.make_request(
+                        endpoint="/uapi/domestic-stock/v1/quotations/chk-holiday",
+                        tr_id="CTCA0903R",
+                        params=params
+                    )
+                    
+                    logging.debug(f"API 응답: {response}")
+                    
+                    if not response:
+                        logging.warning(f"API 응답이 없습니다 (시도 {attempt + 1})")
+                        continue
+                        
+                    if response.get('rt_cd') not in ['0', '1']:
+                        logging.warning(f"API 응답 오류: rt_cd={response.get('rt_cd')}, msg1={response.get('msg1')}")
+                        continue
+                    
+                    output = response.get('output', [])
+                    if not output:
+                        logging.warning("휴장일 데이터가 비어있습니다")
+                        return None
+                    
+                    # 해당 날짜의 거래일 여부 확인
+                    for day_info in output:
+                        if day_info.get('bass_dt') == date:
+                            # opnd_yn: 개장여부 (Y: 개장, N: 휴장)
+                            is_open = day_info.get('opnd_yn', 'N') == 'Y'
+                            return not is_open  # 휴장이면 True 반환
+                    
+                    # 해당 날짜 정보가 없으면 False 반환 (기본적으로 거래일로 간주)
+                    logging.warning(f"날짜 {date}에 대한 정보를 찾을 수 없습니다")
+                    return False
+                    
+                except Exception as e:
+                    logging.error(f"휴장일 확인 중 오류 (시도 {attempt + 1}): {e}")
+                    if attempt == max_retries - 1:
+                        return None
+                    continue
+            
+            logging.error(f"최대 재시도 횟수 {max_retries}회 초과")
+            return None
+            
+        except Exception as e:
+            logging.error(f"Error checking holiday status for {date}: {e}")
             return None
 
 def load_account_info(yaml_path: str = "credit/kis_devlp.yaml") -> dict:

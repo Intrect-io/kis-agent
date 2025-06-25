@@ -26,14 +26,14 @@ def get_condition_stocks_dict():
     # KIS_Agent 인스턴스 생성
     agent = KIS_Agent(account_info=account_info, verbose=False)
     
-    # 조건검색식 종목 목록 조회 (seq=0)
-    stocks = agent.get_condition_stocks(seq=0)
+    # Agent를 통한 조건검색 결과 조회
+    stocks = agent.get_condition_stocks("unohee", seq=0, tr_cont="N")
     
-    if not stocks or stocks.get('rt_cd') != '0':
+    if not stocks:
         print("조건검색식 종목 조회 실패")
         return {}
         
-    stock_list = stocks.get('output2', [])
+    stock_list = stocks
     if not stock_list:
         print("조건검색식 종목이 없습니다.")
         return {}

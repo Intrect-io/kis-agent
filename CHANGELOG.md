@@ -2,6 +2,45 @@
 
 모든 주요 변경사항이 이 파일에 기록됩니다.
 
+## [0.1.5] - 2024-06-25
+
+### 수정됨
+- 조건검색 API 통일 및 개선
+  - 모든 조건검색 호출이 `condition.py`의 정확한 방식(`tr_id="HHKST03900400"`) 사용하도록 통일
+  - `pykis/stock/api.py`의 `get_condition_stocks` 메서드를 올바른 `tr_id`로 수정
+  - `pykis/core/agent.py`의 `get_condition_stocks_dict` 함수에서 직접 `ConditionAPI` 사용
+  - `examples/list_interest_groups.py`에서 Agent 통합 방식으로 변경
+  - 모든 호출 지점에서 `user_id="unohee"` 매개변수 통일 사용
+  - `rt_cd='1'` ("조회가 계속 됩니다") 응답을 정상 처리하도록 개선
+
+- 휴장일 관련 기능 추가 및 개선
+  - `StockAPI` 클래스에 `get_holiday_info()` 및 `is_holiday()` 메서드 추가
+  - Agent 클래스에 휴장일 기능 통합: 직접 API 접근(`get_holiday_info`) + 편의 메서드(`is_holiday`)
+  - 복잡한 캐싱 로직 제거하고 API 직접 호출 방식으로 간소화
+  - 기준일 계산 로직 개선: 입력 날짜가 포함된 월의 첫 번째 날 사용
+  - 최대 재시도 10회 및 상세 디버그 로깅 추가
+
+### 개선됨
+- Facade 패턴 일관성 강화
+  - 조건검색만 `ConditionAPI`를 직접 사용하던 불일치 해결
+  - Agent 클래스의 `get_condition_stocks` 메서드에 매개변수(`user_id`, `seq`, `tr_cont`) 추가
+  - 모든 기능을 Agent를 통해 접근하도록 통일하면서 내부적으로는 적절한 API 클래스 사용
+  - 사용자는 Agent만 사용하고 내부 구현은 캡슐화
+
+- 테스트 노트북 개선
+  - `examples/pykis.ipynb`에 모듈 완전 재로드 기능 추가
+  - 휴장일 기능 테스트를 직접 API 호출 방식으로 대체 (모듈 캐시 문제 회피)
+  - 조건검색 테스트에서 올바른 매개변수 사용 확인
+  - 거래원 분류 테스트 정상 작동 확인
+  - 아키텍처 통일 개선사항을 요약에 명시적으로 표시
+
+### 추가됨
+- 휴장일 API 엔드포인트 지원
+  - `/uapi/domestic-stock/v1/quotations/chk-holiday` 엔드포인트 구현
+  - `tr_id="CTCA0903R"`을 사용한 휴장일 정보 조회
+  - 날짜별 개장여부(`opnd_yn`) 확인 기능
+  - 에러 처리 및 재시도 로직 포함
+
 ## [0.1.4] - 2024-06-22
 
 ### 수정됨
