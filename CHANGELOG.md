@@ -2,9 +2,23 @@
 
 모든 주요 변경사항이 이 파일에 기록됩니다.
 
-## [0.1.5] - 2024-06-25
+## [0.1.5] - 2025-06-26
 
 ### 수정됨
+- **datetime import 충돌 해결**
+  - `pykis/core/agent.py`: `import datetime`와 `from datetime import timedelta` 중복 import 문제 해결
+  - `pykis/stock/api.py`: `import datetime`를 `from datetime import datetime`로 변경, `datetime.datetime.now()` → `datetime.now()` 수정
+  - `pykis/stock/data.py`: 누락된 datetime import문 추가
+  - 모든 파일에서 명시적인 import 방식(`from datetime import datetime, timedelta`) 사용으로 통일
+
+- **분봉 API 매개변수 수정 및 재귀적 분봉 수집 기능 복구**
+  - 주식당일분봉조회 API의 올바른 매개변수 적용: `FID_ETC_CLS_CODE=""` 추가, `FID_COND_SCR_DIV_CODE` 제거
+  - `get_minute_price` 메서드의 API_ENDPOINTS 키를 `MINUTE_CHART` → `MINUTE_PRICE`로 수정
+  - `fetch_minute_data` 메서드 데이터 처리 로직 수정: `output` → `output2` 필드 사용
+  - 시간 형식을 "0900" → "090000" (HHMMSS)로 수정
+  - API 응답 성공 여부 확인 로직 추가 (`rt_cd == '0'`)
+  - 재귀적 분봉 수집 기능 완전 복구: 8개 시간대별로 240건 분봉 데이터 수집 성공
+
 - 조건검색 API 통일 및 개선
   - 모든 조건검색 호출이 `condition.py`의 정확한 방식(`tr_id="HHKST03900400"`) 사용하도록 통일
   - `pykis/stock/api.py`의 `get_condition_stocks` 메서드를 올바른 `tr_id`로 수정
@@ -21,6 +35,12 @@
   - 최대 재시도 10회 및 상세 디버그 로깅 추가
 
 ### 개선됨
+- **분봉 데이터 수집 기능 완전 복구**
+  - `fetch_minute_data` 메서드가 8개 시간대(09:00~15:30)에서 재귀적으로 분봉 데이터 수집
+  - SQLite DB 캐싱 기능 포함으로 효율적인 데이터 관리
+  - 총 240건의 분봉 데이터 수집 성공 확인
+  - 컬럼: `stck_bsop_date`, `stck_cntg_hour`, `stck_prpr`, `stck_oprc`, `stck_hgpr`, `stck_lwpr`, `cntg_vol`, `acml_tr_pbmn`, `code`, `date`
+
 - Facade 패턴 일관성 강화
   - 조건검색만 `ConditionAPI`를 직접 사용하던 불일치 해결
   - Agent 클래스의 `get_condition_stocks` 메서드에 매개변수(`user_id`, `seq`, `tr_cont`) 추가

@@ -336,6 +336,7 @@ class StockAPI:
             return None
 
     def get_daily_price(self, code: str, start_date: str = None, end_date: str = None) -> Optional[pd.DataFrame]:
+        from datetime import datetime, timedelta
         if start_date is None:
             start_date = (datetime.now() - timedelta(days=30)).strftime('%Y%m%d')
         if end_date is None:

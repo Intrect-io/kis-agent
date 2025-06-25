@@ -457,13 +457,13 @@ class StockAPI:
         date: 조회일자(YYYYMMDD), None이면 오늘
         반환: (순매수합계, 외국계 DataFrame) 또는 None
         """
-        import datetime
+        from datetime import datetime
         if foreign_brokers is None:
             foreign_brokers = [
                 "골드만", "메릴린치", "모건스탠리", "크레디트스위스", "도이치", "JP모간", "UBS", "노무라", "맥쿼리", "HSBC"
             ]
         if date is None:
-            date = datetime.datetime.now().strftime("%Y%m%d")
+            date = datetime.now().strftime("%Y%m%d")
             
         # 투자자별 매매 동향 조회
         params = {
@@ -605,18 +605,18 @@ class StockAPI:
 
     def get_minute_price(self, code: str, hour: str = "153000") -> Optional[Dict]:
         """
-        분봉 데이터 조회
+        분봉 데이터 조회 (주식당일분봉조회)
         
         Args:
             code: 종목코드
             hour: 시간 (HHMMSS 형식, 기본값: 153000)
         """
         return self.client.make_request(
-            endpoint=API_ENDPOINTS['MINUTE_CHART'],
+            endpoint=API_ENDPOINTS['MINUTE_PRICE'],
             tr_id="FHKST03010200",
             params={
-                "FID_COND_MRKT_DIV_CODE": "J", 
-                "FID_COND_SCR_DIV_CODE": "20171",
+                "FID_ETC_CLS_CODE": "",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_INPUT_ISCD": code,
                 "FID_INPUT_HOUR_1": hour,
                 "FID_PW_DATA_INCU_YN": "Y"

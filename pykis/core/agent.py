@@ -6,11 +6,10 @@ from ..stock.market import StockMarketAPI
 from ..program.trade import ProgramTradeAPI
 from typing import Optional, Dict
 import logging
-import datetime
+from datetime import datetime, timedelta
 import sqlite3
 import pandas as pd
 import os
-from datetime import timedelta
 import json
 import time
 from dotenv import load_dotenv
@@ -283,26 +282,26 @@ class Agent:
                     endpoint="/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice",
                     tr_id="FHKST03010200",
                     params={
+                        "FID_ETC_CLS_CODE": "",
                         "FID_COND_MRKT_DIV_CODE": "J",
-                        "FID_COND_SCR_DIV_CODE": "20171",
                         "FID_INPUT_ISCD": code,
                         "FID_INPUT_HOUR_1": time_str,
                         "FID_PW_DATA_INCU_YN": "Y"
                     }
-                        )
+                )
                 return response
             except Exception as e:
                 logging.error(f"API 호출 실패 ({time_str}): {e}")
                 return None
         
-        # 시간대별 데이터 수집
-        time_slots = ["0900", "1000", "1100", "1200", "1300", "1400", "1500", "1600"]
+        # 시간대별 데이터 수집 (HHMMSS 형식)
+        time_slots = ["090000", "100000", "110000", "120000", "130000", "140000", "150000", "153000"]
         all_data = []
         
         for time_slot in time_slots:
             data = fetch_data_for_time(time_slot)
-            if data and 'output' in data and data['output']:
-                all_data.extend(data['output'])
+            if data and data.get('rt_cd') == '0' and 'output2' in data and data['output2']:
+                all_data.extend(data['output2'])
             time.sleep(0.1)  # API 호출 간격 조절
         
         if not all_data:
