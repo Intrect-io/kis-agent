@@ -16,6 +16,13 @@
   - 응답 데이터: 시간대별 체결가, 등락률, 누적거래량, 체결량 등 30개 항목 제공
   - Agent 클래스를 통해 `agent.get_hourly_conclusion(code, hour)` 형태로 접근 가능
 
+- **`get_stock_ccnl` 메서드 추가**
+  - `StockAPI`에 `get_stock_ccnl` 메서드를 추가하여 "주식현재가 체결(최근30건)" 조회 기능을 구현했습니다.
+  - API 엔드포인트: `/uapi/domestic-stock/v1/quotations/inquire-ccnl` (TR: FHKST01010300)
+  - **당일 체결강도(`tday_rltv`) 직접 제공** - 별도 계산 없이 바로 확인 가능
+  - 응답 데이터: 최근 30건의 체결시간, 체결가격, 등락률, 체결량, 체결강도 등
+  - Agent 클래스를 통해 `agent.get_stock_ccnl(code)` 형태로 접근 가능
+
 ## [0.1.11] - 2025-06-29
 
 ### 수정됨

@@ -412,6 +412,40 @@ class StockAPI:
             retries=retries
         )
 
+    def get_stock_ccnl(self, code: str, retries: int = 10) -> Optional[dict]:
+        """주식현재가 체결(최근30건) 조회
+        
+        최근 30건의 체결 내역과 함께 당일 체결강도(tday_rltv)를 포함한 상세한 체결 정보를 제공합니다.
+        
+        Args:
+            code: 종목코드 (6자리)
+            retries: 재시도 횟수
+            
+        Returns:
+            Optional[dict]: 최근 30건 체결 내역
+                - output: 체결 내역 리스트 (30건)
+                  - stck_cntg_hour: 체결시간
+                  - stck_prpr: 체결가격  
+                  - prdy_vrss: 전일대비
+                  - prdy_ctrt: 등락률
+                  - tday_rltv: 당일 체결강도 ★
+                  - cntg_vol: 체결량
+                  - acml_vol: 누적거래량
+                  - askp: 매도호가
+                  - bidp: 매수호가
+                  - cnqn: 체결건수
+        """
+        params = {
+            "fid_cond_mrkt_div_code": "J",
+            "fid_input_iscd": code,
+        }
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_CCNL'],
+            tr_id="FHKST01010300",
+            params=params,
+            retries=retries
+        )
+
     def get_minute_price(self, code: str, hour: str = "153000") -> Optional[Dict]:
         """
         분봉 데이터 조회 (주식당일분봉조회)

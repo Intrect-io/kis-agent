@@ -312,6 +312,32 @@ hourly = agent.get_hourly_conclusion("005930")
 hourly = agent.get_hourly_conclusion("005930", "143000")
 ```
 
+### `get_stock_ccnl(code)`
+**설명**: 주식현재가 체결(최근30건) 조회 - **당일 체결강도 포함**  
+**매개변수**: `code` (str) - 종목코드  
+**반환**: `Dict` - 최근 30건 체결 내역
+- `output`: 체결 내역 리스트 (30건)
+  - `stck_cntg_hour`: 체결시간 (HHMMSS)
+  - `stck_prpr`: 체결가격  
+  - `prdy_vrss`: 전일대비
+  - `prdy_ctrt`: 등락률
+  - **`tday_rltv`: 당일 체결강도** ⭐
+  - `cntg_vol`: 체결량
+  
+**예시**:
+```python
+# 삼성전자 최근 체결 내역 및 체결강도 조회
+ccnl = agent.get_stock_ccnl("005930")
+if ccnl and 'output' in ccnl:
+    # 당일 체결강도 확인
+    strength = ccnl['output'][0]['tday_rltv']
+    print(f"당일 체결강도: {strength}")
+    
+    # 최근 5건 체결 내역
+    for i, item in enumerate(ccnl['output'][:5]):
+        print(f"{item['stck_cntg_hour']} | {item['stck_prpr']}원 | 체결강도: {item['tday_rltv']}")
+```
+
 ---
 
 ## 프로그램 매매 메서드
