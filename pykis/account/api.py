@@ -173,6 +173,26 @@ class AccountAPI:
             logging.error(f"주문 가능 금액 조회 실패: {e}")
             return None
 
+    def get_possible_order_amount(self) -> Optional[Dict]:
+        """주문 가능 금액 조회"""
+        try:
+            return self.client.make_request(
+                endpoint=API_ENDPOINTS['INQUIRE_PSBL_ORDER'],
+                tr_id="TTTC8908R",
+                params={
+                    "CANO": self.account['CANO'],
+                    "ACNT_PRDT_CD": self.account['ACNT_PRDT_CD'],
+                    "PDNO": "",
+                    "ORD_UNPR": "0",
+                    "ORD_DVSN": "00",
+                    "CMA_EVLU_AMT_ICLD_YN": "Y",
+                    "OVRS_ICLD_YN": "N"
+                }
+            )
+        except Exception as e:
+            logging.error(f"주문 가능 금액 조회 실패: {e}")
+            return None
+
 
 
 # Expose facade class for flat import

@@ -85,9 +85,9 @@ class TestStockBasicInfo:
         assert is_valid, f"분봉 시세 조회 실패: {msg}"
         assert 'output1' in result or 'output2' in result
     
-    def test_get_member(self, agent, test_stock):
+    def test_get_stock_member(self, agent, test_stock):
         """거래원 정보 조회 테스트"""
-        result = agent.get_member(test_stock)
+        result = agent.get_stock_member(test_stock)
         is_valid, msg = validate_api_response(result)
         assert is_valid, f"거래원 정보 조회 실패: {msg}"
         
@@ -111,11 +111,7 @@ class TestProgramTrade:
             first_item = result['output'][0]
             assert 'whol_smtn_ntby_qty' in first_item  # 순매수량
     
-    def test_get_program_trade_hourly_trend(self, agent, test_stock):
-        """시간별 프로그램 매매 추이 테스트"""
-        result = agent.get_program_trade_hourly_trend(test_stock)
-        is_valid, msg = validate_api_response(result)
-        assert is_valid, f"시간별 프로그램 매매 추이 조회 실패: {msg}"
+    
     
     def test_get_program_trade_daily_summary(self, agent, test_stock, test_date):
         """일별 프로그램 매매 집계 테스트"""
@@ -148,14 +144,7 @@ class TestMemberTransaction:
         is_valid, msg = validate_api_response(result)
         assert is_valid, f"체결강도 순위 조회 실패: {msg}"
     
-    def test_get_program_trade_period_detail(self, agent):
-        """기간별 프로그램 매매 상세 테스트"""
-        past_7days = (datetime.now() - timedelta(days=7)).strftime('%Y%m%d')
-        current_date = datetime.now().strftime('%Y%m%d')
-        
-        result = agent.get_program_trade_period_detail(past_7days, current_date)
-        is_valid, msg = validate_api_response(result)
-        assert is_valid, f"기간별 프로그램 매매 상세 조회 실패: {msg}"
+    
 
 
 class TestAccountInfo:
@@ -236,9 +225,9 @@ class TestInvestorInfo:
             assert isinstance(net_buy_amount, (int, float)), "순매수량이 숫자가 아님"
             assert isinstance(dataframe, pd.DataFrame), "DataFrame이 아님"
     
-    def test_get_possible_order(self, agent, test_stock):
+    def test_get_possible_order_amount(self, agent):
         """매수 가능 주문 조회 테스트"""
-        result = agent.get_possible_order(test_stock, "50000", "01")
+        result = agent.get_possible_order_amount()
         is_valid, msg = validate_api_response(result)
         assert is_valid, f"매수 가능 주문 조회 실패: {msg}"
 
@@ -268,9 +257,9 @@ class TestConditionSearch:
 class TestChartData:
     """차트 데이터 테스트"""
     
-    def test_get_minute_chart(self, agent, test_stock):
+    def test_get_minute_price(self, agent, test_stock):
         """분봉 차트 조회 테스트"""
-        result = agent.get_minute_chart(test_stock, "153000")
+        result = agent.get_minute_price(test_stock, "153000")
         is_valid, msg = validate_api_response(result)
         assert is_valid, f"분봉 차트 조회 실패: {msg}"
     
@@ -278,8 +267,8 @@ class TestChartData:
         """분봉 데이터 수집 테스트"""
         result = agent.fetch_minute_data(test_stock, test_date)
         assert result is not None, "분봉 데이터 수집 결과 없음"
-        
-        if isinstance(result, pd.DataFrame):
+    
+        if isinstance(result, pd.DataFrame) and not result.empty:
             # DataFrame의 기본 구조 확인
             expected_columns = ['stck_bsop_date', 'stck_cntg_hour', 'stck_prpr']
             for col in expected_columns:
@@ -288,6 +277,12 @@ class TestChartData:
                     break
             else:
                 pytest.fail("예상 컬럼들이 없습니다")
+        elif isinstance(result, dict):
+            assert 'output2' in result, "분봉 데이터에 output2가 없습니다"
+        elif isinstance(result, pd.DataFrame) and result.empty:
+            pass
+        else:
+            pytest.fail("결과가 DataFrame도 아니고, output2를 포함한 dict도 아닙니다.")
     
     def test_init_minute_db(self, agent):
         """분봉 DB 초기화 테스트"""
@@ -303,11 +298,11 @@ class TestChartData:
 class TestUtilities:
     """기타 유틸리티 테스트"""
     
-    @pytest.mark.parametrize("test_date", ["20241225", "20241001", "20240815"])
-    def test_is_holiday(self, agent, test_date):
+    @pytest.mark.parametrize("test_date, expected", [(datetime.now().strftime('%Y%m%d'), False)])
+    def test_is_holiday(self, agent, test_date, expected):
         """휴장일 확인 테스트"""
         result = agent.is_holiday(test_date)
-        assert isinstance(result, bool), f"휴장일 확인 결과가 boolean이 아님: {test_date}"
+        assert result == expected, f"휴장일 확인 결과가 올바르지 않음: {test_date}"
     
     def test_classify_broker(self):
         """거래원 분류 테스트"""

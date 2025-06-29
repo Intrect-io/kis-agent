@@ -72,7 +72,7 @@ def test_market_api():
         logger.info(f"휴장일 정보 조회 결과: {holiday_info}")
         
         # 기본 정보 조회
-        basic_info = agent.get_stock_basic(test_code)
+        basic_info = agent.get_stock_info(test_code)
         logger.info(f"기본 정보 조회 결과: {basic_info}")
         
         # 투자자별 매매 동향 조회
@@ -80,19 +80,19 @@ def test_market_api():
         logger.info(f"투자자별 매매 동향 조회 결과: {investor_info}")
         
         # 국내 증시자금 종합 조회
-        market_money = agent.get_market_money()
+        market_money = agent.get_market_rankings()
         logger.info(f"국내 증시자금 종합 조회 결과: {market_money}")
         
         # 거래량 순위 조회
-        volume_rank = agent.get_volume_rank()
+        volume_rank = agent.get_volume_power()
         logger.info(f"거래량 순위 조회 결과: {volume_rank}")
         
         # 등락률 순위 조회
-        price_rank = agent.get_price_rank()
+        price_rank = agent.get_market_fluctuation()
         logger.info(f"등락률 순위 조회 결과: {price_rank}")
         
         # 수익자산지표 순위 조회
-        profit_rank = agent.get_profit_rank()
+        profit_rank = agent.get_market_rankings()
         logger.info(f"수익자산지표 순위 조회 결과: {profit_rank}")
 
         logger.info("\n✅ 모든 API 테스트가 성공적으로 완료되었습니다.")

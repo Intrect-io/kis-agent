@@ -54,34 +54,33 @@ class ProgramTradeAPI:
         self.client = client
         self.account_info = account_info or {}
 
-    def get_program_trade_hourly_trend(self, code: str) -> Optional[Dict[str, Any]]:
+    def get_program_trade_by_stock(self, code: str, ref_date: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
-        종목별프로그램매매추이(체결) - 시간별 프로그램 매매 추이를 조회합니다.
+        종목별 프로그램매매추이(체결)를 조회합니다. ref_date가 없으면 당일 시간별, 있으면 해당일의 데이터를 조회합니다.
 
         Args:
             code (str): 종목 코드 (예: "005930")
+            ref_date (Optional[str]): 기준 일자 (YYYYMMDD 형식, 기본값: 현재 일자)
 
         Returns:
             Optional[Dict[str, Any]]: API 응답 데이터
-                - 성공 시: 시간별 프로그램 매매 추이 정보를 포함한 응답 데이터
-                - 실패 시: None
-
-        Note:
-            이 API는 특정 '일자'를 지정하지 않고 호출 시, 당일의 시간대별 프로그램 매매 현황을 반환합니다.
-            주요 응답 필드 (output 리스트의 각 항목):
-            - bsop_hour: 영업 시간 (HHMMSS)
-            - whol_ntby_vol_icdc: 전체 순매수 거래량 증감 (이전 시간 대비 델타)
-
-        Example:
-            >>> api.get_program_trade_hourly_trend("005930")
         """
+        params = {
+            "FID_COND_MRKT_DIV_CODE": "J",
+            "FID_INPUT_ISCD": code,
+        }
+        if ref_date:
+            params["FID_INPUT_DATE_1"] = ref_date
+        else:
+            # ref_date가 없으면 당일 시간별 추이를 위해 날짜 파라미터를 보내지 않거나,
+            # API 명세에 따라 오늘 날짜를 명시해야 할 수 있습니다.
+            # 현재 구현은 ref_date가 있을 때만 날짜를 추가합니다.
+            pass
+
         return self.client.make_request(
             endpoint=API_ENDPOINTS['PROGRAM_TRADE_BY_STOCK'],
-            tr_id="FHPPG04650101", # 종목별프로그램매매추이(체결)
-            params={
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_ISCD": code
-            }
+            tr_id="FHPPG04650101",  # 종목별프로그램매매추이(체결)
+            params=params
         )
 
     def get_program_trade_daily_summary(self, code: str, date_str: str) -> Optional[Dict[str, Any]]:
@@ -144,58 +143,9 @@ class ProgramTradeAPI:
             }
         )
 
-    def get_program_trade_period_detail(self, start_date: str, end_date: str) -> Optional[Dict[str, Any]]:
-        """
-        프로그램 매매 일별 상세 (기간별)를 조회합니다.
+    
 
-        Args:
-            start_date (str): 시작 일자 (YYYYMMDD 형식)
-            end_date (str): 종료 일자 (YYYYMMDD 형식)
-
-        Returns:
-            Optional[Dict[str, Any]]: API 응답 데이터
-                - 성공 시: 기간별 프로그램 매매 상세 정보를 포함한 응답 데이터
-                - 실패 시: None
-
-        Example:
-            >>> api.get_program_trade_period_detail("20240701", "20240726")
-        """
-        return self.client.make_request(
-            endpoint=API_ENDPOINTS['COMP_PROGRAM_TRADE_DAILY'],
-            tr_id="FHPPG04600000", # 프로그램매매종합추이(기간)
-            params={
-                "FID_MRKT_CLS_CODE": "", # 시장 분류 코드 (전체는 공백)
-                "FID_INPUT_DATE_1": start_date,
-                "FID_INPUT_DATE_2": end_date,
-                "FID_COND_MRKT_DIV_CODE": "J" # J: 주식
-            }
-        )
-
-    def get_program_trade_by_stock(self, code: str, ref_date: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """
-        종목별 프로그램매매추이(체결) 조회
-        
-        Args:
-            code (str): 종목 코드 (예: "005930")
-            ref_date (Optional[str]): 기준 일자 (YYYYMMDD 형식, 기본값: 현재 일자)
-            
-        Returns:
-            Optional[Dict[str, Any]]: 종목별 프로그램매매추이(체결) 정보
-        """
-        if ref_date is None:
-            from datetime import datetime
-            ref_date = datetime.now().strftime("%Y%m%d")
-            
-        # 실제 종목별프로그램매매추이(체결) API 직접 호출
-        return self.client.make_request(
-            endpoint=API_ENDPOINTS['PROGRAM_TRADE_BY_STOCK'],
-            tr_id="FHPPG04650101",  # 종목별프로그램매매추이(체결) TR ID
-            params={
-                "FID_COND_MRKT_DIV_CODE": "J",  # 시장구분코드(J: 주식)
-                "FID_INPUT_ISCD": code,         # 종목코드
-                "FID_INPUT_DATE_1": ref_date    # 기준일
-            }
-        )
+    
 
 # 주석 처리된 get_program_trade_summary는 삭제 또는 실제 API 명세에 맞게 재구현 필요
 # class ProgramTradeAPI:

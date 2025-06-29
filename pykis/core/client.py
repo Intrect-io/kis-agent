@@ -136,55 +136,12 @@ API_ENDPOINTS = {
     # === 채권 ===
     'BOND_INQUIRE_PRICE': '/uapi/domestic-bond/v1/quotations/inquire-price',  # 장내채권현재가(시세) (TR: FHKBJ773400C0)
     'BOND_INQUIRE_BALANCE': '/uapi/domestic-bond/v1/trading/inquire-balance',  # 장내채권 잔고조회 (TR: CTSC8407R)
-    
-    # === 기존 호환성을 위한 별칭 ===
-    'STOCK_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-price',  # 별칭: INQUIRE_PRICE
-    'STOCK_DAILY': '/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice',  # 별칭: INQUIRE_DAILY_ITEMCHARTPRICE
-    'STOCK_MINUTE': '/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice',  # 별칭: INQUIRE_TIME_ITEMCHARTPRICE
-    'STOCK_MEMBER': '/uapi/domestic-stock/v1/quotations/inquire-member',  # 별칭: INQUIRE_MEMBER
-    'STOCK_INVESTOR': '/uapi/domestic-stock/v1/quotations/inquire-investor',  # 별칭: INQUIRE_INVESTOR
-    'STOCK_INFO': '/uapi/domestic-stock/v1/quotations/search-stock-info',  # 별칭: SEARCH_STOCK_INFO
-    'STOCK_BASIC': '/uapi/domestic-stock/v1/quotations/search-stock-info',  # 별칭: SEARCH_STOCK_INFO
-    'ACCOUNT_BALANCE': '/uapi/domestic-stock/v1/trading/inquire-balance',  # 별칭: INQUIRE_BALANCE
-    'POSSIBLE_ORDER': '/uapi/domestic-stock/v1/trading/inquire-psbl-order',  # 별칭: INQUIRE_PSBL_ORDER
-    'MEMBER_TRANSACTION': '/uapi/domestic-stock/v1/quotations/inquire-member-daily',  # 별칭: INQUIRE_MEMBER_DAILY
-    'PBAR_TRATIO': '/uapi/domestic-stock/v1/quotations/pbar-tratio',  # 매물대/거래비중
-    'ORDERBOOK': '/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn',  # 별칭: INQUIRE_ASKING_PRICE_EXP_CCN
-    'OVERTIME': '/uapi/domestic-stock/v1/quotations/inquire-daily-overtimeprice',  # 별칭: INQUIRE_DAILY_OVERTIMEPRICE
-    'CCNL': '/uapi/domestic-stock/v1/quotations/inquire-ccnl',  # 별칭: INQUIRE_CCNL
-    'MINUTE_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice',  # 별칭: INQUIRE_TIME_ITEMCHARTPRICE
-    'TIME_CONCLUSION': '/uapi/domestic-stock/v1/quotations/inquire-time-itemconclusion',  # 별칭: INQUIRE_TIME_ITEMCONCLUSION
-    'OVERTIME_CONCLUSION': '/uapi/domestic-stock/v1/quotations/inquire-time-overtimeconclusion',  # 별칭: INQUIRE_TIME_OVERTIMECONCLUSION
-    'DAILY_CHART': '/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice',  # 별칭: INQUIRE_DAILY_ITEMCHARTPRICE
-    'INDEX_CHART': '/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice',  # 별칭: INQUIRE_DAILY_INDEXCHARTPRICE
-    'EXPECTED_CLOSING_PRICE': '/uapi/domestic-stock/v1/quotations/exp-closing-price',  # 별칭: EXP_CLOSING_PRICE
-    'MARKET_FLUCTUATION': '/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn',  # 시장 정보
-    'MARKET_RANKINGS': '/uapi/domestic-stock/v1/quotations/volume-rank',  # 별칭: VOLUME_RANK
-    'VOLUME_RANK': '/uapi/domestic-stock/v1/quotations/volume-rank',  # 거래량순위
-    'PRICE_RANK': '/uapi/domestic-stock/v1/ranking/fluctuation',  # 별칭: FLUCTUATION
-    'PROFIT_RANK': '/uapi/domestic-stock/v1/ranking/market-cap',  # 별칭: MARKET_CAP
-    'MARKET_MONEY': '/uapi/domestic-stock/v1/quotations/mktfunds',  # 별칭: MKTFUNDS
-    'DOMESTIC_INVESTOR': '/uapi/domestic-stock/v1/quotations/inquire-investor-time-by-market',  # 별칭: INQUIRE_INVESTOR_TIME_BY_MARKET
-    'FOREIGN_INVESTOR': '/uapi/domestic-stock/v1/quotations/foreign-institution-total',  # 별칭: FOREIGN_INSTITUTION_TOTAL
-    'FOREIGN_TRADE': '/uapi/domestic-stock/v1/quotations/frgnmem-trade-trend',  # 별칭: FRGNMEM_TRADE_TREND
-    'FOREIGN_NET_BUY': '/uapi/domestic-stock/v1/quotations/frgnmem-pchs-trend',  # 별칭: FRGNMEM_PCHS_TREND
-    'STOCK_INCOME': '/uapi/domestic-stock/v1/finance/income-statement',  # 별칭: INCOME_STATEMENT
-    'STOCK_FINANCIAL': '/uapi/domestic-stock/v1/finance/financial-ratio',  # 별칭: FINANCIAL_RATIO
-    'STOCK_STABILITY': '/uapi/domestic-stock/v1/finance/stability-ratio',  # 별칭: STABILITY_RATIO
-    'STOCK_GROWTH': '/uapi/domestic-stock/v1/finance/growth-ratio',  # 별칭: GROWTH_RATIO
-    'STOCK_ESTIMATE': '/uapi/domestic-stock/v1/quotations/estimate-perform',  # 별칭: ESTIMATE_PERFORM
-    'STOCK_BROKER_OPINION': '/uapi/domestic-stock/v1/quotations/invest-opbysec',  # 별칭: INVEST_OPBYSEC
-    'STOCK_OPINION': '/uapi/domestic-stock/v1/quotations/invest-opinion',  # 별칭: INVEST_OPINION
-    'HOLIDAY_CHECK': '/uapi/domestic-stock/v1/quotations/chk-holiday',  # 별칭: CHK_HOLIDAY
-    'HOLIDAY_INFO': '/uapi/domestic-stock/v1/quotations/chk-holiday',  # 별칭: CHK_HOLIDAY
-    'CONDITIONED_STOCK': '/uapi/domestic-stock/v1/quotations/psearch-result',  # 별칭: PSEARCH_RESULT
-    'STOCK_PRICE_2': '/uapi/domestic-stock/v1/quotations/inquire-price-2',  # 별칭: INQUIRE_PRICE_2
-    'OVERSEAS_PRICE': '/uapi/overseas-price/v1/quotations/price',  # 해외주식 현재체결가
-    'OVERSEAS_PRICE_DETAIL': '/uapi/overseas-price/v1/quotations/price-detail',  # 해외주식 현재가상세
-    'OVERSEAS_NEWS': '/uapi/overseas-price/v1/quotations/news-title',  # 별칭: OVERSEAS_NEWS_TITLE
-    'OVERSEAS_RIGHT': '/uapi/overseas-price/v1/quotations/period-rights',  # 별칭: PERIOD_RIGHTS
-    'BOND_PRICE': '/uapi/domestic-bond/v1/quotations/inquire-price',  # 별칭: BOND_INQUIRE_PRICE
+
+    # === 조건검색 ===
+    'CONDITIONED_STOCK': '/uapi/domestic-stock/v1/quotations/psearch-result',
 }
+    
+    
 
 _shared_rate_limit_lock = threading.Lock()
 _last_api_call_time = [0]

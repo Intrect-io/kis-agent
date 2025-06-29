@@ -85,18 +85,18 @@ class TestStockAPI(unittest.TestCase):
             # API 오류가 있어도 응답이 왔다면 테스트 통과
             self.assertIsNotNone(result)
 
-    def test_get_minute_chart(self):
+    def test_get_minute_price(self):
         """분봉 차트 조회 테스트"""
-        result = self.api.get_minute_chart(self.test_code, "153000")
-        print("get_minute_chart:", result)
+        result = self.api.get_minute_price(self.test_code, "153000")
+        print("get_minute_price:", result)
         self.assertIsNotNone(result)
         if isinstance(result, dict) and "rt_cd" in result:
             self.assertEqual(result["rt_cd"], "0")
 
-    def test_get_possible_order(self):
+    def test_get_possible_order_amount(self):
         """매수 가능 주문 조회 테스트"""
-        result = self.api.get_possible_order(self.test_code, "50000", "01")
-        print("get_possible_order:", result)
+        result = self.api.get_possible_order_amount()
+        print("get_possible_order_amount:", result)
         self.assertIsNotNone(result)
         if isinstance(result, dict) and "rt_cd" in result:
             # 계좌 정보에 따라 성공/실패가 달라질 수 있음

@@ -50,7 +50,7 @@ class StockAPI:
     def get_stock_price(self, code: str) -> Optional[Dict[str, Any]]:
         """주식 현재가 조회"""
         return self.client.make_request(
-            endpoint=API_ENDPOINTS['STOCK_PRICE'],
+            endpoint=API_ENDPOINTS['INQUIRE_PRICE'],
             tr_id="FHKST01010100",
             params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code}
         )
@@ -65,7 +65,7 @@ class StockAPI:
             org_adj_prc: 수정주가구분 (0: 수정주가 미사용, 1: 수정주가 사용)
         """
         return self.client.make_request(
-            endpoint=API_ENDPOINTS['STOCK_DAILY'],
+            endpoint=API_ENDPOINTS['INQUIRE_DAILY_ITEMCHARTPRICE'],
             tr_id="FHKST01010400",
             params={
                 "fid_cond_mrkt_div_code": "J",
@@ -75,28 +75,7 @@ class StockAPI:
             }
         )
 
-    def get_minute_chart(self, code: str, time: str) -> Optional[Dict[str, Any]]:
-        """
-        특정 시간대의 분봉 차트 조회 (단일 API 호출)
-        
-        Args:
-            code: 종목코드
-            time: 조회 시간 (HHMMSS 형식)
-            
-        Returns:
-            Dict: API 응답 데이터
-        """
-        return self.client.make_request(
-            endpoint=API_ENDPOINTS['STOCK_MINUTE'],
-            tr_id="FHKST03010200",
-            params={
-                "FID_ETC_CLS_CODE": "",
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_ISCD": code,
-                "FID_INPUT_HOUR_1": time,
-                "FID_PW_DATA_INCU_YN": "Y"
-            }
-        )
+    
 
     def get_stock_member(self, ticker: str, retries: int = 10) -> Optional[Dict]:
         """
@@ -109,7 +88,7 @@ class StockAPI:
         for attempt in range(retries):
             try:
                 response = self.client.make_request(
-                    endpoint=API_ENDPOINTS['STOCK_MEMBER'],
+                    endpoint=API_ENDPOINTS['INQUIRE_MEMBER'],
                     tr_id="FHKST01010600",
                     params={
                         "FID_COND_MRKT_DIV_CODE": "J",
@@ -150,7 +129,7 @@ class StockAPI:
             "FID_INPUT_ISCD": ticker,
         }
         df = self._make_request_dataframe(
-            endpoint=API_ENDPOINTS['STOCK_INVESTOR'],
+            endpoint=API_ENDPOINTS['INQUIRE_INVESTOR'],
             tr_id="FHKST01010900",
             params=params,
             retries=retries
@@ -217,7 +196,7 @@ class StockAPI:
     def get_orderbook(self, code: str) -> Optional[pd.DataFrame]:
         """호가 및 예상체결 데이터 조회"""
         response = self.client.make_request(
-            endpoint="/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn",
+            endpoint=API_ENDPOINTS['INQUIRE_ASKING_PRICE_EXP_CCN'],
             tr_id="FHKST01010200",
             params={
                 "fid_cond_mrkt_div_code": "J",
@@ -250,109 +229,6 @@ class StockAPI:
             })
         return None
 
-    def get_account_balance(self) -> Optional[Dict[str, Any]]:
-        """보유 종목, 수량, 평균단가, 평가손익 등"""
-        params = {
-            "CANO": self.account['CANO'],
-            "ACNT_PRDT_CD": self.account['ACNT_PRDT_CD'],
-            "AFHR_FLPR_YN": "N",
-            "OFL_YN": "",
-            "INQR_DVSN": "01",
-            "UNPR_DVSN": "01",
-            "FUND_STTL_ICLD_YN": "N",
-            "FNCG_AMT_AUTO_RDPT_YN": "N",
-            "PRCS_DVSN": "00",
-            "CTX_AREA_FK100": "",
-            "CTX_AREA_NK100": ""
-        }
-        res = self.client.make_request(
-            endpoint=API_ENDPOINTS['ACCOUNT_BALANCE'],
-            tr_id="TTTC8434R",
-            params=params,
-            retries=5
-        )
-        if res and res.get('rt_cd') == '0':
-            return res
-        return None
-
-    def get_account_balance_df(self) -> Optional[pd.DataFrame]:
-        """
-        잔고 정보를 DataFrame으로 반환 (테스트 목적)
-        """
-        params = {
-            "CANO": self.account['CANO'].zfill(8),  # 8자리로 맞춤
-            "ACNT_PRDT_CD": self.account['ACNT_PRDT_CD'].zfill(2),  # 2자리로 맞춤
-            "AFHR_FLPR_YN": "N",
-            "OFL_YN": "",  # 빈 문자열
-            "INQR_DVSN": "01",
-            "UNPR_DVSN": "01",
-            "FUND_STTL_ICLD_YN": "N",
-            "FNCG_AMT_AUTO_RDPT_YN": "N",
-            "PRCS_DVSN": "00",
-            "CTX_AREA_FK100": "",  # 빈 문자열
-            "CTX_AREA_NK100": ""   # 빈 문자열
-        }
-        # print("[DEBUG][잔고조회 요청 파라미터]", params)  # 요청 파라미터 출력
-        res = self.client.make_request(
-            endpoint=API_ENDPOINTS['ACCOUNT_BALANCE'],
-            tr_id="TTTC8434R",
-            params=params,
-            retries=3
-        )
-        # print("[DEBUG][잔고조회 raw response]", res)
-        if res and res.get("rt_cd") == "0":
-            return pd.DataFrame(res.get("output1", []))
-        return None
-
-    def get_possible_order(self, code: str, price: str, order_type: str = "01") -> Optional[Dict[str, Any]]:
-        return self.client.make_request(
-            endpoint=API_ENDPOINTS['POSSIBLE_ORDER'],
-            tr_id="TTTC8908R",
-            params={
-                "CANO": self.account['CANO'],
-                "ACNT_PRDT_CD": self.account['ACNT_PRDT_CD'],
-                "PDNO": code,
-                "ORD_UNPR": price,
-                "ORD_DVSN": order_type,
-                "OVRS_ICLD_YN": "N",
-                "CMA_EVLU_AMT_ICLD_YN": "N"
-            }
-        )
-
-    def order_stock_cash(self, code: str, price: str, quantity: str, order_type: str = "01") -> Optional[Dict[str, Any]]:
-        return self.client.make_request(
-            endpoint=API_ENDPOINTS['ORDER_CASH'],
-            tr_id="TTTC0802U",
-            params={
-                "CANO": self.account['CANO'],
-                "ACNT_PRDT_CD": self.account['ACNT_PRDT_CD'],
-                "PDNO": code,
-                "ORD_DVSN": order_type,
-                "ORD_QTY": quantity,
-                "ORD_UNPR": price
-            },
-            method="POST"
-        )
-
-    def get_overtime(self, code: str) -> Optional[Dict[str, Any]]:
-        return self.client.make_request(
-            endpoint=API_ENDPOINTS['OVERTIME'],
-            tr_id="FHKST663400C0",
-            params={
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_ISCD": code
-            }
-        )
-
-    # Added for StockMonitor
-    def inquire_ccnl(self, code: str) -> Optional[Dict[str, Any]]:
-        """주식 체결 조회"""
-        return self.client.make_request(
-            endpoint=API_ENDPOINTS['CCNL'],
-            tr_id="FHKST01010300",
-            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code}
-        )
-
     def get_volume_power(self, volume: int = 0) -> Optional[Dict[str, Any]]:
         """
         체결강도 순위 조회
@@ -378,7 +254,7 @@ class StockAPI:
             }
             
             return self.client.make_request(
-                endpoint="/uapi/domestic-stock/v1/ranking/volume-power",
+                endpoint=API_ENDPOINTS['VOLUME_POWER'],
                 tr_id="FHPST01680000",
                 params=params
             )
@@ -405,7 +281,7 @@ class StockAPI:
             "fid_rsfl_rate2": ""
         }
         response = self.client.make_request(
-            endpoint="/uapi/domestic-stock/v1/ranking/fluctuation",
+            endpoint=API_ENDPOINTS['FLUCTUATION'],
             tr_id="FHPST01700000",
             params=params
         )
@@ -427,7 +303,7 @@ class StockAPI:
             "FID_INPUT_DATE_1": ""
         }
         response = self.client.make_request(
-            endpoint=API_ENDPOINTS['MARKET_RANKINGS'],
+            endpoint=API_ENDPOINTS['VOLUME_RANK'],
             tr_id="FHPST01710000",
             params=params
         )
@@ -436,7 +312,7 @@ class StockAPI:
     def get_stock_info(self, ticker: str) -> Optional[pd.DataFrame]:
         """주식 기본 정보 조회"""
         response = self.client.make_request(
-            endpoint=API_ENDPOINTS['STOCK_INFO'],
+            endpoint=API_ENDPOINTS['SEARCH_STOCK_INFO'],
             tr_id="CTPF1002R",
             params={"PRDT_TYPE_CD": "300", "PDNO": ticker}
         )
@@ -459,7 +335,7 @@ class StockAPI:
             "fid_sctn_cls_code": ""
         }
         return self.client.make_request(
-            endpoint=API_ENDPOINTS['MEMBER_TRANSACTION'],
+            endpoint=API_ENDPOINTS['INQUIRE_MEMBER_DAILY'],
             tr_id="FHPST04540000",
             params=params
         )
@@ -472,53 +348,30 @@ class StockAPI:
         date: 조회일자(YYYYMMDD), None이면 오늘
         반환: (순매수합계, 외국계 DataFrame) 또는 None
         """
-        from datetime import datetime
-        if foreign_brokers is None:
-            foreign_brokers = [
-                "골드만", "메릴린치", "모건스탠리", "크레디트스위스", "도이치", "JP모간", "UBS", "노무라", "맥쿼리", "HSBC"
-            ]
-        if date is None:
-            date = datetime.now().strftime("%Y%m%d")
-            
-        # 투자자별 매매 동향 조회
-        params = {
-            "fid_cond_mrkt_div_code": "J",
-            "fid_input_iscd": code,
-        }
+        df = self.get_stock_investor(ticker=code)
         
-        try:
-            df = self._make_request_dataframe(
-                endpoint=API_ENDPOINTS['STOCK_INVESTOR'],  # INQUIRE_INVESTOR_DETAIL 대신 STOCK_INVESTOR 사용
-                tr_id="FHKST01010900",
-                params=params
-            )
+        if df is None or df.empty:
+            logging.warning(f"[{code}] 투자자별 매매 동향 데이터가 없습니다.")
+            return None
             
-            if df is None or df.empty:
-                logging.warning(f"[{code}] 투자자별 매매 동향 데이터가 없습니다.")
-                return None
-                
-            # 외국인 순매수량 추출
-            if 'frgn_ntby_qty' not in df.columns:
-                logging.error(f"[{code}] 외국인 순매수량 컬럼이 없습니다. 컬럼: {df.columns.tolist()}")
-                return None
-                
-            try:
-                # 빈 문자열 처리: 당일 데이터 우선, 빈 값이면 0으로 처리
-                foreign_qty_str = df['frgn_ntby_qty'].iloc[0]
-                foreign_qty = int(foreign_qty_str) if foreign_qty_str and foreign_qty_str.strip() else 0
-                
-                if not foreign_qty_str.strip():
-                    logging.info(f"[{code}] 당일 외국인 순매수량이 빈 값, 0으로 설정 (날짜: {df['stck_bsop_date'].iloc[0]})")
-                else:
-                    logging.info(f"[{code}] 외국인 순매수량: {foreign_qty} (날짜: {df['stck_bsop_date'].iloc[0]})")
-                
-                return foreign_qty, df
-            except (ValueError, IndexError) as e:
-                logging.error(f"[{code}] 외국인 순매수량 추출 중 오류 발생: {e}")
-                return None
-                
-        except Exception as e:
-            logging.error(f"[{code}] 투자자별 매매 동향 조회 중 오류 발생: {e}", exc_info=True)
+        # 외국인 순매수량 추출
+        if 'frgn_ntby_qty' not in df.columns:
+            logging.error(f"[{code}] 외국인 순매수량 컬럼이 없습니다. 컬럼: {df.columns.tolist()}")
+            return None
+            
+        try:
+            # 빈 문자열 처리: 당일 데이터 우선, 빈 값이면 0으로 처리
+            foreign_qty_str = df['frgn_ntby_qty'].iloc[0]
+            foreign_qty = int(foreign_qty_str) if foreign_qty_str and foreign_qty_str.strip() else 0
+            
+            if not foreign_qty_str.strip():
+                logging.info(f"[{code}] 당일 외국인 순매수량이 빈 값, 0으로 설정 (날짜: {df['stck_bsop_date'].iloc[0]})")
+            else:
+                logging.info(f"[{code}] 외국인 순매수량: {foreign_qty} (날짜: {df['stck_bsop_date'].iloc[0]})")
+            
+            return foreign_qty, df
+        except (ValueError, IndexError) as e:
+            logging.error(f"[{code}] 외국인 순매수량 추출 중 오류 발생: {e}")
             return None
 
     def get_pbar_tratio(self, code: str, retries: int = 10) -> Optional[dict]:
@@ -536,96 +389,6 @@ class StockAPI:
             retries=retries
         )
 
-    def get_condition_stocks(self, user_id: str, seq: int = 0, tr_cont: str = 'N') -> Optional[List[Dict]]:
-        """조건검색 결과를 조회합니다.
-        
-        Args:
-            user_id: 사용자 ID
-            seq: 조건검색 시퀀스 번호 (기본값: 0)
-            tr_cont: 연속조회 여부 (기본값: 'N')
-            
-        Returns:
-            List[Dict]: 조건검색 결과 리스트, 실패 시 None
-        """
-        try:
-            # API 요청 파라미터
-            params = {
-                "user_id": user_id,
-                "seq": seq,
-                "tr_cont": tr_cont
-            }
-            
-            # API 호출 - condition.py와 동일한 tr_id 사용
-            response = self.client.make_request(
-                endpoint=API_ENDPOINTS['CONDITIONED_STOCK'],
-                tr_id="HHKST03900400",
-                params=params
-            )
-            
-            if not response or response.get('rt_cd') != '0':
-                logging.error(f"조건검색 실패: {response}")
-                return None
-                
-            # output2 필드에서 결과 추출
-            stocks = response.get('output2', [])
-            if not stocks:
-                logging.warning("조건검색 결과가 없습니다.")
-                return None
-                
-            logging.info(f"조건검색 결과: {len(stocks)}개 종목")
-            return stocks
-            
-        except Exception as e:
-            logging.error(f"조건검색 중 오류 발생: {e}")
-            return None
-
-    def get_member(self, code: str) -> Optional[Dict]:
-        """거래원 조회"""
-        try:
-            return self.client.make_request(
-                endpoint=API_ENDPOINTS['STOCK_MEMBER'],
-                tr_id="FHKST01010600",
-                params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code}
-            )
-        except Exception as e:
-            logging.error(f"거래원 조회 실패: {e}")
-            return None
-
-    def get_price_volume_ratio(self, code: str) -> Optional[Dict]:
-        """국내주식 매물대 거래비중 조회
-        
-        Args:
-            code (str): 종목코드
-            
-        Returns:
-            Optional[Dict]: 매물대 거래비중 정보
-            {
-                'pbar_tratio': 현재가 기준 거래비중,
-                'prdy_tratio': 전일 기준 거래비중
-            }
-        """
-        try:
-            response = self.client.make_request(
-                endpoint=API_ENDPOINTS['STOCK_PRICE'],
-                tr_id="FHKST01010100",
-                params={
-                    "FID_COND_MRKT_DIV_CODE": "J",
-                    "FID_INPUT_ISCD": code
-                }
-            )
-            
-            if response and response.get('rt_cd') == '0':
-                output = response.get('output', {})
-                return {
-                    'pbar_tratio': output.get('pbar_tratio', '0'),
-                    'prdy_tratio': output.get('prdy_tratio', '0')
-                }
-            return None
-            
-        except Exception as e:
-            logging.error(f"매물대 거래비중 조회 실패: {e}")
-            return None
-
     def get_minute_price(self, code: str, hour: str = "153000") -> Optional[Dict]:
         """
         분봉 데이터 조회 (주식당일분봉조회)
@@ -635,7 +398,7 @@ class StockAPI:
             hour: 시간 (HHMMSS 형식, 기본값: 153000)
         """
         return self.client.make_request(
-            endpoint=API_ENDPOINTS['MINUTE_PRICE'],
+            endpoint=API_ENDPOINTS['INQUIRE_TIME_ITEMCHARTPRICE'],
             tr_id="FHKST03010200",
             params={
                 "FID_ETC_CLS_CODE": "",
@@ -646,22 +409,108 @@ class StockAPI:
             }
         )
 
-    def get_holiday_info(self) -> Optional[Dict]:
+    def get_possible_order(self, code: str, price: str, order_type: str = "01") -> Optional[Dict[str, Any]]:
+        """매수 가능 주문 조회"""
+        if not self.account:
+            logging.error("계좌 정보가 없습니다.")
+            return None
+        
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_PSBL_ORDER'],
+            tr_id="TTTC8908R",
+            params={
+                "CANO": self.account['CANO'],
+                "ACNT_PRDT_CD": self.account['ACNT_PRDT_CD'],
+                "PDNO": code,
+                "ORD_UNPR": price,
+                "ORD_DVSN": order_type,
+                "CMA_EVLU_AMT_ICLD_YN": "Y",
+                "OVRS_ICLD_YN": "Y"
+            }
+        )
+
+    def get_holiday_info(self, date: Optional[str] = None) -> Optional[Dict]:
         """국내 휴장일 정보를 조회합니다.
+        
+        Args:
+            date (str, optional): YYYYMMDD 형식의 기준 날짜. Defaults to None.
         
         Returns:
             Dict: 휴장일 정보, 실패 시 None
         """
         import logging
+        params = {'CTX_AREA_NK': '', 'CTX_AREA_FK': ''}
+        if date:
+            params['BASS_DT'] = date
+            
         try:
             return self.client.make_request(
-                endpoint="/uapi/domestic-stock/v1/quotations/chk-holiday",
+                endpoint=API_ENDPOINTS['CHK_HOLIDAY'],
                 tr_id="CTCA0903R",
-                params={}
+                params=params
             )
         except Exception as e:
             logging.error(f"국내 휴장일 정보 조회 실패: {e}")
             return None
+
+    def get_stock_financial(self, code: str) -> Optional[Dict[str, Any]]:
+        """재무비율 조회"""
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['FINANCIAL_RATIO'],
+            tr_id="FHKST66430300",
+            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code}
+        )
+
+    def get_stock_basic(self, code: str) -> Optional[Dict[str, Any]]:
+        """주식 기본 정보 조회"""
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['SEARCH_STOCK_INFO'],
+            tr_id="CTPF1002R",
+            params={"PRDT_TYPE_CD": "300", "PDNO": code}
+        )
+        
+    def get_member(self, ticker: str, retries: int = 10) -> Optional[Dict]:
+        """
+        주식 회원사 정보 조회 (Postman 검증된 방식)
+        
+        Args:
+            ticker: 종목코드 (6자리)
+            retries: 재시도 횟수
+        """
+        for attempt in range(retries):
+            try:
+                response = self.client.make_request(
+                    endpoint=API_ENDPOINTS['INQUIRE_MEMBER'],
+                    tr_id="FHKST01010600",
+                    params={
+                        "FID_COND_MRKT_DIV_CODE": "J",
+                        "FID_INPUT_ISCD": ticker
+                    }
+                )
+                
+                if response and response.get('rt_cd') == '0':
+                    return response
+                elif response and response.get('rt_cd') != '0':
+                    logging.warning(f"주식 회원사 조회 실패 (시도 {attempt+1}/{retries}): {response.get('msg1', '알 수 없는 오류')}")
+                    if attempt < retries - 1:
+                        continue
+                    else:
+                        return response
+                else:
+                    logging.error(f"주식 회원사 조회 응답 없음 (시도 {attempt+1}/{retries})")
+                    if attempt < retries - 1:
+                        continue
+                    else:
+                        return None
+                        
+            except Exception as e:
+                logging.error(f"주식 회원사 조회 예외 발생 (시도 {attempt+1}/{retries}): {e}")
+                if attempt < retries - 1:
+                    continue
+                else:
+                    return None
+        
+        return None
 
     def is_holiday(self, date: str) -> Optional[bool]:
         """주어진 날짜가 한국 주식 시장 휴장일인지 확인합니다.
@@ -673,67 +522,31 @@ class StockAPI:
             bool: 휴장일이면 True, 거래일이면 False, 확인 불가면 None
         """
         import logging
-        from datetime import datetime, timedelta
+        from datetime import datetime
         
         try:
             # 기준일 계산: 입력 날짜가 포함된 월의 첫 번째 날
             target_date = datetime.strptime(date, '%Y%m%d')
-            base_date = target_date.replace(day=1)
-            base_date_str = base_date.strftime('%Y%m%d')
+            base_date_str = target_date.replace(day=1).strftime('%Y%m%d')
             
-            logging.debug(f"기준일 계산: {date} -> {base_date_str}")
+            holiday_info = self.get_holiday_info(base_date_str)
             
-            max_retries = 10
-            for attempt in range(max_retries):
-                try:
-                    logging.debug(f"API 호출 시도 {attempt + 1}/{max_retries}")
-                    params = {
-                        'BASS_DT': base_date_str,
-                        'CTX_AREA_NK': '',
-                        'CTX_AREA_FK': ''
-                    }
-                    logging.debug(f"요청 파라미터: {params}")
-                    
-                    response = self.client.make_request(
-                        endpoint="/uapi/domestic-stock/v1/quotations/chk-holiday",
-                        tr_id="CTCA0903R",
-                        params=params
-                    )
-                    
-                    logging.debug(f"API 응답: {response}")
-                    
-                    if not response:
-                        logging.warning(f"API 응답이 없습니다 (시도 {attempt + 1})")
-                        continue
-                        
-                    if response.get('rt_cd') not in ['0', '1']:
-                        logging.warning(f"API 응답 오류: rt_cd={response.get('rt_cd')}, msg1={response.get('msg1')}")
-                        continue
-                    
-                    output = response.get('output', [])
-                    if not output:
-                        logging.warning("휴장일 데이터가 비어있습니다")
-                        return None
-                    
-                    # 해당 날짜의 거래일 여부 확인
-                    for day_info in output:
-                        if day_info.get('bass_dt') == date:
-                            # opnd_yn: 개장여부 (Y: 개장, N: 휴장)
-                            is_open = day_info.get('opnd_yn', 'N') == 'Y'
-                            return not is_open  # 휴장이면 True 반환
-                    
-                    # 해당 날짜 정보가 없으면 False 반환 (기본적으로 거래일로 간주)
-                    logging.warning(f"날짜 {date}에 대한 정보를 찾을 수 없습니다")
-                    return False
-                    
-                except Exception as e:
-                    logging.error(f"휴장일 확인 중 오류 (시도 {attempt + 1}): {e}")
-                    if attempt == max_retries - 1:
-                        return None
-                    continue
-            
-            logging.error(f"최대 재시도 횟수 {max_retries}회 초과")
-            return None
+            if not holiday_info or holiday_info.get('rt_cd') not in ['0', '1']:
+                logging.warning(f"휴장일 정보를 가져올 수 없습니다: {holiday_info.get('msg1') if holiday_info else 'No response'}")
+                return None
+
+            output = holiday_info.get('output', [])
+            if not output:
+                logging.warning("휴장일 데이터가 비어있습니다")
+                return None
+
+            for day_info in output:
+                if day_info.get('bass_dt') == date:
+                    is_open = day_info.get('opnd_yn', 'N') == 'Y'
+                    return not is_open
+
+            logging.warning(f"날짜 {date}에 대한 정보를 찾을 수 없습니다")
+            return False
             
         except Exception as e:
             logging.error(f"Error checking holiday status for {date}: {e}")
@@ -788,11 +601,6 @@ if __name__ == "__main__":
         test_and_log("get_stock_investor", lambda: stock.get_stock_investor(test_code))
         test_and_log("estimate_accumulated_volume_by_top_members", lambda: stock.estimate_accumulated_volume_by_top_members({"output": stock.get_stock_member(test_code).iloc[0].to_dict()}))
         test_and_log("get_orderbook", lambda: stock.get_orderbook(test_code))
-        test_and_log("get_account_balance", lambda: stock.get_account_balance())
-        test_and_log("get_possible_order", lambda: stock.get_possible_order(test_code, "60000"))
-        test_and_log("order_stock_cash", lambda: stock.order_stock_cash(test_code, "60000", "10"))
-        test_and_log("get_overtime", lambda: stock.get_overtime(test_code))
-        test_and_log("inquire_ccnl", lambda: stock.inquire_ccnl(test_code))
         test_and_log("get_volume_power", lambda: stock.get_volume_power(10))
         test_and_log("get_market_fluctuation", lambda: stock.get_market_fluctuation())
         test_and_log("get_market_rankings", lambda: stock.get_market_rankings())

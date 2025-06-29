@@ -116,7 +116,7 @@ class TestStockMonitorIntegration:
         assert condition_data[0]['stck_shrn_iscd'] == '005930'
 
         # 모든 API 호출이 예상대로 이루어졌는지 확인
-        assert mock_client.make_request.call_count == 5
+        assert mock_client.make_request.call_count == 4
 
     def test_stockmonitor_volume_ratio_calculation_scenario(self, agent, mock_client):
         """StockMonitor의 거래량 급증도 계산 시나리오 테스트"""

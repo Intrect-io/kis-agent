@@ -55,30 +55,30 @@ def test_agent_usage():
             logger.info(f"[RAW] 거래량 순위 raw: {volume_rank['raw_text']}")
 
         # 등락률 순위 조회
-        price_rank = agent.get_price_rank()
+        price_rank = agent.get_market_rankings()
         logger.info(f"등락률 순위: {price_rank}")
         if price_rank and 'raw_text' in price_rank:
             logger.info(f"[RAW] 등락률 순위 raw: {price_rank['raw_text']}")
 
         # 4. 재무정보 조회
         # 삼성전자 재무비율 조회
-        samsung_financial = agent.get_stock_financial("005930")
+        samsung_financial = agent.get_stock_info("005930")
         logger.info(f"삼성전자 재무비율: {samsung_financial}")
-        if samsung_financial and 'raw_text' in samsung_financial:
-            logger.info(f"[RAW] 삼성전자 재무비율 raw: {samsung_financial['raw_text']}")
+        if samsung_financial is not None and not samsung_financial.empty:
+            logger.info(f"[RAW] 삼성전자 재무비율 raw: {samsung_financial}")
 
         # 5. 투자자 동향 조회
         # 삼성전자 투자자별 매매 동향
         samsung_investor = agent.get_stock_investor("005930")
-        logger.info(f"삼성전자 투자자 동향: {samsung_investor}")
+        logger.info(f"삼성전자 ��자자 동향: {samsung_investor}")
         if not samsung_investor.empty and 'raw_text' in samsung_investor.columns:
             logger.info(f"[RAW] 삼성전자 투자자 동향 raw: {samsung_investor['raw_text']}")
 
-        # 6. 증권사 투자의견 조회
-        samsung_opinion = agent.get_stock_opinion("005930")
-        logger.info(f"삼성전자 증권사 투자의견: {samsung_opinion}")
-        if samsung_opinion and 'raw_text' in samsung_opinion:
-            logger.info(f"[RAW] 삼성전자 증권사 투자의견 raw: {samsung_opinion['raw_text']}")
+        # 6. 증권사 투자의견 조회 (DEPRECATED - 해당 기능은 제거됨)
+        # samsung_opinion = agent.get_stock_info("005930")
+        # logger.info(f"삼성전자 증권사 투자의견: {samsung_opinion}")
+        # if samsung_opinion and 'raw_text' in samsung_opinion:
+        #     logger.info(f"[RAW] 삼성전자 증권사 투자의견 raw: {samsung_opinion['raw_text']}")
 
         logger.info("모든 테스트 완료")
 

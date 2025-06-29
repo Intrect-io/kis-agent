@@ -1,8 +1,8 @@
 from . import client as core_client
-from .client import API_ENDPOINTS
+from .client import KISClient
 from ..account.balance import AccountBalanceAPI as AccountAPI
 from ..stock.api import StockAPI
-from ..stock.market import StockMarketAPI
+from ..stock import StockMarketAPI
 from ..program.trade import ProgramTradeAPI
 from typing import Optional, Dict
 import logging
@@ -384,20 +384,18 @@ class Agent:
         """
         # StockAPI를 최우선으로 확인 (메인 주식 API)
         if hasattr(self.stock_api, name):
-            attr = getattr(self.stock_api, name)
-            if not callable(attr):
-                return attr
-            return attr
-            
+            return getattr(self.stock_api, name)
+        
+        # StockMarketAPI 확인 (시장 데이터 관련 API)
+        if hasattr(self.market_api, name):
+            return getattr(self.market_api, name)
+
         # 나머지 API 모듈에서 메서드 찾기
-        for api in (self.account_api, self.program_api, self.market_api):
+        for api in (self.account_api, self.program_api):
             if hasattr(api, name):
-                attr = getattr(api, name)
-                if not callable(attr):
-                    return attr
-                return attr
+                return getattr(api, name)
                 
-        raise AttributeError(f"{self.__class__.__name__} object has no attribute '{name}'")
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
 # Expose facade class for flat import
 __all__ = ['Agent'] 

@@ -78,7 +78,7 @@ class TestProgramTradeAPI:
         # Then
         assert result == expected_result
         call_args = mock_client.make_request.call_args
-        assert call_args.kwargs['params']['FID_INPUT_DATE_1'] == datetime.now().strftime("%Y%m%d")
+        assert 'FID_INPUT_DATE_1' not in call_args.kwargs['params']
 
     def test_get_program_trade_by_stock_with_specific_date(self, program_api, mock_client):
         """get_program_trade_by_stock 특정 날짜 지정 테스트"""
@@ -94,29 +94,7 @@ class TestProgramTradeAPI:
         call_args = mock_client.make_request.call_args
         assert call_args.kwargs['params']['FID_INPUT_DATE_1'] == '20241225'
 
-    def test_get_program_trade_hourly_trend_success(self, program_api, mock_client):
-        """get_program_trade_hourly_trend 성공 테스트"""
-        # Given
-        expected_result = {
-            'output': [
-                {
-                    'bsop_hour': '091000',
-                    'whol_ntby_vol_icdc': '1000'
-                }
-            ],
-            'rt_cd': '0'
-        }
-        mock_client.make_request.return_value = expected_result
-
-        # When
-        result = program_api.get_program_trade_hourly_trend('005930')
-
-        # Then
-        assert result == expected_result
-        mock_client.make_request.assert_called_once()
-        call_args = mock_client.make_request.call_args
-        assert call_args.kwargs['tr_id'] == 'FHPPG04650101'
-        assert call_args.kwargs['params']['FID_INPUT_ISCD'] == '005930'
+    
 
     def test_get_program_trade_daily_summary_success(self, program_api, mock_client):
         """get_program_trade_daily_summary 성공 테스트"""
@@ -169,30 +147,7 @@ class TestProgramTradeAPI:
         assert call_args.kwargs['params']['FID_INPUT_DATE_1'] == '20241201'
         assert call_args.kwargs['params']['FID_INPUT_DATE_2'] == '20241227'
 
-    def test_get_program_trade_period_detail_success(self, program_api, mock_client):
-        """get_program_trade_period_detail 성공 테스트"""
-        # Given
-        expected_result = {
-            'output': [
-                {
-                    'stck_bsop_date': '20241227',
-                    'detail_info': 'test'
-                }
-            ],
-            'rt_cd': '0'
-        }
-        mock_client.make_request.return_value = expected_result
-
-        # When
-        result = program_api.get_program_trade_period_detail('20241201', '20241227')
-
-        # Then
-        assert result == expected_result
-        mock_client.make_request.assert_called_once()
-        call_args = mock_client.make_request.call_args
-        assert call_args.kwargs['tr_id'] == 'FHPPG04600000'
-        assert call_args.kwargs['params']['FID_INPUT_DATE_1'] == '20241201'
-        assert call_args.kwargs['params']['FID_INPUT_DATE_2'] == '20241227'
+    
 
     def test_get_program_trade_by_stock_client_exception(self, program_api, mock_client):
         """get_program_trade_by_stock 클라이언트 예외 테스트"""
@@ -204,15 +159,7 @@ class TestProgramTradeAPI:
             program_api.get_program_trade_by_stock('005930')
         mock_client.make_request.assert_called_once()
 
-    def test_get_program_trade_hourly_trend_client_exception(self, program_api, mock_client):
-        """get_program_trade_hourly_trend 클라이언트 예외 테스트"""
-        # Given
-        mock_client.make_request.side_effect = Exception("API 호출 실패")
-
-        # When / Then
-        with pytest.raises(Exception, match="API 호출 실패"):
-            program_api.get_program_trade_hourly_trend('005930')
-        mock_client.make_request.assert_called_once()
+    
 
     def test_get_program_trade_daily_summary_client_exception(self, program_api, mock_client):
         """get_program_trade_daily_summary 클라이언트 예외 테스트"""
@@ -234,12 +181,4 @@ class TestProgramTradeAPI:
             program_api.get_program_trade_market_daily('20241201', '20241227')
         mock_client.make_request.assert_called_once()
 
-    def test_get_program_trade_period_detail_client_exception(self, program_api, mock_client):
-        """get_program_trade_period_detail 클라이언트 예외 테스트"""
-        # Given
-        mock_client.make_request.side_effect = Exception("API 호출 실패")
-
-        # When / Then
-        with pytest.raises(Exception, match="API 호출 실패"):
-            program_api.get_program_trade_period_detail('20241201', '20241227')
-        mock_client.make_request.assert_called_once() 
+     

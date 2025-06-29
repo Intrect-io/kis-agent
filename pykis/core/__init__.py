@@ -17,9 +17,8 @@ from .auth import auth
 from .config import KISConfig
 
 __all__ = [
-    'Agent',
     'KISClient',
-    'API_ENDPOINTS',
+    'KISConfig',
     'auth',
-    'KISConfig'
+    'Agent'
 ]
