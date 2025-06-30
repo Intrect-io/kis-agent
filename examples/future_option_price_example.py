@@ -105,7 +105,7 @@ def main():
     from pykis.stock.api import get_kospi200_futures_code
     from datetime import datetime
     
-    # 현재 날짜 기준으로 가장 가까운 선물코드 생성
+    # 현재 날짜 기준으로 가장 가까운 선물코드 생성 (두 번째 주 목요일 만기 규칙 적용)
     current_futures_code = get_kospi200_futures_code()
     print(f"현재 날짜 기준 가장 가까운 선물코드: {current_futures_code}")
     

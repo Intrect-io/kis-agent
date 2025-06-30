@@ -28,7 +28,7 @@ from typing import Optional, Dict, Any, List
 import pandas as pd
 import logging
 from ..core.client import KISClient, API_ENDPOINTS
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def get_kospi200_futures_code(today=None):
     """
@@ -42,25 +42,56 @@ def get_kospi200_futures_code(today=None):
         
     Note:
         - KOSPI200 선물은 3, 6, 9, 12월 만기
+        - 만기일은 매월 두 번째 주 목요일
         - 종목코드 패턴: 101W + MM (MM: 03, 06, 09, 12)
-        - 현재 월이 만기월인 경우, 다음 만기월을 반환
-        - 만기월이 지난 경우 다음 만기월을 반환
+        - 현재 날짜가 만기일을 지난 경우 다음 만기월을 반환
     """
     if today is None:
         today = datetime.now()
     
-    month = today.month
-    expiry_months = [3, 6, 9, 12]
+    def get_second_thursday(year, month):
+        """특정 년월의 두 번째 주 목요일 날짜를 반환"""
+        # 해당 월의 첫 번째 날
+        first_day = datetime(year, month, 1)
+        # 첫 번째 목요일까지의 일수 (0=월요일, 3=목요일)
+        days_until_first_thursday = (3 - first_day.weekday()) % 7
+        # 첫 번째 목요일
+        first_thursday = first_day + timedelta(days=days_until_first_thursday)
+        # 두 번째 주 목요일 (7일 후)
+        second_thursday = first_thursday + timedelta(days=7)
+        return second_thursday
     
-    # 현재 월이 만기월인 경우, 다음 만기월을 반환
-    # 만기월이 지난 경우에도 다음 만기월을 반환
-    for m in expiry_months:
-        if month <= m:
-            expiry = m
-            break
+    expiry_months = [3, 6, 9, 12]
+    current_year = today.year
+    current_month = today.month
+    
+    # 현재 월이 만기월인지 확인
+    if current_month in expiry_months:
+        # 현재 월의 만기일 계산
+        expiry_date = get_second_thursday(current_year, current_month)
+        
+        # 현재 날짜가 만기일을 지났는지 확인
+        if today.date() > expiry_date.date():
+            # 만기일을 지났으면 다음 만기월 찾기
+            for i, month in enumerate(expiry_months):
+                if month > current_month:
+                    expiry = month
+                    break
+            else:
+                # 현재 월이 12월인 경우 다음 해 3월물
+                expiry = 3
+        else:
+            # 만기일이 지나지 않았으면 현재 월
+            expiry = current_month
     else:
-        # 현재 월이 12월 이후인 경우, 다음 해 3월물 반환
-        expiry = 3
+        # 현재 월이 만기월이 아닌 경우, 다음 만기월 찾기
+        for month in expiry_months:
+            if month > current_month:
+                expiry = month
+                break
+        else:
+            # 현재 월이 12월 이후인 경우 다음 해 3월물
+            expiry = 3
     
     # 101W + MM 형태로 종목코드 생성 (MM은 2자리)
     return f"101W{expiry:02d}"
