@@ -2,26 +2,136 @@
 
 모든 주요 변경사항이 이 파일에 기록됩니다.
 
+## [0.1.16] - 2025-01-29
+
+### 추가됨
+- **📊 KOSPI200 지수 베이시스 계산 기능**
+  - **`get_kospi200_futures_code` 함수 추가**: 오늘 날짜 기준 최근월물 자동 계산
+    - 현재 날짜를 기준으로 다음 만기월(3,6,9,12월) 중 가장 가까운 미래 월물 계산
+    - KOSPI200 선물 종목코드 자동 생성 (예: 101S12, 201S03 등)
+    - `get_future_option_price` 메서드의 기본값에 자동 적용
+  - **선물옵션 API 개선**: 별도 파라미터 없이 호출해도 최신 KOSPI200 선물 시세 자동 조회
+    - 기존: 수동으로 종목코드 지정 필요 (`101S09` 등)
+    - 개선: 자동으로 오늘 기준 최근월물 계산하여 조회
+
+### 개선됨
+- **선물옵션 시세 조회 편의성 향상**: KOSPI200 베이시스 계산 자동화
+- **문서 업데이트**: PYKIS_API_METHODS.md에 새로운 기능 설명 추가
+
+### 사용 예시
+```python
+# 기존 방식 (수동 종목코드 지정)
+futures_price = agent.get_future_option_price(
+    market_div_code="F",      # 지수선물
+    input_iscd="101S09"       # 수동으로 종목코드 지정
+)
+
+# 개선된 방식 (자동 최근월물 계산)
+futures_price = agent.get_future_option_price()  # 자동으로 최신 KOSPI200 선물 조회
+```
+
+## [0.1.15] - 2025-01-29
+
+### 추가됨
+- **📊 선물옵션 시세 API 추가**
+  - **`get_future_option_price` 메서드 추가**: 선물옵션 시세 조회 기능
+    - API 엔드포인트: `/uapi/domestic-futureoption/v1/quotations/inquire-price` (TR: FHMIF10000000)
+    - 지수선물, 지수옵션, 주식선물, 주식옵션 시세 조회 지원
+    - 시장분류코드: F(지수선물), O(지수옵션), JF(주식선물), JO(주식옵션)
+    - 종목코드: 선물 6자리(예: 101S03), 옵션 9자리(예: 201S03370)
+    - 기본값: 지수선물(F), 종목코드(101S09)
+
+- **사용 예시**:
+  ```python
+  # 지수선물 시세 조회 (기본값)
+  futures_price = agent.get_future_option_price()
+  
+  # 다른 지수선물 종목 조회
+  futures_price = agent.get_future_option_price(
+      market_div_code="F",      # 지수선물
+      input_iscd="101S03"       # 다른 선물 종목
+  )
+  
+  # 지수옵션 시세 조회
+  option_price = agent.get_future_option_price(
+      market_div_code="O",      # 지수옵션
+      input_iscd="201S03370"    # 옵션 종목 (9자리)
+  )
+  ```
+
+- **예제 파일 추가**: `examples/future_option_price_example.py` - 선물옵션 시세 조회 사용법 예시
+- **문서 업데이트**: PYKIS_API_METHODS.md에 선물옵션 관련 메서드 섹션 추가
+
+## [0.1.14] - 2025-01-29
+
+### 추가됨
+- **📈 업종 시세 API 추가**
+  - **`get_daily_index_chart_price` 메서드 추가**: 국내주식업종기간별시세 조회 기능
+    - API 엔드포인트: `/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice` (TR: FHKUP03500100)
+    - 업종별 시세 데이터 조회 (종합, 대형주, 중형주, 소형주, KOSPI, KOSDAQ 등)
+    - 기간별 조회 지원 (일봉, 주봉, 월봉, 년봉)
+    - 최대 50건 데이터 수신, 연속 조회를 위한 날짜 범위 설정 가능
+    - 주요 업종코드: 0001(종합), 0002(대형주), 0003(중형주), 0004(소형주), 0005(KOSPI), 0006(KOSDAQ), 0007(KOSPI200), 0008(KOSPI100), 0009(KOSPI50), 0010(KOSDAQ150)
+
+- **사용 예시**:
+  ```python
+  # 종합 업종 일봉 데이터 조회
+  sector_daily = agent.get_daily_index_chart_price(
+      market_div_code="U",      # 업종
+      input_iscd="0001",        # 종합
+      start_date="20240601",
+      end_date="20240630",
+      period_div_code="D"       # 일봉
+  )
+  
+  # 대형주 업종 주봉 데이터 조회
+  large_cap_weekly = agent.get_daily_index_chart_price(
+      market_div_code="U",      # 업종
+      input_iscd="0002",        # 대형주
+      start_date="20240101",
+      end_date="20241231",
+      period_div_code="W"       # 주봉
+  )
+  ```
+
+- **예제 파일 추가**: `examples/daily_index_chart_price_example.py` - 업종 시세 조회 사용법 예시
+- **문서 업데이트**: PYKIS_API_METHODS.md에 상세한 API 문서 추가
+
+## [0.1.13] - 2025-01-29
+
+### 추가됨
+- **📊 체결 관련 API 확장**
+  - **`get_hourly_conclusion` 메서드 추가**: 시간대별 체결 조회 기능
+    - API 엔드포인트: `/uapi/domestic-stock/v1/quotations/inquire-time-itemconclusion` (TR: FHPST01060000)
+    - 기준시간 설정 가능 (HHMMSS 형식, 기본값: "115959")
+    - 응답 데이터: 시간대별 체결가, 등락률, 누적거래량, 체결량 등 30개 항목 제공
+  
+  - **⭐ `get_stock_ccnl` 메서드 추가**: 주식현재가 체결(최근30건) 조회 - **당일 체결강도 직접 제공**
+    - API 엔드포인트: `/uapi/domestic-stock/v1/quotations/inquire-ccnl` (TR: FHKST01010300)
+    - **핵심 장점**: 당일 체결강도(`tday_rltv`)를 별도 계산 없이 바로 확인 가능
+    - 기존 `get_volume_power`는 체결강도 순위에서만 확인 가능했던 한계 해결
+    - 응답 데이터: 최근 30건의 체결시간, 체결가격, 등락률, 체결량, 체결강도 등
+    - 특정 종목의 체결강도를 즉시 확인할 수 있어 매매 전략 수립에 유용
+
+- **Agent 클래스 자동 위임**: 두 메서드 모두 Agent 클래스를 통해 자동으로 접근 가능
+  ```python
+  # 시간대별 체결 조회
+  hourly = agent.get_hourly_conclusion("005930", "143000")
+  
+  # 당일 체결강도 바로 확인
+  ccnl = agent.get_stock_ccnl("005930")
+  strength = ccnl['output'][0]['tday_rltv']  # 123.50
+  ```
+
+### 개선됨
+- **체결강도 조회 방식 개선**: 순위권에 없는 종목도 체결강도 확인 가능
+- **문서 확장**: README.md, PYKIS_API_METHODS.md에 상세한 사용 예시 추가
+
 ## [0.1.12] - 2025-06-29
 
 ### 수정됨
 - **`get_pbar_tratio` 메서드 수정**
   - `get_pbar_tratio` 메서드의 docstring, `tr_id`, 파라미터를 수정하여 "매물대/거래비중 조회" 기능이 올바르게 동작하도록 수정했습니다.
-  
-### 추가됨
-- **`get_hourly_conclusion` 메서드 추가**
-  - `StockAPI`에 `get_hourly_conclusion` 메서드를 추가하여 "시간대별 체결 조회" 기능을 구현했습니다.
-  - API 엔드포인트: `/uapi/domestic-stock/v1/quotations/inquire-time-itemconclusion` (TR: FHPST01060000)
-  - 기준시간 설정 가능 (HHMMSS 형식, 기본값: "115959")
-  - 응답 데이터: 시간대별 체결가, 등락률, 누적거래량, 체결량 등 30개 항목 제공
-  - Agent 클래스를 통해 `agent.get_hourly_conclusion(code, hour)` 형태로 접근 가능
-
-- **`get_stock_ccnl` 메서드 추가**
-  - `StockAPI`에 `get_stock_ccnl` 메서드를 추가하여 "주식현재가 체결(최근30건)" 조회 기능을 구현했습니다.
-  - API 엔드포인트: `/uapi/domestic-stock/v1/quotations/inquire-ccnl` (TR: FHKST01010300)
-  - **당일 체결강도(`tday_rltv`) 직접 제공** - 별도 계산 없이 바로 확인 가능
-  - 응답 데이터: 최근 30건의 체결시간, 체결가격, 등락률, 체결량, 체결강도 등
-  - Agent 클래스를 통해 `agent.get_stock_ccnl(code)` 형태로 접근 가능
 
 ## [0.1.11] - 2025-06-29
 
@@ -41,7 +151,7 @@
 ### 변경됨
 - **인증 방식 변경**: `kis_devlp.yaml` 파일을 사용하던 방식에서 `.env` 파일을 사용하는 방식으로 변경되었습니다.
   - `python-dotenv` 라이브러리를 사용하여 `.env` 파일에서 API 키 및 계좌 정보를 로드합니다.
-  - 더 이상 `pyyaml` 라이브러리에 의��하지 않습니다.
+  - 더 이상 `pyyaml` 라이브러리에 의존하지 않습니다.
 
 ### 추가됨
 - **`.env.example` 파일**: 사용자가 설정을 쉽게 구성할 수 있도록 `.env.example` 파일을 추가했습니다.
@@ -86,7 +196,7 @@
   - `tests/integration/test_agent_comprehensive.py`: `validate_api_response` 함수가 `output1`, `output2` 키를 처리하도록 수정하여 분봉/차트 테스트 실패 해결.
   - `tests/unit/test_auth.py`: `read_token` 및 `save_token` 함수에 대한 잘못된 mock 패치 수정.
   - `tests/unit/test_client.py`: `test_make_request_daily_price`의 `tr_id` 수정. `test_refresh_token`에 `requests.post` mock 추가.
-  - `tests/unit/test_program_trade.py`: `datetime` import ���락 수정 및 예외 처리 테스트에 `pytest.raises` 추가.
+  - `tests/unit/test_program_trade.py`: `datetime` import 락 수정 및 예외 처리 테스트에 `pytest.raises` 추가.
 
 - **`pykis/core/agent.py` 리팩토링**
   - `StockMarketAPI`를 `Agent` 클래스에 추가하고 `__getattr__`을 통해 메서드를 위임하도록 수정.
@@ -150,7 +260,7 @@
 
 ### 추가됨
 - 휴장일 API 엔드포인트 지원
-  - `/uapi/domestic-stock/v1/quotations/chk-holiday` 엔드포인트 구��
+  - `/uapi/domestic-stock/v1/quotations/chk-holiday` 엔드포인트 구현
   - `tr_id="CTCA0903R"`을 사용한 휴장일 정보 조회
   - 날짜별 개장여부(`opnd_yn`) 확인 기능
   - 에러 처리 및 재시도 로직 포함
@@ -251,7 +361,7 @@
 
 ### 개선됨
 - 로깅 시스템 개선
-  - 각 API 호출에 대한 ������한 로깅 추가
+  - 각 API 호출에 대한 상세한 로깅 추가
   - 에러 메시지 한글화
   - 로그 포맷 통일화
 - 국내주식 엔드포인트 실제 테스트 결과, 대부분 정상 동작함을 확인 (일부 미지원/폐지 API 및 파라미터 오류 등은 실제 서비스 상태에 따라 다를 수 있음)

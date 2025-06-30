@@ -128,6 +128,8 @@ API_ENDPOINTS = {
     'FUTUREOPTION_INQUIRE_PRICE': '/uapi/domestic-futureoption/v1/quotations/inquire-price',  # 선물옵션 시세 (TR: FHMIF10000000)
     'FUTUREOPTION_INQUIRE_ASKING_PRICE': '/uapi/domestic-futureoption/v1/quotations/inquire-asking-price',  # 선물옵션 시세호가 (TR: FHMIF10010000)
     'FUTUREOPTION_INQUIRE_BALANCE': '/uapi/domestic-futureoption/v1/trading/inquire-balance',  # 선물옵션 잔고현황 (TR: CTFO6118R)
+    'INQUIRE_INDEX_PRICE': '/uapi/domestic-futureoption/v1/quotations/underlying-price', # KOSPI 200 지수 (TR: FHMIF10100000)
+    'INQUIRE_FUTURES_PRICE': '/uapi/domestic-futureoption/v1/quotations/inquire-price', # 선물옵션 시세 (TR: FHMIF10000000)
     
     # === ETF/ETN ===
     'ETF_INQUIRE_PRICE': '/uapi/etfetn/v1/quotations/inquire-price',  # ETF/ETN현재가 (TR: FHPST02400000)

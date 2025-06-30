@@ -28,6 +28,22 @@ from typing import Optional, Dict, Any, List
 import pandas as pd
 import logging
 from ..core.client import KISClient, API_ENDPOINTS
+from datetime import datetime
+
+def get_kospi200_futures_code(today=None):
+    if today is None:
+        today = datetime.now()
+    year = today.year % 100  # 2자리 연도
+    month = today.month
+    expiry_months = [3, 6, 9, 12]
+    for m in expiry_months:
+        if month <= m:
+            expiry = m
+            break
+    else:
+        year += 1
+        expiry = 3
+    return f"101S{expiry:02d}"
 
 class StockAPI:
     def __init__(self, client: KISClient, account_info: Dict[str, str]):
@@ -616,3 +632,90 @@ class StockAPI:
         except Exception as e:
             logging.error(f"Error checking holiday status for {date}: {e}")
             return None
+
+    def get_kospi200_index(self, futures_month: str = "202409") -> Optional[Dict[str, Any]]:
+        """
+        KOSPI 200 지수 시세 조회 (기초자산)
+        
+        Args:
+            futures_month (str): 조회할 선물의 만기년월 (YYYYMM 형식).
+                                 이 값에 따라 관련된 기초자산(KOSPI 200)의 시세가 조회됩니다.
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_INDEX_PRICE'],
+            tr_id="FHMIF10100000",
+            params={
+                "fid_cond_mrkt_cls_code": "K21",
+                "fid_input_iscd": futures_month,
+            }
+        )
+
+    def get_futures_price(self, code: str) -> Optional[Dict[str, Any]]:
+        """선물 시세 조회"""
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_FUTURES_PRICE'],
+            tr_id="FHMIF10000000",
+            params={
+                "fid_cond_mrkt_div_code": "F",
+                "fid_input_iscd": code,
+            }
+        )
+
+    def get_daily_index_chart_price(self, 
+                                   market_div_code: str = "U", 
+                                   input_iscd: str = "0007", 
+                                   start_date: str = "20210101", 
+                                   end_date: str = "20220722", 
+                                   period_div_code: str = "D") -> Optional[Dict[str, Any]]:
+        """
+        국내주식업종기간별시세 조회 (일/주/월/년)
+        
+        Args:
+            market_div_code (str): 시장 분류 코드 (U: 업종)
+            input_iscd (str): 업종코드 (0001: 종합, 0002: 대형주, ...)
+            start_date (str): 시작일자 (YYYYMMDD 형식)
+            end_date (str): 종료일자 (YYYYMMDD 형식)
+            period_div_code (str): 기간분류코드 (D: 일봉, W: 주봉, M: 월봉, Y: 년봉)
+            
+        Returns:
+            Dict: 업종기간별시세 데이터, 실패 시 None
+            
+        Note:
+            - 한 번의 호출에 최대 50건의 데이터 수신
+            - 다음 데이터를 받아오려면 OUTPUT 값의 가장 과거 일자의 1일 전 날짜를 end_date에 넣어 재호출
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_DAILY_INDEXCHARTPRICE'],
+            tr_id="FHKUP03500100",
+            params={
+                "fid_cond_mrkt_div_code": market_div_code,
+                "fid_input_iscd": input_iscd,
+                "fid_input_date_1": start_date,
+                "fid_input_date_2": end_date,
+                "fid_period_div_code": period_div_code
+            }
+        )
+
+    def get_future_option_price(self, 
+                               market_div_code: str = "F", 
+                               input_iscd: str = None) -> Optional[Dict[str, Any]]:
+        """
+        선물옵션 시세 조회
+        
+        Args:
+            market_div_code (str): 시장분류코드 (F: 지수선물, O: 지수옵션, JF: 주식선물, JO: 주식옵션)
+            input_iscd (str): 선물옵션종목코드 (선물 6자리 예: 101S03, 옵션 9자리 예: 201S03370)
+            
+        Returns:
+            Dict: 선물옵션 시세 데이터, 실패 시 None
+        """
+        if input_iscd is None:
+            input_iscd = get_kospi200_futures_code()
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['FUTUREOPTION_INQUIRE_PRICE'],
+            tr_id="FHMIF10000000",
+            params={
+                "fid_cond_mrkt_div_code": market_div_code,
+                "fid_input_iscd": input_iscd
+            }
+        )

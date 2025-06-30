@@ -1,6 +1,6 @@
 # pykis API 메서드 레퍼런스
 
-> **pykis v0.1.8** - 한국투자증권 OpenAPI Python 래퍼 라이브러리
+> **pykis v0.1.16** - 한국투자증권 OpenAPI Python 래퍼 라이브러리
 
 이 문서는 pykis 라이브러리의 모든 사용 가능한 메서드를 정리한 완전한 API 레퍼런스입니다.  
 후임자나 다른 에이전트 LLM이 pykis를 활용할 때 참고할 수 있도록 작성되었습니다.
@@ -16,6 +16,7 @@
 - [휴장일 정보 메서드](#휴장일-정보-메서드)
 - [거래원/회원사 관련 메서드](#거래원회원사-관련-메서드)
 - [해외주식 관련 메서드](#해외주식-관련-메서드)
+- [선물옵션 관련 메서드](#선물옵션-관련-메서드)
 - [유틸리티 메서드](#유틸리티-메서드)
 - [데이터 관리 메서드](#데이터-관리-메서드)
 
@@ -79,7 +80,7 @@ possible = agent.get_possible_order("005930", "75000", "01")
 ```
 
 ### `order_credit(code, qty, price, order_type)`
-**설���**: 신용 주문  
+**설명**: 신용 주문  
 **매개변수**:
 - `code` (str) - 종목코드
 - `qty` (int) - 주문수량
@@ -175,6 +176,38 @@ price = agent.get_stock_price("005930")  # 삼성전자
 **예시**:
 ```python
 daily = agent.get_daily_price("005930", "D", "1")
+```
+
+### `get_daily_index_chart_price(market_div_code="U", input_iscd="0001", start_date="20210101", end_date="20220722", period_div_code="D")`
+**설명**: 국내주식업종기간별시세 조회 (일/주/월/년)  
+**매개변수**:
+- `market_div_code` (str) - 시장 분류 코드 (U: 업종)
+- `input_iscd` (str) - 업종코드 (0001: 종합, 0002: 대형주, 0003: 중형주, 0004: 소형주, 0005: KOSPI, 0006: KOSDAQ, 0007: KOSPI200, 0008: KOSPI100, 0009: KOSPI50, 0010: KOSDAQ150)
+- `start_date` (str) - 시작일자 (YYYYMMDD 형식)
+- `end_date` (str) - 종료일자 (YYYYMMDD 형식)
+- `period_div_code` (str) - 기간분류코드 (D: 일봉, W: 주봉, M: 월봉, Y: 년봉)
+
+**반환**: `Dict` - 업종기간별시세 데이터  
+**참고**: 한 번의 호출에 최대 50건의 데이터 수신, 다음 데이터를 받아오려면 OUTPUT 값의 가장 과거 일자의 1일 전 날짜를 end_date에 넣어 재호출  
+**예시**:
+```python
+# 종합 업종 일봉 데이터 조회
+sector_daily = agent.get_daily_index_chart_price(
+    market_div_code="U",      # 업종
+    input_iscd="0001",        # 종합
+    start_date="20240601",
+    end_date="20240630",
+    period_div_code="D"       # 일봉
+)
+
+# 대형주 업종 주봉 데이터 조회
+large_cap_weekly = agent.get_daily_index_chart_price(
+    market_div_code="U",      # 업종
+    input_iscd="0002",        # 대형주
+    start_date="20240101",
+    end_date="20241231",
+    period_div_code="W"       # 주봉
+)
 ```
 
 ### `get_minute_price(code, hour="153000")`
@@ -541,6 +574,48 @@ overseas_right = agent.get_overseas_right("AAPL")
 
 ---
 
+## 선물옵션 관련 메서드
+
+### `get_future_option_price(market_div_code="F", input_iscd="101S09")`
+**설명**: 선물옵션 시세 조회  
+**매개변수**:
+- `market_div_code` (str) - 시장분류코드 (F: 지수선물, O: 지수옵션, JF: 주식선물, JO: 주식옵션)
+- `input_iscd` (str) - 선물옵션종목코드 (선물 6자리 예: 101S03, 옵션 9자리 예: 201S03370)
+
+**반환**: `Dict` - 선물옵션 시세 데이터  
+**참고**: 
+- 시장분류코드: F(지수선물), O(지수옵션), JF(주식선물), JO(주식옵션)
+- 종목코드: 선물은 6자리, 옵션은 9자리
+- **⭐ KOSPI200 베이시스 계산**: `input_iscd`를 None으로 설정하면 오늘 날짜 기준 최근월물 자동 계산
+
+**예시**:
+```python
+# 지수선물 시세 조회 (기본값 - 자동 최근월물 계산)
+futures_price = agent.get_future_option_price()
+
+# 다른 지수선물 종목 조회
+futures_price = agent.get_future_option_price(
+    market_div_code="F",      # 지수선물
+    input_iscd="101S03"       # 다른 선물 종목
+)
+
+# 지수옵션 시세 조회
+option_price = agent.get_future_option_price(
+    market_div_code="O",      # 지수옵션
+    input_iscd="201S03370"    # 옵션 종목 (9자리)
+)
+
+# KOSPI200 베이시스 계산 예시
+# 오늘이 2025년 1월이라면 -> 101S03 (3월물) 자동 선택
+# 오늘이 2025년 4월이라면 -> 101S06 (6월물) 자동 선택
+futures_price = agent.get_future_option_price(
+    market_div_code="F",      # 지수선물
+    input_iscd=None           # 자동 최근월물 계산
+)
+```
+
+---
+
 ## 유틸리티 메서드
 
 ### `get_price_volume_ratio(code)`
@@ -661,4 +736,4 @@ for code in stock_codes:
 
 문의사항이나 버그 신고는 GitHub Issues를 통해 연락주세요.
 
-**pykis v0.1.8** - 한국투자증권 OpenAPI를 쉽고 안전하게! 🚀 
+**pykis v0.1.16** - 한국투자증권 OpenAPI를 쉽고 안전하게! 🚀 
