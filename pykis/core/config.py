@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from dotenv import load_dotenv
+from dotenv import dotenv_values
 
 @dataclass
 class KISConfig:
@@ -12,19 +12,31 @@ class KISConfig:
     ACCOUNT_NO: str = ""
     ACCOUNT_CODE: str = ""
 
-    def __init__(self, env_path: str = ".env"):
-        """환경 변수 파일(.env)에서 설정을 초기화합니다."""
-        if not os.path.exists(env_path):
-            raise FileNotFoundError(
-                f"'{env_path}' 파일을 찾을 수 없습니다. '.env.example' 파일을 복사하여 설정 후 사용하세요."
-            )
-        load_dotenv(dotenv_path=env_path)
+    def __init__(self, env_path: str = ".env", app_key: str = None, app_secret: str = None, base_url: str = None, account_no: str = None, account_code: str = None):
+        """
+        설정을 초기화합니다.
+        인자가 제공되면 직접 사용하고, 그렇지 않으면 .env 파일에서 로드합니다.
+        """
+        # 인자가 하나라도 제공되면 직접 설정을 적용
+        if any(arg is not None for arg in [app_key, app_secret, base_url, account_no, account_code]):
+            self.APP_KEY = app_key or ""
+            self.APP_SECRET = app_secret or ""
+            self.BASE_URL = base_url or ""
+            self.ACCOUNT_NO = account_no or ""
+            self.ACCOUNT_CODE = account_code or ""
+        else:
+            if not os.path.exists(env_path):
+                raise FileNotFoundError(
+                    f"'{env_path}' 파일을 찾을 수 없습니다. '.env.example' 파일을 복사하여 설정 후 사용하세요."
+                )
+            
+            config = dotenv_values(dotenv_path=env_path)
 
-        self.APP_KEY = os.getenv("KIS_APP_KEY", "")
-        self.APP_SECRET = os.getenv("KIS_APP_SECRET", "")
-        self.BASE_URL = os.getenv("KIS_BASE_URL", "")
-        self.ACCOUNT_NO = os.getenv("KIS_ACCOUNT_NO", "")
-        self.ACCOUNT_CODE = os.getenv("KIS_ACCOUNT_CODE", "")
+            self.APP_KEY = config.get("KIS_APP_KEY") or ""
+            self.APP_SECRET = config.get("KIS_APP_SECRET") or ""
+            self.BASE_URL = config.get("KIS_BASE_URL") or ""
+            self.ACCOUNT_NO = config.get("KIS_ACCOUNT_NO") or ""
+            self.ACCOUNT_CODE = config.get("KIS_ACCOUNT_CODE") or ""
         
         self._validate()
 
@@ -40,6 +52,6 @@ class KISConfig:
 
     def _validate(self) -> None:
         if not all([self.APP_KEY, self.APP_SECRET, self.BASE_URL, self.ACCOUNT_NO, self.ACCOUNT_CODE]):
-            raise Exception("필수 설정 값이 누락되었습니다. .env 파일의 내용을 확인하세요.")
+            raise ValueError("필수 설정 값이 누락되었습니다. .env 파일의 내용을 확인하세요.")
 
 __all__ = ["KISConfig"]

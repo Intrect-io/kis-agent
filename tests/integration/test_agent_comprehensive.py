@@ -298,7 +298,11 @@ class TestChartData:
 class TestUtilities:
     """기타 유틸리티 테스트"""
     
-    @pytest.mark.parametrize("test_date, expected", [(datetime.now().strftime('%Y%m%d'), False)])
+    @pytest.mark.parametrize("test_date, expected", [
+        ("20250705", True),  # Saturday
+        ("20250706", True),  # Sunday
+        ("20250707", False), # Monday
+    ])
     def test_is_holiday(self, agent, test_date, expected):
         """휴장일 확인 테스트"""
         result = agent.is_holiday(test_date)
