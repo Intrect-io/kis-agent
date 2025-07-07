@@ -78,60 +78,74 @@ class AccountAPI:
             return pd.DataFrame(res['output1'])
         return None
 
-    def get_cash_available(self) -> Optional[Dict[str, Any]]:
-        """Query available cash for trading.
+    def get_cash_available(self, stock_code: str = "005930") -> Optional[Dict[str, Any]]:
+        """Query available cash for purchasing specific stock.
+
+        Args
+        ----
+        stock_code : str, default "005930"
+            Stock code to check purchase availability (default: Samsung Electronics)
 
         Returns
         -------
         Optional[dict]
-            Response JSON with ``rt_cd`` and ``cash`` fields.
+            Response JSON with purchase availability information.
+            - ord_psbl_cash: Available cash for purchase
+            - ord_psbl_sbst: Available substitution amount
+            - max_buy_qty: Maximum purchasable quantity
 
         Example
         -------
-        >>> api.get_cash_available()
+        >>> api.get_cash_available("005930")  # Samsung Electronics
+        >>> api.get_cash_available("000660")  # SK Hynix
         """
         res = self.client.make_request(
-            endpoint="/uapi/domestic-stock/v1/trading/inquire-available-amount",
-            tr_id="TTTC8901R",
+            endpoint="/uapi/domestic-stock/v1/trading/inquire-psbl-order",
+            tr_id="TTTC8908R",
             params={
                 "CANO": self.account['CANO'],
                 "ACNT_PRDT_CD": self.account['ACNT_PRDT_CD'],
-                "CASH_CLO_CD": "10",
-                "TR_MKET_CD": "0"
+                "PDNO": stock_code,  # 매수가능조회할 종목코드
+                "ORD_UNPR": "0",   # 주문단가 (0으로 설정하면 현재가 기준)
+                "ORD_DVSN": "00",  # 지정가
+                "CMA_EVLU_AMT_ICLD_YN": "Y",  # CMA평가금액포함여부
+                "OVRS_ICLD_YN": "N"  # 해외포함여부
             }
         )
-        # 새벽 정산 시간(404/JSONDecodeError) 안내 메시지 추가
-        if res is not None and (res.get('rt_cd') == 'JSON_DECODE_ERROR' or res.get('status_code') == 404):
-            # 변경 이유: 새벽 정산 시간에는 계좌 관련 API가 일시적으로 차단되어 혼동 방지 목적 안내 메시지 추가
-            return {"rt_cd": res.get('rt_cd', ''), "msg1": res.get('msg1', ''), "정산안내": "정산 시간(23:30~01:00 등)에는 계좌 관련 API가 일시적으로 차단될 수 있습니다. 잠시 후 다시 시도해 주세요."}
+        # JSON 디코드 실패 시 원시 응답 확인을 위한 상세 정보 제공
+        if res is not None and res.get('rt_cd') == 'JSON_DECODE_ERROR':
+            # 원시 응답 텍스트 확인을 위해 추가 정보 제공
+            res["디버깅_정보"] = f"원시 응답 텍스트 확인 필요 (상태코드: {res.get('status_code', 'N/A')})"
         return res
 
     def get_total_asset(self) -> Optional[Dict[str, Any]]:
-        """Total asset evaluation including cash and stocks.
+        """Query total asset evaluation including cash and stocks.
 
         Returns
         -------
         Optional[dict]
-            JSON structure describing account summary.
+            JSON structure describing investment account balance.
+            - output1: Account summary information
+            - output2: Detailed balance information
 
         Example
         -------
         >>> api.get_total_asset()
         """
         res = self.client.make_request(
-            endpoint="/uapi/domestic-stock/v1/trading/inquire-account-summary",
-            tr_id="TTTC8522R",
+            endpoint="/uapi/domestic-stock/v1/trading/inquire-account-balance",
+            tr_id="CTRP6548R",
             params={
                 "CANO": self.account['CANO'],
                 "ACNT_PRDT_CD": self.account['ACNT_PRDT_CD'],
-                "INQR_DVSN": "02",  # 01: 잔고 기준, 02: 평가 기준
-                "UNPR_DVSN": "01"   # 01: 현재가 기준
+                "INQR_DVSN_1": "",  # 조회구분1 (공백입력)
+                "BSPR_BF_DT_APLY_YN": ""  # 기준가이전일자적용여부 (공백입력)
             }
         )
-        # 새벽 정산 시간(404/JSONDecodeError) 안내 메시지 추가
-        if res is not None and (res.get('rt_cd') == 'JSON_DECODE_ERROR' or res.get('status_code') == 404):
-            # 변경 이유: 새벽 정산 시간에는 계좌 관련 API가 일시적으로 차단되어 혼동 방지 목적 안내 메시지 추가
-            return {"rt_cd": res.get('rt_cd', ''), "msg1": res.get('msg1', ''), "정산안내": "정산 시간(23:30~01:00 등)에는 계좌 관련 API가 일시적으로 차단될 수 있습니다. 잠시 후 다시 시도해 주세요."}
+        # JSON 디코드 실패 시 원시 응답 확인을 위한 상세 정보 제공
+        if res is not None and res.get('rt_cd') == 'JSON_DECODE_ERROR':
+            # 원시 응답 텍스트 확인을 위해 추가 정보 제공
+            res["디버깅_정보"] = f"원시 응답 텍스트 확인 필요 (상태코드: {res.get('status_code', 'N/A')})"
         return res
 
     def get_account_order_quantity(self, code: str) -> Optional[Dict]:

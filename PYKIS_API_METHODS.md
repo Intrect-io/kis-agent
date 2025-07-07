@@ -1,6 +1,6 @@
 # pykis API 메서드 레퍼런스
 
-> **pykis v0.1.19** - 한국투자증권 OpenAPI Python 래퍼 라이브러리
+> **pykis v0.1.21** - 한국투자증권 OpenAPI Python 래퍼 라이브러리
 
 이 문서는 pykis 라이브러리의 모든 사용 가능한 메서드를 정리한 완전한 API 레퍼런스입니다.  
 후임자나 다른 에이전트 LLM이 pykis를 활용할 때 참고할 수 있도록 작성되었습니다.
@@ -15,7 +15,7 @@
 - [프로그램 매매 메서드](#프로그램-매매-메서드)
 - [조건검색 메서드](#조건검색-메서드)
 - [휴장일 정보 메서드](#휴장일-정보-메서드)
-- [거래원/���원사 관련 메서드](#거래원회원사-관련-메서드)
+- [거래원/회원사 관련 메서드](#거래원회원사-관련-메서드)
 - [해외주식 관련 메서드](#해외주식-관련-메서드)
 - [선물옵션 관련 메서드](#선물옵션-관련-메서드)
 - [유틸리티 메서드](#유틸리티-메서드)
@@ -38,22 +38,70 @@ agent = Agent(account_info={
 })
 ```
 
+## 📦 헬퍼 모듈 (v0.1.21 신규)
+
+테스트 및 개발 편의를 위한 헬퍼 모듈이 추가되었습니다:
+
+```python
+# 헬퍼 모듈 import
+import sys
+sys.path.append('examples')
+from test_helpers import *
+
+# 테스트 환경 설정
+agent = setup_test_environment()
+
+# API 메서드 테스트
+result = test_api_method(agent, 'get_stock_price', '005930')
+
+# 여러 메서드 일괄 테스트  
+methods_to_test = ['get_stock_price', 'get_daily_price', 'get_minute_price']
+codes = ['005930', '000660']
+batch_test_methods(agent, methods_to_test, codes)
+
+# 테스트 결과 요약
+print_test_summary()
+```
+
+### 주요 헬퍼 함수들
+- `setup_test_environment()`: Agent 초기화 및 테스트 환경 설정
+- `test_api_method(agent, method_name, *args)`: 개별 API 메서드 테스트
+- `batch_test_methods(agent, methods, codes)`: 여러 메서드 일괄 테스트
+- `print_test_summary()`: 테스트 결과 요약 출력
+- `reset_test_results()`: 테스트 결과 초기화
+- `get_common_test_configs()`: 자주 사용하는 테스트 설정 반환
+
 ---
 
 ## 실시간 시세 (웹소켓)
 
-### `agent.websocket(stock_codes, purchase_prices)`
+### `agent.websocket(stock_codes, purchase_prices, enable_index, enable_program_trading, enable_ask_bid)`
 **설명**: 실시간 시세 수신을 위한 웹소켓 클라이언트를 생성합니다.  
 **매개변수**:
 - `stock_codes` (list, optional) - 구독할 종목코드 리스트
 - `purchase_prices` (dict, optional) - 매수 정보 딕셔너리 `{'종목코드': (매입가, 보유수량)}`
+- `enable_index` (bool, optional) - 실시간 지수 데이터 수신 여부 (기본값: False)
+- `enable_program_trading` (bool, optional) - 실시간 프로그램매매 데이터 수신 여부 (기본값: False)
+- `enable_ask_bid` (bool, optional) - 실시간 호가 데이터 수신 여부 (기본값: False)
+
 **반환**: `KisWebSocket` - 웹소켓 클라이언트 객체  
 **예시**:
 ```python
 import asyncio
 
 agent = Agent()
+
+# 기본 체결 데이터만 수신
 ws_client = agent.websocket()
+
+# 모든 실시간 데이터 수신
+ws_client = agent.websocket(
+    stock_codes=["005930", "000660"],
+    purchase_prices={"005930": (75000, 10)},
+    enable_index=True,
+    enable_program_trading=True,
+    enable_ask_bid=True
+)
 
 async def main():
     await ws_client.connect(["005930", "000660"])
@@ -67,6 +115,171 @@ if __name__ == "__main__":
 **매개변수**: `stock_codes` (list) - 구독할 종목코드 리스트  
 **참고**: 이 메서드는 `asyncio` 이벤트 루프 내에서 실행되어야 합니다.
 
+### 웹소켓 실시간 데이터 종류
+
+#### 1. 실시간 체결 데이터 (H0STCNT0)
+**설명**: 주식 체결가, 누적거래량, 등락률 등의 실시간 정보  
+**데이터 예시**:
+```python
+{
+    'mksc_shrn_iscd': '005930',      # 종목코드
+    'stck_cntg_hour': '143000',      # 체결시간
+    'stck_prpr': '75000',            # 현재가
+    'prdy_vrss': '1000',             # 전일대비
+    'prdy_ctrt': '1.35',             # 등락률
+    'acml_vol': '12345678',          # 누적거래량
+    'acml_tr_pbmn': '987654321'      # 누적거래대금
+}
+```
+
+#### 2. 실시간 지수 데이터 (H0IF1000) ⭐ 신규
+**설명**: 코스피, 코스닥, 코스피200 등 주요 지수의 실시간 정보  
+**지수 코드**:
+- `0001`: 코스피 지수
+- `1001`: 코스닥 지수  
+- `2001`: 코스피200 지수
+
+**데이터 예시**:
+```python
+{
+    'bstp_nmix_prpr': '2500.50',     # 지수 현재가
+    'bstp_nmix_prdy_vrss': '10.25',  # 전일대비
+    'prdy_vrss_sign': '2',           # 등락구분
+    'bstp_nmix_prdy_ctrt': '0.41',   # 등락률
+    'acml_vol': '456789123',         # 누적거래량
+    'acml_tr_pbmn': '12345678901'    # 누적거래대금
+}
+```
+
+#### 3. 실시간 프로그램매매 추이 (H0GSCNT0) ⭐ 신규
+**설명**: 프로그램매매 거래량과 거래대금의 실시간 추이  
+**데이터 예시**:
+```python
+{
+    'pgtr_ntby_qty': '12345',        # 프로그램매매 순매수량
+    'pgtr_ntby_tr_pbmn': '987654321' # 프로그램매매 순매수대금
+}
+```
+
+#### 4. 실시간 호가 데이터 (H0STASP0) ⭐ 신규
+**설명**: 매수/매도 호가 및 잔량의 실시간 정보  
+**데이터 예시**:
+```python
+{
+    'mksc_shrn_iscd': '005930',      # 종목코드
+    'bspr_rsqn_1': '100',           # 매수 1호가 잔량
+    'bspr_rsqn_2': '200',           # 매수 2호가 잔량
+    'askp_rsqn_1': '150',           # 매도 1호가 잔량
+    'askp_rsqn_2': '250',           # 매도 2호가 잔량
+    'stck_sdpr': '75100',           # 매도 1호가
+    'stck_sbpr': '75000'            # 매수 1호가
+}
+```
+
+### 웹소켓 클라이언트 메서드
+
+#### `ws_client.get_index_name(index_code)`
+**설명**: 지수 코드를 지수 이름으로 변환  
+**매개변수**: `index_code` (str) - 지수 코드  
+**반환**: `str` - 지수 이름  
+**예시**:
+```python
+name = ws_client.get_index_name("0001")  # "코스피"
+```
+
+#### `ws_client.display_index_info(data)`
+**설명**: 실시간 지수 정보를 포맷팅하여 출력  
+**매개변수**: `data` (dict) - 지수 데이터  
+**예시**:
+```python
+# 자동으로 호출되어 다음과 같이 출력됩니다:
+# [실시간 지수] 코스피: 2,500.50 (▲10.25, +0.41%)
+```
+
+#### `ws_client.display_program_trading_info(data)`
+**설명**: 실시간 프로그램매매 정보를 포맷팅하여 출력  
+**매개변수**: `data` (dict) - 프로그램매매 데이터  
+**예시**:
+```python
+# 자동으로 호출되어 다음과 같이 출력됩니다:
+# [프로그램매매] 순매수량: 12,345주 | 순매수대금: 987,654,321원
+```
+
+#### `ws_client.display_ask_bid_info(data)`
+**설명**: 실시간 호가 정보를 포맷팅하여 출력  
+**매개변수**: `data` (dict) - 호가 데이터  
+**예시**:
+```python
+# 자동으로 호출되어 다음과 같이 출력됩니다:
+# [호가] 005930 | 매도1호가: 75,100원(150주) | 매수1호가: 75,000원(100주)
+```
+
+### 실시간 데이터 저장소
+
+웹소켓 클라이언트는 다음 속성에 최신 데이터를 저장합니다:
+
+#### `ws_client.latest_prices`
+**설명**: 종목별 최신 체결 데이터 저장  
+**구조**: `{'종목코드': {...체결데이터...}}`
+
+#### `ws_client.latest_index` ⭐ 신규
+**설명**: 지수별 최신 지수 데이터 저장  
+**구조**: `{'지수코드': {...지수데이터...}}`
+
+#### `ws_client.latest_program_trading` ⭐ 신규
+**설명**: 최신 프로그램매매 데이터 저장  
+**구조**: `{...프로그램매매데이터...}`
+
+#### `ws_client.latest_ask_bid` ⭐ 신규
+**설명**: 종목별 최신 호가 데이터 저장  
+**구조**: `{'종목코드': {...호가데이터...}}`
+
+### 실시간 데이터 활용 예시
+
+```python
+import asyncio
+from pykis import Agent
+
+async def realtime_monitor():
+    agent = Agent()
+    
+    # 모든 실시간 데이터 활성화
+    ws_client = agent.websocket(
+        stock_codes=["005930", "000660"],
+        enable_index=True,
+        enable_program_trading=True,
+        enable_ask_bid=True
+    )
+    
+    # 웹소켓 연결 시작
+    await ws_client.connect(["005930", "000660"])
+    
+    # 5초 후 데이터 조회
+    await asyncio.sleep(5)
+    
+    # 최신 데이터 조회
+    print("=== 최신 체결 데이터 ===")
+    for code, data in ws_client.latest_prices.items():
+        print(f"{code}: {data['stck_prpr']}원")
+    
+    print("\n=== 최신 지수 데이터 ===")
+    for code, data in ws_client.latest_index.items():
+        index_name = ws_client.get_index_name(code)
+        print(f"{index_name}: {data['bstp_nmix_prpr']}")
+    
+    print("\n=== 최신 프로그램매매 데이터 ===")
+    if ws_client.latest_program_trading:
+        data = ws_client.latest_program_trading
+        print(f"순매수량: {data['pgtr_ntby_qty']}주")
+    
+    print("\n=== 최신 호가 데이터 ===")
+    for code, data in ws_client.latest_ask_bid.items():
+        print(f"{code} 매도1호가: {data['stck_sdpr']}원")
+
+if __name__ == "__main__":
+    asyncio.run(realtime_monitor())
+```
+
 ---
 
 ## 계좌 관련 메서드
@@ -77,6 +290,29 @@ if __name__ == "__main__":
 **예시**:
 ```python
 balance = agent.get_account_balance()
+```
+
+### `get_cash_available(stock_code="005930")`
+**설명**: 종목별 매수 가능 금액 조회  
+**매개변수**: `stock_code` (str) - 종목코드 (기본값: "005930" 삼성전자)  
+**반환**: `Dict` - 매수 가능 금액 정보  
+**참고**: v0.1.21에서 종목코드 파라미터 추가, TR ID 변경 (TTTC8908R)  
+**예시**:
+```python
+# 삼성전자 매수 가능 금액 (기본값)
+cash = agent.get_cash_available()
+
+# SK하이닉스 매수 가능 금액
+cash = agent.get_cash_available("000660")
+```
+
+### `get_total_asset()`
+**설명**: 총 자산 평가 조회  
+**반환**: `Dict` - 총 자산 정보  
+**참고**: v0.1.21에서 TR ID 변경 (CTRP6548R), 파라미터 구조 변경  
+**예시**:
+```python
+total_asset = agent.get_total_asset()
 ```
 
 ### `get_possible_order_amount()`
@@ -111,7 +347,7 @@ possible = agent.get_possible_order("005930", "75000", "01")
 
 ### `order_credit(code, qty, price, order_type)`
 **설명**: 신용 주문  
-**매개���수**:
+**매개변수**:
 - `code` (str) - 종목코드
 - `qty` (int) - 주문수량
 - `price` (int) - 주문가격
@@ -252,17 +488,7 @@ large_cap_weekly = agent.get_daily_index_chart_price(
 minute_data = agent.get_minute_price("005930", "143000")
 ```
 
-### `get_minute_chart(code, time)`
-**설명**: 분봉 차트 조회  
-**매개변수**:
-- `code` (str) - 종목코드
-- `time` (str) - 시간 (HHMMSS)
 
-**반환**: `Dict` - 분봉 차트 데이터  
-**예시**:
-```python
-chart = agent.get_minute_chart("005930", "143000")
-```
 
 ### `get_orderbook(code)`
 **설명**: 호가 정보 조회  
@@ -344,7 +570,7 @@ gainers = agent.get_top_gainers()
 
 ### `get_stock_investor(ticker)`
 **설명**: 투자자별 매매 동향 조회  
-**��개변수**: `ticker` (str) - 종목코드  
+**매개변수**: `ticker` (str) - 종목코드  
 **반환**: `DataFrame` - 투자자별 매매 동향  
 **예시**:
 ```python
@@ -541,7 +767,7 @@ transaction = agent.get_member_transaction("005930", "99999")
 **반환**: `tuple` - 순매수 정보  
 **예시**:
 ```python
-net_buy = agent.get_foreign_broker_net_buy("005930", ["모간", "골��만"], "20240625")
+net_buy = agent.get_foreign_broker_net_buy("005930", ["모간", "골드만"], "20240625")
 ```
 
 ### `classify_broker(name)` (정적 메서드)
@@ -690,16 +916,19 @@ agent.migrate_minute_csv_to_db("005930", 'my_data.db')
 ```
 
 ### `fetch_minute_data(code, date=None, cache_dir='cache')`
-**설명**: 분봉 데이터 조회 및 캐시  
+**설명**: 분봉 데이터 조회 및 캐시 (8개 시간대별 재귀 수집)  
 **매개변수**:
 - `code` (str) - 종목코드
 - `date` (str) - 날짜 (YYYYMMDD, None이면 오늘)
 - `cache_dir` (str) - 캐시 디렉토리
 
-**반환**: `DataFrame` - 분봉 데이터  
+**반환**: `DataFrame` - 분봉 데이터 (최대 360개)  
+**참고**: v0.1.21에서 `get_minute_price` 메서드 사용으로 수정, 정상 데이터 수집 확인  
 **예시**:
 ```python
+# 삼성전자 당일 분봉 데이터 (360개)
 minute_data = agent.fetch_minute_data("005930", "20240625", "cache")
+print(f"수집된 분봉 데이터: {len(minute_data)}개")
 ```
 
 ---
@@ -751,6 +980,25 @@ for code in stock_codes:
     time.sleep(0.1)  # 100ms 대기
 ```
 
+### 6. 웹소켓 사용 시 권장사항 ⭐ 신규
+실시간 데이터 사용 시 효율성을 위한 권장사항:
+```python
+# 필요한 데이터만 선택적으로 활성화
+ws_client = agent.websocket(
+    enable_index=True,           # 지수 모니터링 시에만
+    enable_program_trading=True, # 프로그램매매 분석 시에만
+    enable_ask_bid=True         # 호가 분석 시에만
+)
+
+# 데이터 저장소 정기적으로 정리
+async def cleanup_old_data():
+    while True:
+        await asyncio.sleep(3600)  # 1시간마다
+        ws_client.latest_prices.clear()
+        ws_client.latest_index.clear()
+        # 필요시 정리 로직 추가
+```
+
 ---
 
 ## 🔗 관련 리소스
@@ -766,4 +1014,4 @@ for code in stock_codes:
 
 문의사항이나 버그 신고는 GitHub Issues를 통해 연락주세요.
 
-**pykis v0.1.16** - 한국투자증권 OpenAPI를 쉽고 안전하게! 🚀 
+**pykis v0.1.21** - 한국투자증권 OpenAPI를 쉽고 안전하게! 🚀 

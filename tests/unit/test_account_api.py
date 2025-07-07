@@ -122,6 +122,11 @@ class TestAccountAPI(unittest.TestCase):
         params = kwargs["params"]
         self.assertEqual(params["CANO"], "12345678")
         self.assertEqual(params["ACNT_PRDT_CD"], "01")
+        self.assertEqual(params["PDNO"], "005930")  # 기본 종목코드 (삼성전자)
+        self.assertEqual(params["ORD_UNPR"], "0")
+        self.assertEqual(params["ORD_DVSN"], "00")
+        self.assertEqual(params["CMA_EVLU_AMT_ICLD_YN"], "Y")
+        self.assertEqual(params["OVRS_ICLD_YN"], "N")
 
     @patch('pykis.core.client.KISClient.make_request')
     def test_get_cash_available_json_decode_error(self, mock_request):
@@ -135,8 +140,8 @@ class TestAccountAPI(unittest.TestCase):
         
         self.assertIsNotNone(result)
         self.assertEqual(result["rt_cd"], "JSON_DECODE_ERROR")
-        self.assertIn("정산안내", result)
-        self.assertIn("정산 시간", result["정산안내"])
+        self.assertIn("디버깅_정보", result)
+        self.assertIn("원시 응답 텍스트 확인 필요", result["디버깅_정보"])
 
     @patch('pykis.core.client.KISClient.make_request')
     def test_get_cash_available_404_error(self, mock_request):
@@ -151,7 +156,7 @@ class TestAccountAPI(unittest.TestCase):
         
         self.assertIsNotNone(result)
         self.assertEqual(result["rt_cd"], "ERROR")
-        self.assertIn("정산안내", result)
+        self.assertEqual(result["status_code"], 404)
 
     @patch('pykis.core.client.KISClient.make_request')
     def test_get_cash_available_normal_response(self, mock_request):
@@ -165,7 +170,7 @@ class TestAccountAPI(unittest.TestCase):
         
         self.assertIsNotNone(result)
         self.assertEqual(result["rt_cd"], "0")
-        self.assertNotIn("정산안내", result)
+        self.assertIn("output", result)
 
     @patch('pykis.core.client.KISClient.make_request')
     def test_get_total_asset_success(self, mock_request):
@@ -193,8 +198,8 @@ class TestAccountAPI(unittest.TestCase):
         params = kwargs["params"]
         self.assertEqual(params["CANO"], "12345678")
         self.assertEqual(params["ACNT_PRDT_CD"], "01")
-        self.assertEqual(params["INQR_DVSN"], "02")  # 평가 기준
-        self.assertEqual(params["UNPR_DVSN"], "01")  # 현재가 기준
+        self.assertEqual(params["INQR_DVSN_1"], "")  # 조회구분1 공백
+        self.assertEqual(params["BSPR_BF_DT_APLY_YN"], "")  # 기준가이전일자적용여부 공백
 
     @patch('pykis.core.client.KISClient.make_request')
     def test_get_total_asset_json_decode_error(self, mock_request):
@@ -208,7 +213,8 @@ class TestAccountAPI(unittest.TestCase):
         
         self.assertIsNotNone(result)
         self.assertEqual(result["rt_cd"], "JSON_DECODE_ERROR")
-        self.assertIn("정산안내", result)
+        self.assertIn("디버깅_정보", result)
+        self.assertIn("원시 응답 텍스트 확인 필요", result["디버깅_정보"])
 
     @patch('pykis.core.client.KISClient.make_request')
     def test_get_total_asset_404_error(self, mock_request):
@@ -223,7 +229,7 @@ class TestAccountAPI(unittest.TestCase):
         
         self.assertIsNotNone(result)
         self.assertEqual(result["rt_cd"], "ERROR")
-        self.assertIn("정산안내", result)
+        self.assertEqual(result["status_code"], 404)
 
     @patch('pykis.core.client.KISClient.make_request')
     def test_get_account_order_quantity_success(self, mock_request):

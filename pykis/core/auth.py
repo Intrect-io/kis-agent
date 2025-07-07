@@ -29,8 +29,8 @@ clearConsole = lambda: os.system('cls' if os.name in ('nt', 'dos') else 'clear')
 
 key_bytes = 32
 
-# 프로젝트 루트 디렉토리 경로 설정 - 절대 경로로 변경
-config_root = os.path.join(os.path.dirname(__file__), '../../credit')
+# 토큰 저장 경로 설정 - 패키지 폴더 내 tokens 디렉토리 사용
+config_root = os.path.join(os.path.dirname(__file__), '../../tokens')
 token_tmp = os.getenv('KIS_TOKEN_PATH', os.path.join(config_root, 'KIS_Token.json'))
 
 # 디렉토리가 없으면 생성

@@ -298,7 +298,10 @@ class KISClient:
                 try:
                     data = response.json()
                 except json.JSONDecodeError:
-                    logger.error(f"[{tr_id}] JSON 디코드 실패 (시도 {attempt+1}/{retries}): {response.text}")
+                    logger.error(f"[{tr_id}] JSON 디코드 실패 (시도 {attempt+1}/{retries})")
+                    logger.error(f"[{tr_id}] 원시 응답 텍스트: {response.text[:500]}...")
+                    logger.error(f"[{tr_id}] 응답 상태 코드: {response.status_code}")
+                    logger.error(f"[{tr_id}] 응답 헤더: {dict(response.headers)}")
                     return {
                         'rt_cd': 'JSON_DECODE_ERROR',
                         'msg1': 'JSON 디코드 실패',

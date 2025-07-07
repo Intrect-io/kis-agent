@@ -38,6 +38,7 @@ htmlcov/
 
 # Credentials
 credit/
+tokens/
 *.yaml
 .env
 .env.*

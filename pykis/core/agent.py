@@ -323,7 +323,7 @@ class Agent:
         
         def fetch_data_for_time(time_str):
             try:
-                data_response = self.stock_api.get_minute_chart(code, time_str)
+                data_response = self.stock_api.get_minute_price(code, time_str)
                 if not data_response or data_response.get('rt_cd') != '0' or 'output2' not in data_response:
                     return None
                 data = data_response['output2']
