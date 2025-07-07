@@ -417,19 +417,54 @@ class KISClient:
 
     def get_kospi200_index(self, futures_month: str = "202409") -> Optional[Dict[str, Any]]:
         """
-        KOSPI 200 지수 시세 조회 (기초자산)
-        
+        KOSPI200 지수 조회
+
         Args:
-            futures_month (str): 조회할 선물의 만기년월 (YYYYMM 형식).
-                                 이 값에 따라 관련된 기초자산(KOSPI 200)의 시세가 조회됩니다.
+            futures_month (str): 선물 만료월 (YYYYMM 형식)
+
+        Returns:
+            Dict[str, Any]: KOSPI200 지수 정보
         """
-        return self.make_request(
-            endpoint=API_ENDPOINTS['INQUIRE_INDEX_PRICE'],
-            tr_id="FHMIF10100000",
-            params={
-                "fid_cond_mrkt_cls_code": "K21",
-                "fid_input_iscd": futures_month,
-            }
-        )
+        endpoint = API_ENDPOINTS['INQUIRE_INDEX_PRICE']
+        params = {
+            "FID_COND_MRKT_DIV_CODE": "U",
+            "FID_INPUT_ISCD": f"101{futures_month[-2:]}000"
+        }
+        return self.make_request(endpoint, "FHMIF10100000", params)
+
+    def get_ws_approval_key(self) -> Optional[str]:
+        """
+        웹소켓 접속을 위한 승인키를 가져옵니다.
+
+        Returns:
+            str: 웹소켓 승인키
+        """
+        url = f"{self.base_url}/oauth2/Approval"
+        
+        payload = {
+            "grant_type": "client_credentials",
+            "appkey": self.config.app_key if self.config else os.getenv('KIS_APP_KEY'),
+            "secretkey": self.config.app_secret if self.config else os.getenv('KIS_APP_SECRET')
+        }
+        
+        headers = {
+            'content-type': 'application/json'
+        }
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload)
+            if response.status_code == 200:
+                approval_key = response.json().get("approval_key")
+                if not approval_key:
+                    logger.error("응답에서 approval_key를 추출하지 못했습니다.")
+                    return None
+                logger.info(f"웹소켓 승인키 발급 완료: {approval_key[:10]}...")
+                return approval_key
+            else:
+                logger.error(f"웹소켓 승인키 요청 실패: {response.status_code} - {response.text}")
+                return None
+        except Exception as e:
+            logger.error(f"웹소켓 승인키 요청 중 오류 발생: {e}")
+            return None
 
 __all__ = ['KISClient', 'API_ENDPOINTS']

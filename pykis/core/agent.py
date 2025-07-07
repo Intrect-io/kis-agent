@@ -76,13 +76,18 @@ class Agent:
         self.program_api = ProgramTradeAPI(self.client, self.account_info)
         self.market_api = StockMarketAPI(self.client, self.account_info)
         
-    def websocket(self, stock_codes: list = None, purchase_prices: dict = None) -> KisWebSocket:
+    def websocket(self, stock_codes: list = None, purchase_prices: dict = None, 
+                  enable_index: bool = True, enable_program_trading: bool = True, 
+                  enable_ask_bid: bool = False) -> KisWebSocket:
         """
         실시간 웹소켓 클라이언트를 생성합니다.
 
         Args:
             stock_codes (list, optional): 구독할 종목코드 리스트. Defaults to None.
             purchase_prices (dict, optional): 매수 정보 딕셔너리 {'종목코드': (매입가격, 보유 수량)}. Defaults to None.
+            enable_index (bool): 지수 실시간 데이터 구독 여부. Defaults to True.
+            enable_program_trading (bool): 프로그램매매 실시간 데이터 구독 여부. Defaults to True.
+            enable_ask_bid (bool): 호가 실시간 데이터 구독 여부. Defaults to False.
 
         Returns:
             KisWebSocket: 웹소켓 클라이언트 객체
@@ -91,7 +96,10 @@ class Agent:
             client=self.client,
             account_info=self.account_info,
             stock_codes=stock_codes,
-            purchase_prices=purchase_prices
+            purchase_prices=purchase_prices,
+            enable_index=enable_index,
+            enable_program_trading=enable_program_trading,
+            enable_ask_bid=enable_ask_bid
         )
 
     # ============================================================================

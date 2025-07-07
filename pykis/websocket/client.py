@@ -1,5 +1,3 @@
-
-
 import websockets
 import json
 import requests
@@ -26,26 +24,47 @@ class KisWebSocket:
     """
     한국투자증권 실시간 웹소켓 클라이언트
     """
-    def __init__(self, client: KISClient, account_info: dict, stock_codes: list = None, purchase_prices: dict = None):
+    def __init__(self, client: KISClient, account_info: dict, stock_codes: list = None, purchase_prices: dict = None, 
+                 enable_index: bool = True, enable_program_trading: bool = True, enable_ask_bid: bool = False):
         """
         Args:
             client (KISClient): API 클라이언트 객체
             account_info (dict): 계좌 정보 딕셔너리
             stock_codes (list, optional): 구독할 종목코드 리스트. Defaults to None.
             purchase_prices (dict, optional): 매수 정보 딕셔너리 {'종목코드': (매입가격, 보유 수량)}. Defaults to None.
+            enable_index (bool): 지수 실시간 데이터 구독 여부. Defaults to True.
+            enable_program_trading (bool): 프로그램매매 실시간 데이터 구독 여부. Defaults to True.
+            enable_ask_bid (bool): 호가 실시간 데이터 구독 여부. Defaults to False.
         """
         self.client = client
         self.account_info = account_info
         self.stock_api = StockAPI(client=client, account_info=account_info)
         self.url = 'ws://ops.koreainvestment.com:21000'  # 고정 URL
         self.stock_codes = stock_codes or []
+        
+        # 기능 활성화 플래그
+        self.enable_index = enable_index
+        self.enable_program_trading = enable_program_trading
+        self.enable_ask_bid = enable_ask_bid
+        
         self.approval_key = None
         self.aes_key = None
         self.aes_iv = None
+        
         # 체결 데이터 및 trade history 초기화
         self.latest_trade = {code: None for code in self.stock_codes}
         self.trade_history = {code: [] for code in self.stock_codes}
         self.prev_indicators = {code: (None, None) for code in self.stock_codes}
+        
+        # 실시간 지수 데이터 저장소
+        self.latest_index = {}  # {'KOSPI200': data, 'KOSPI': data, 'KOSDAQ': data}
+        
+        # 실시간 프로그램매매 데이터 저장소  
+        self.latest_program_trading = {}  # {종목코드: 프로그램매매 데이터}
+        
+        # 실시간 호가 데이터 저장소
+        self.latest_ask_bid = {}  # {종목코드: 호가 데이터}
+        
         # 매입 정보: {'종목코드': (매입가격, 보유 수량)}
         self.purchase_prices = purchase_prices or {}
         # 현재 구독중인 종목 집합 (웹소켓 구독 요청을 보낸 종목)
@@ -69,7 +88,7 @@ class KisWebSocket:
         # Heartbeat: track last websocket receive time
         self.last_ws_recv_time = datetime.now()
         
-        # 마지막 ��고 조회 시간 추가
+        # 마지막 고 조회 시간 추가
         self.last_balance_check = datetime.now()
         
         # 잔고 정보 저장용
@@ -107,7 +126,7 @@ class KisWebSocket:
         self.approval_key = self.client.get_ws_approval_key()
         logging.info(f"승인키 발급 완료: {self.approval_key}")
         if not self.approval_key:
-            raise ValueError("approval_key를 ��답에서 추출하지 못했습니다.")
+            raise ValueError("approval_key를 답에서 추출하지 못했습니다.")
         return self.approval_key
 
     def update_trade_history(self, stock_code, trade_time, price, trade_strength=None):
@@ -373,6 +392,81 @@ class KisWebSocket:
                 i += 1
         print("=========================================")
 
+    def get_index_name(self, index_code):
+        """
+        지수 코드를 지수 이름으로 변환합니다.
+        """
+        index_map = {
+            '0001': 'KOSPI',
+            '1001': 'KOSDAQ', 
+            '2001': 'KOSPI200',
+            '1029': 'KOSPI200',  # 또 다른 코스피200 코드
+        }
+        return index_map.get(index_code, f"INDEX_{index_code}")
+
+    def display_ask_bid_info(self, stock_code, data):
+        """
+        실시간 호가 정보를 간결하게 표시합니다.
+        """
+        try:
+            recv = data.split('^')
+            if len(recv) >= 50:
+                # 매도호가 1~5단계만 표시 (간결화)
+                sell_prices = recv[3:8]  # 상위 5단계만
+                buy_prices = recv[13:18]  # 상위 5단계만
+                
+                name = self.stock_names.get(stock_code, stock_code)
+                current_time = datetime.now().strftime('%H:%M:%S')
+                
+                print(f"[{current_time}] 호가 - {name}({stock_code})")
+                print(f"매도5: {self.format_price(sell_prices[4]):<10} | 매수1: {self.format_price(buy_prices[0]):<10}")
+                print(f"매도1: {self.format_price(sell_prices[0]):<10} | 매수5: {self.format_price(buy_prices[4]):<10}")
+                print("-" * 50)
+        except Exception as e:
+            logging.error(f"호가 데이터 처리 오류 ({stock_code}): {e}")
+
+    def display_index_info(self, index_name, index_data):
+        """
+        실시간 지수 정보를 표시합니다.
+        """
+        try:
+            if len(index_data) >= 10:
+                current_time = datetime.now().strftime('%H:%M:%S')
+                index_value = self.format_price(index_data[1])  # 현재 지수값
+                change = index_data[2]  # 전일대비
+                change_rate = index_data[3]  # 등락률
+                
+                # 부호 처리
+                change_str = f"+{change}" if not change.startswith(('+', '-')) else change
+                change_rate_str = f"+{change_rate}" if not change_rate.startswith(('+', '-')) else change_rate
+                
+                print(f"[{current_time}] 📊 {index_name}: {index_value} ({change_str}, {change_rate_str}%)")
+        except Exception as e:
+            logging.error(f"지수 데이터 처리 오류 ({index_name}): {e}")
+
+    def display_program_trading_info(self, stock_code, data):
+        """
+        실시간 프로그램매매 정보를 표시합니다.
+        """
+        try:
+            recv = data.split('^')
+            if len(recv) >= 11:
+                name = self.stock_names.get(stock_code, stock_code)
+                current_time = datetime.now().strftime('%H:%M:%S')
+                
+                # 프로그램매매 주요 지표
+                sell_volume = self.format_price(recv[2])     # 매도체결량
+                buy_volume = self.format_price(recv[4])      # 매수체결량
+                net_volume = self.format_price(recv[6])      # 순매수체결량
+                net_amount = self.format_price(recv[7])      # 순매수대금
+                
+                print(f"[{current_time}] 🔄 프로그램매매 - {name}({stock_code})")
+                print(f"  매도량: {sell_volume} | 매수량: {buy_volume}")
+                print(f"  순매수량: {net_volume} | 순매수대금: {net_amount}")
+                print("-" * 50)
+        except Exception as e:
+            logging.error(f"프로그램매매 데이터 처리 오류 ({stock_code}): {e}")
+
     def display_trade_summary(self):
         # 계산 로직은 모두 trade_summary에 있음. 반환 값은
         # (종목코드, 종목명, 체결가, 거래량, 체결강도, 매입가격, 보유수량, 평가금액, 매입가 대비,
@@ -553,18 +647,68 @@ class KisWebSocket:
     def handle_message(self, data):
         """
         수신된 웹소켓 메시지를 처리합니다.
-        - 체결 데이터(H0STCNT0)의 경우: 현재가와 기술적 지표만 업데이트
-        - 체결통보(H0STCNI0, H0STCNI9): 기존 처리 유지.
+        - 체결 데이터(H0STCNT0): 현재가와 기술적 지표 업데이트
+        - 호가 데이터(H0STASP0): 실시간 호가창 정보 (선택적)
+        - 지수 데이터(H0IF1000): 실시간 지수 정보 (코스피200 등)
+        - 프로그램매매(H0GSCNT0): 실시간 프로그램매매 추이
+        - 체결통보(H0STCNI0, H0STCNI9): 기존 처리 유지
         - JSON 메시지: PINGPONG, SUBSCRIBE SUCCESS, AES 키 처리
         """
         if data[0] in ('0', '1'):
             recv_parts = data.split('|')
             trid = recv_parts[1]
+            
             if trid == "H0STCNT0":
                 # 체결 데이터 저장
-                self.latest_trade[recv_parts[3].split('^')[0]] = recv_parts[3]
+                stock_code = recv_parts[3].split('^')[0]
+                self.latest_trade[stock_code] = recv_parts[3]
+                
+                # trade_history에도 저장 (기술적 지표 계산을 위해)
+                try:
+                    trade_data = recv_parts[3].split('^')
+                    if len(trade_data) >= 19:
+                        time_str = trade_data[1]
+                        price_str = trade_data[2]
+                        strength_str = trade_data[18]
+                        
+                        # 시간 파싱 (HHMMSS 형태)
+                        from datetime import datetime
+                        current_date = datetime.now().strftime('%Y%m%d')
+                        trade_time = datetime.strptime(f"{current_date}{time_str}", '%Y%m%d%H%M%S')
+                        
+                        price = float(price_str)
+                        strength = float(strength_str) if strength_str else None
+                        
+                        # trade_history에 추가
+                        self.update_trade_history(stock_code, trade_time, price, strength)
+                except Exception as e:
+                    logging.error(f"체결 데이터 파싱 오류: {e}")
+                
                 # 현재가와 기술적 지표 업데이트
                 self.update_price_and_indicators()
+                
+            elif trid == "H0STASP0" and self.enable_ask_bid:
+                # 호가 데이터 처리
+                stock_code = recv_parts[3].split('^')[0]
+                self.latest_ask_bid[stock_code] = recv_parts[3]
+                if len(recv_parts[3].split('^')) >= 50:
+                    self.display_ask_bid_info(stock_code, recv_parts[3])
+                    
+            elif trid == "H0IF1000" and self.enable_index:
+                # 지수 데이터 처리 (코스피200, 코스피, 코스닥 등)
+                index_data = recv_parts[3].split('^')
+                if len(index_data) >= 10:
+                    index_code = index_data[0]  # 지수 코드
+                    index_name = self.get_index_name(index_code)
+                    self.latest_index[index_name] = recv_parts[3]
+                    self.display_index_info(index_name, index_data)
+                    
+            elif trid == "H0GSCNT0" and self.enable_program_trading:
+                # 프로그램매매 실시간 데이터 처리
+                stock_code = recv_parts[3].split('^')[0]
+                self.latest_program_trading[stock_code] = recv_parts[3]
+                self.display_program_trading_info(stock_code, recv_parts[3])
+                
             elif trid in ["H0STCNI0", "H0STCNI9"]:
                 # 기존 체결통보 메시지를 이용해 신규 종목 추가
                 stock_code = recv_parts[3].split('^')[0]
@@ -592,9 +736,7 @@ class KisWebSocket:
                         }
                         asyncio.create_task(self.ws.send(json.dumps(senddata_trade)))
                         self.subscribed_stocks.add(stock_code)
-            elif trid in ["H0STASP0"]:
-                # 호가 데이터는 무시
-                pass
+                        
         elif data.startswith('{'):
             # JSON 메시지 처리 (예: PINGPONG, SUBSCRIBE SUCCESS, AES키 등)
             json_obj = json.loads(data)
@@ -640,7 +782,7 @@ class KisWebSocket:
     def stocksigningnotice(self, data, key, iv):
         """
         체결통보 메시지 처리 (AES256 복호화).
-        필요한 경우 여기에 추�� 처리를 할 수 있습니다.
+        필요한 경우 여기에 추가 처리를 할 수 있습니다.
         """
         decrypted = self.aes_cbc_base64_dec(key, iv, data)
         # 체결통보 출력 제거
@@ -656,7 +798,7 @@ class KisWebSocket:
         for code in self.stock_codes:
             try:
                 df = self.stock_api.get_daily_price(code)
-                if df is not None and not df.empty:
+                if isinstance(df, pd.DataFrame) and not df.empty:
                     # 'stck_cntg_hour' 컬럼을 datetime으로 변환하여 'time'으로 사용
                     df['time'] = pd.to_datetime(df['stck_bsop_date'].astype(str) + df['stck_cntg_hour'].astype(str),
                                                 format='%Y%m%d%H%M%S', errors='coerce')
@@ -887,8 +1029,7 @@ class KisWebSocket:
                     avg_price, qty = self.purchase_prices.get(code, (0, 0))
                     if qty <= 0:
                         continue
-                    logging.info(f"
-[ORDER] {code}: 시장가 매도")
+                    logging.info(f"[ORDER] {code}: 시장가 매도")
                     logging.info(f"- 수량: {qty:,}주")
                     logging.info(f"- 매입가: {avg_price:,.2f}원")
                     res = account_api.order_stock_cash(
@@ -922,10 +1063,10 @@ class KisWebSocket:
         from ..account.api import AccountAPI
         account_api = AccountAPI(client=self.client, account_info=self.account_info)
         balance = account_api.get_account_balance()
-        if balance and balance.get('output1'):
-            self.balance_info = pd.DataFrame(balance['output1'])
-            # 초기 
-수금 저장
+        output1 = balance.get('output1')
+        if output1 is not None and output1:
+            self.balance_info = pd.DataFrame(output1)
+            # 초기 수금 저장
             if 'output2' in balance and balance.get('output2'):
                 self.initial_cash_balance = int(balance['output2'][0]['dnca_tot_amt'])
             return True
@@ -1050,10 +1191,37 @@ class KisWebSocket:
                     logging.info("-"*50 + "\n")
                     sys.stdout.flush()
                     
-                    # 구독 요청 전송
+                    # 지수 구독 (활성화된 경우)
+                    if self.enable_index:
+                        index_codes = ['0001', '1001', '2001']  # KOSPI, KOSDAQ, KOSPI200
+                        for index_code in index_codes:
+                            index_name = self.get_index_name(index_code)
+                            logging.info(f"[INFO] {index_name}({index_code}) 지수 구독 요청 중...")
+                            sys.stdout.flush()
+                            senddata_index = {
+                                "header": {
+                                    "approval_key": self.approval_key,
+                                    "custtype": "P",
+                                    "tr_type": "1",
+                                    "content-type": "utf-8"
+                                },
+                                "body": {
+                                    "input": {
+                                        "tr_id": "H0IF1000",
+                                        "tr_key": index_code
+                                    }
+                                }
+                            }
+                            await websocket.send(json.dumps(senddata_index))
+                            logging.info(f"[INFO] {index_name} 지수 구독 요청 완료")
+                            sys.stdout.flush()
+                            await asyncio.sleep(0.1)
+                    
+                    # 종목별 구독 요청 전송
                     for stock_code in self.stock_codes:
                         logging.info(f"[INFO] {stock_code} 구독 요청 중...")
                         sys.stdout.flush()
+                        
                         # 체결정보(H0STCNT0) 구독
                         senddata_trade = {
                             "header": {
@@ -1073,25 +1241,47 @@ class KisWebSocket:
                         logging.info(f"[INFO] {stock_code} 체결정보 구독 요청 완료")
                         sys.stdout.flush()
                         
-                        # 호가창(H0STASP0) 구독
-                        senddata_hoga = {
-                            "header": {
-                                "approval_key": self.approval_key,
-                                "custtype": "P",
-                                "tr_type": "1",
-                                "content-type": "utf-8"
-                            },
-                            "body": {
-                                "input": {
-                                    "tr_id": "H0STASP0",
-                                    "tr_key": stock_code
+                        # 호가창(H0STASP0) 구독 (활성화된 경우)
+                        if self.enable_ask_bid:
+                            senddata_hoga = {
+                                "header": {
+                                    "approval_key": self.approval_key,
+                                    "custtype": "P",
+                                    "tr_type": "1",
+                                    "content-type": "utf-8"
+                                },
+                                "body": {
+                                    "input": {
+                                        "tr_id": "H0STASP0",
+                                        "tr_key": stock_code
+                                    }
                                 }
                             }
-                        }
-                        await websocket.send(json.dumps(senddata_hoga))
-                        logging.info(f"[INFO] {stock_code} 호가창 구독 요청 완료")
-                        sys.stdout.flush()
-                        await asyncio.sleep(0.1)  # ���독 요청 간 약간의 딜레이
+                            await websocket.send(json.dumps(senddata_hoga))
+                            logging.info(f"[INFO] {stock_code} 호가창 구독 요청 완료")
+                            sys.stdout.flush()
+                            
+                        # 프로그램매매(H0GSCNT0) 구독 (활성화된 경우)
+                        if self.enable_program_trading:
+                            senddata_program = {
+                                "header": {
+                                    "approval_key": self.approval_key,
+                                    "custtype": "P",
+                                    "tr_type": "1",
+                                    "content-type": "utf-8"
+                                },
+                                "body": {
+                                    "input": {
+                                        "tr_id": "H0GSCNT0",
+                                        "tr_key": stock_code
+                                    }
+                                }
+                            }
+                            await websocket.send(json.dumps(senddata_program))
+                            logging.info(f"[INFO] {stock_code} 프로그램매매 구독 요청 완료")
+                            sys.stdout.flush()
+                            
+                        await asyncio.sleep(0.1)  # 구독 요청 간 약간의 딜레이
                     
                     logging.info("\n" + "-"*50)
                     logging.info("[INFO] 모든 구독 요청 완료. 데이터 수신 대기 중...")
