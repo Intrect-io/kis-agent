@@ -506,25 +506,56 @@ class Agent:
             return False
 
     def fetch_minute_data(self, code, date=None, cache_dir='cache'):
-        """분봉 데이터 CSV에서 조회, 없으면 API로 수집 후 CSV에 저장 (DB는 장 마감 후 별도 이관)"""
+        """분봉 데이터 CSV에서 조회, 시간 기반 최신화 체크 후 필요시 API로 수집 후 CSV에 저장 (DB는 장 마감 후 별도 이관)"""
         import datetime  # datetime 모듈 명시적 임포트 (datetime.now() 오류 방지)
         import pandas as pd
         import os
         
         os.makedirs(cache_dir, exist_ok=True)
         today = date or datetime.datetime.now().strftime('%Y%m%d')
-        csv_file_path = os.path.join(cache_dir, f'{code}_minute_data.csv')
+        csv_file_path = os.path.join(cache_dir, f'{code}_minute_data_{today}.csv')  # 날짜별 캐시 파일명
 
-        # 1. CSV에서 조회 (기존 방식)
+        # 시간 기반 최신화 체크 로직
+        need_refresh = True
+        cached_df = None
+        
+        # 1. CSV에서 조회 및 시간 기반 최신화 체크
         if os.path.exists(csv_file_path):
             try:
-                df = pd.read_csv(csv_file_path)
-                if not df.empty:
-                    return df
+                # 파일 수정 시간 확인
+                file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(csv_file_path))
+                now = datetime.datetime.now()
+                
+                # 현재 시장 상황 판단
+                market_open_time = now.replace(hour=9, minute=0, second=0, microsecond=0)
+                market_close_time = now.replace(hour=15, minute=30, second=0, microsecond=0)
+                
+                # 시간 기반 최신화 정책
+                if market_open_time <= now <= market_close_time:
+                    # 장중: 5분마다 갱신
+                    refresh_interval = datetime.timedelta(minutes=5)
+                else:
+                    # 장외: 30분마다 갱신
+                    refresh_interval = datetime.timedelta(minutes=30)
+                
+                # 캐시가 유효한지 확인
+                if now - file_mtime < refresh_interval:
+                    cached_df = pd.read_csv(csv_file_path)
+                    if not cached_df.empty:
+                        logging.info(f"[{code}] 캐시된 분봉 데이터 사용 (마지막 갱신: {file_mtime.strftime('%H:%M:%S')})")
+                        need_refresh = False
+                else:
+                    logging.info(f"[{code}] 캐시된 데이터가 오래됨 (마지막 갱신: {file_mtime.strftime('%H:%M:%S')}), 새로 수집")
+                    
             except Exception as e:
                 logging.warning(f"[{code}] CSV 로드 실패: {e}")
+        
+        # 캐시가 유효하면 반환
+        if not need_refresh and cached_df is not None:
+            return cached_df
 
-        # 2. CSV에 없으면 API로 수집
+        # 2. 캐시가 유효하지 않거나 없으면 API로 새로 수집
+        logging.info(f"[{code}] 분봉 데이터 API 수집 시작 ({today})")
         now = datetime.datetime.now()
         current_date = now.date()
         market_close_time = now.replace(hour=15, minute=30, second=0, microsecond=0)
@@ -532,8 +563,10 @@ class Agent:
         
         if market_open_time <= now <= market_close_time:
             current_time_to_fetch = now
+            logging.info(f"[{code}] 장중 실시간 수집 (기준시간: {now.strftime('%H:%M:%S')})")
         else:
             current_time_to_fetch = market_close_time
+            logging.info(f"[{code}] 장마감 후 전체 데이터 수집 (기준시간: {market_close_time.strftime('%H:%M:%S')})")
             
         data_frames = []
         
@@ -556,19 +589,22 @@ class Agent:
             
         from datetime import timedelta
         loop_time = current_time_to_fetch
+        collected_count = 0
         while loop_time >= market_open_time:
             time_str = loop_time.strftime('%H%M%S')
             data = fetch_data_for_time(time_str)
             if data is not None:
                 data_frames.append(data)
+                collected_count += len(data)
             loop_time -= timedelta(minutes=30)
             
         if data_frames:
             all_data = pd.concat(data_frames, ignore_index=True)
             all_data['code'] = code
             all_data['date'] = today
-            # CSV에 저장 (DB 저장은 장 마감 후 별도 이관)
+            # CSV에 저장 (시간 기반 최신화를 위해 파일 타임스탬프 업데이트)
             all_data.to_csv(csv_file_path, index=False)
+            logging.info(f"[{code}] 분봉 데이터 수집 완료: {collected_count}건, CSV 저장됨")
             
             # DB에도 저장 시도 (선택적)
             try:
@@ -583,8 +619,10 @@ class Agent:
                 logging.warning(f"DB 저장 실패: {e}")
             
             return all_data
+        else:
+            logging.warning(f"[{code}] 분봉 데이터 수집 실패: API 응답 없음")
             
-        return pd.DataFrame()  # 데이터 없으면 빈 DataFrame 반환 (전략/흐름/의미 변경 없음)
+        return pd.DataFrame()  # 데이터 없으면 빈 DataFrame 반환
 
     def get_condition_stocks(self, user_id: str = "unohee", seq: int = 0, tr_cont: str = 'N'):
         """조건검색 결과를 조회합니다.
