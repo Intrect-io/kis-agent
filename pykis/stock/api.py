@@ -747,6 +747,39 @@ class StockAPI:
             }
         )
 
+    def get_daily_credit_balance(self, 
+                                code: str, 
+                                date: str) -> Optional[Dict[str, Any]]:
+        """
+        국내주식 신용잔고 일별추이 조회
+        
+        Args:
+            code (str): 종목코드 (6자리, 예: "005930")
+            date (str): 결제일자 (YYYYMMDD 형식, 예: "20240508")
+            
+        Returns:
+            Optional[Dict[str, Any]]: 신용잔고 일별추이 데이터
+                - 성공 시: 신용잔고 일별추이 정보를 포함한 응답 데이터
+                - 실패 시: None
+                
+        Note:
+            신용잔고는 신용거래(융자, 대주거래)로 인한 미결제 잔고를 의미합니다.
+            일별 추이를 통해 해당 종목의 신용거래 동향을 파악할 수 있습니다.
+            
+        Example:
+            >>> stock_api.get_daily_credit_balance("005930", "20240508")
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['DAILY_CREDIT_BALANCE'],
+            tr_id="FHPST04760000",  # 국내주식 신용잔고 일별추이 TR ID
+            params={
+                "fid_cond_mrkt_div_code": "J",  # 시장 분류 코드 (J: 주식)
+                "fid_cond_scr_div_code": "20476",  # 화면 분류 코드
+                "fid_input_iscd": code,  # 종목코드
+                "fid_input_date_1": date  # 결제일자
+            }
+        )
+
     def get_future_option_price(self, 
                                market_div_code: str = "F", 
                                input_iscd: str = None) -> Optional[Dict[str, Any]]:

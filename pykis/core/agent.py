@@ -121,6 +121,19 @@ class Agent:
         """
         return self.stock_api.get_daily_price(code, period, org_adj_prc)
     
+    def get_daily_credit_balance(self, code: str, date: str):
+        """
+        국내주식 신용잔고 일별추이 조회
+        
+        Args:
+            code: 종목코드 (6자리, 예: "005930")
+            date: 결제일자 (YYYYMMDD 형식, 예: "20240508")
+        
+        Returns:
+            Dict: 신용잔고 일별추이 데이터 (성공 시), None (실패 시)
+        """
+        return self.stock_api.get_daily_credit_balance(code, date)
+    
     def get_minute_price(self, code: str, hour: str = "153000"):
         """
         주식당일분봉조회 (Postman 검증된 방식)

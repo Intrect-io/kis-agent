@@ -200,11 +200,12 @@ class StockMonitor:
             # pykis Agent를 사용한 조건검색 (통일된 방식)
             condition_result = self.agent.get_condition_stocks("unohee", 0, "N")
             
-            if not condition_result or 'output' not in condition_result:
+            # [수정] condition API는 직접 List를 반환하므로 'output' 필드 확인 불필요
+            if not condition_result:
                 logging.warning("조건검색 결과가 없습니다.")
                 return []
             
-            stocks = condition_result['output']
+            stocks = condition_result  # [수정] 직접 리스트 사용
             if not stocks:
                 logging.warning("조건검색된 종목이 없습니다.")
                 return []
