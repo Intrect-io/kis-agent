@@ -25,12 +25,75 @@ price = agent.get_stock_price("005930")  # 삼성전자
 # 분봉 데이터 조회
 minute_data = agent.get_minute_price("005930", "093000")  # 9시 30분 데이터
 
+# 과거일자 분봉 데이터 조회 (최대 120건)
+daily_minute_data = agent.get_daily_minute_price("005930", "20250715", "153000")  # 2025년 7월 15일 15시 30분 기준
+
+# 분봉 데이터 수집 (4번 호출로 효율적 수집)
+minute_data = agent.fetch_minute_data("005930", "20250715")  # 특정 날짜 분봉 수집
+recent_data = agent.fetch_minute_data("005930")  # 최근 영업일 + 전일 분봉 수집
+
+# 매물대 분석 (지지선/저항선, VWAP, 피벗 포인트)
+support_resistance = agent.calculate_support_resistance("005930")  # 최근 데이터 기준 매물대 분석
+
 # 조건검색 결과 조회 (통일된 방식)
 condition_stocks = agent.get_condition_stocks("unohee", 0, "N")
 
 # 휴장일 정보 조회 (새로 추가됨)
 holiday_info = agent.get_holiday_info()
 is_holiday = agent.is_holiday("20241225")  # 크리스마스 휴장일 여부
+```
+
+## 분봉 데이터 크롤러 예제
+
+대량의 분봉 데이터를 수집하여 SQLite 데이터베이스에 저장하는 크롤러를 제공합니다.
+
+### 사용법
+```bash
+cd examples
+python minute_candle_crawler.py
+```
+
+### 기능
+- **대화형 인터페이스**: 종목명/코드와 기간을 입력받아 자동 수집
+- **영업일 자동 계산**: 휴장일 API를 활용한 정확한 영업일 계산
+- **효율적 수집**: 4번 호출로 하루 전체 분봉 데이터 수집
+- **SQLite 저장**: `{종목코드}_candles.db` 파일로 자동 저장
+- **진행 상황 표시**: 실시간 수집 진행률 및 통계 제공
+- **오류 처리**: 네트워크 오류 시 재시도 및 로그 기록
+
+### 실행 예시
+```
+🚀 분봉 데이터 크롤러
+========================================
+📈 종목명 또는 종목코드를 입력하세요: 삼성전자
+✅ 종목 확인: 삼성전자 (005930)
+
+📅 수집 기간 설정
+시작일 (YYYYMMDD): 20240101
+종료일 (YYYYMMDD): 20240131
+
+🔍 설정 확인
+   종목: 삼성전자 (005930)
+   기간: 20240101 ~ 20240131
+   저장: 005930_candles.db
+
+📊 수집 시작: 삼성전자(005930)
+📅 기간: 20240101 ~ 20240131
+📈 총 영업일: 22일
+💾 저장 경로: 005930_candles.db
+============================================================
+[  1/22] 20240102 수집 중... ✅ 완료 (361건)
+[  2/22] 20240103 수집 중... ✅ 완료 (361건)
+...
+============================================================
+✅ 수집 완료!
+📊 성공: 22/22일
+💾 저장 위치: 005930_candles.db
+
+📊 저장된 데이터 통계:
+   총 분봉 개수: 7,942건
+   수집된 날짜: 22일
+   일평균 분봉: 361.0건
 ```
 
 ## 주요 기능
@@ -187,7 +250,9 @@ await ws_client.connect()
 - `get_daily_price(code)`: 일별 시세 조회
 - `get_orderbook(code)`: 호가 정보 조회
 - `get_minute_price(code, time)`: 특정 시간 분봉 데이터 조회
-- `fetch_minute_data(code, date, cache_dir)`: 당일 전체 분봉 데이터 조회 (캐시 활용)
+- `get_daily_minute_price(code, date, hour)`: 과거일자 분봉 데이터 조회 (최대 120건)
+- `fetch_minute_data(code, date, cache_dir)`: 분봉 데이터 수집 (4번 호출로 효율적 수집, 캐시 활용)
+- `calculate_support_resistance(code, date)`: 매물대 분석 (지지선/저항선, VWAP, 피벗 포인트)
 - `get_stock_income(code)`: 손익계산서 조회
 - `get_stock_financial(code)`: 재무비율 조회
 - `get_price_volume_ratio(code)`: 매물대 거래비중 조회

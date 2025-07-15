@@ -29,6 +29,7 @@ API_ENDPOINTS = {
     'INQUIRE_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-price',  # 주식현재가 시세 (TR: FHKST01010100)
     'INQUIRE_DAILY_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-daily-price',  # ELW 당일급변종목 (TR: FHPEW02870000)
     'INQUIRE_TIME_ITEMCHARTPRICE': '/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice',  # 주식당일분봉조회(주식) (TR: FHKST03010200)
+    'INQUIRE_TIME_DAILYCHARTPRICE': '/uapi/domestic-stock/v1/quotations/inquire-time-dailychartprice',  # 일별분봉시세조회 (TR: FHKST03010230)
     'INQUIRE_MEMBER': '/uapi/domestic-stock/v1/quotations/inquire-member',  # 주식현재가 회원사 (TR: FHKST01010600)
     'INQUIRE_INVESTOR': '/uapi/domestic-stock/v1/quotations/inquire-investor',  # 주식현재가 투자자 (TR: FHKST01010900)
     'INQUIRE_ASKING_PRICE_EXP_CCN': '/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn',  # 주식현재가 호가 예상체결 (TR: FHKST01010200)
