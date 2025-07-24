@@ -435,39 +435,177 @@ class StockAPI:
             params=params
         )
 
+    def get_frgnmem_pchs_trend(self, code: str, date: str) -> Optional[Dict[str, Any]]:
+        """
+        종목별 외국계 순매수추이 조회 (날짜별 API)
+        
+        Args:
+            code: 종목코드
+            date: 조회일자 (YYYYMMDD)
+            
+        Returns:
+            Dict: 외국계 순매수추이 데이터
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['FRGNMEM_PCHS_TREND'],
+            tr_id="FHKST644400C0",
+            params={
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code,
+                "fid_input_date_1": date
+            }
+        )
+
     def get_foreign_broker_net_buy(self, code: str, foreign_brokers=None, date: str = None) -> Optional[tuple]:
         """
-        투자자별 매매 동향 API를 활용해 외국계 브로커의 순매수(매수-매도) 합계를 집계합니다.
-        code: 종목코드
-        foreign_brokers: 외국계 브로커명 리스트 (기본값 제공)
-        date: 조회일자(YYYYMMDD), None이면 오늘
-        반환: (순매수합계, 외국계 DataFrame) 또는 None
-        """
-        df = self.get_stock_investor(ticker=code)
+        거래원 정보를 활용해 외국계 증권사의 순매수(매수-매도) 합계를 집계합니다.
         
-        if df is None or df.empty:
-            logging.warning(f"[{code}] 투자자별 매매 동향 데이터가 없습니다.")
-            return None
+        Args:
+            code: 종목코드
+            foreign_brokers: 외국계 브로커명 리스트 (사용되지 않음, 자동 패턴 매칭)
+            date: 조회일자(YYYYMMDD), None이면 당일, 특정 날짜면 해당 날짜 데이터 조회
             
-        # 외국인 순매수량 추출
-        if 'frgn_ntby_qty' not in df.columns:
-            logging.error(f"[{code}] 외국인 순매수량 컬럼이 없습니다. 컬럼: {df.columns.tolist()}")
-            return None
-            
+        Returns:
+            tuple: (순매수량, 상세정보 dict) 또는 None
+                - 순매수량: 외국계 증권사 순매수량 (매수-매도)
+                - 상세정보: {'brokers': [...], 'buy_total': int, 'sell_total': int}
+        """
+        from datetime import datetime
+        
+        # 날짜 파라미터가 있고 당일이 아닌 경우 외국계 순매수추이 API 사용
+        if date and date != datetime.now().strftime('%Y%m%d'):
+            return self._get_foreign_broker_historical(code, date)
+        
+        # 당일인 경우 기존 거래원 정보 방식 사용
+        return self._get_foreign_broker_current(code, date)
+    
+    def _get_foreign_broker_historical(self, code: str, date: str) -> Optional[tuple]:
+        """과거 날짜의 외국인 순매수 조회 (투자자별 매매 동향 기반)"""
         try:
-            # 빈 문자열 처리: 당일 데이터 우선, 빈 값이면 0으로 처리
-            foreign_qty_str = df['frgn_ntby_qty'].iloc[0]
-            foreign_qty = int(foreign_qty_str) if foreign_qty_str and foreign_qty_str.strip() else 0
+            # get_stock_investor로 30일간 외국인 매매 데이터 조회
+            investor_df = self.get_stock_investor(ticker=code)
             
-            if not foreign_qty_str.strip():
-                logging.info(f"[{code}] 당일 외국인 순매수량이 빈 값, 0으로 설정 (날짜: {df['stck_bsop_date'].iloc[0]})")
-            else:
-                logging.info(f"[{code}] 외국인 순매수량: {foreign_qty} (날짜: {df['stck_bsop_date'].iloc[0]})")
+            if investor_df is None or investor_df.empty:
+                logging.warning(f"[{code}] 투자자별 매매 동향 데이터 조회 실패")
+                return None
             
-            return foreign_qty, df
-        except (ValueError, IndexError) as e:
-            logging.error(f"[{code}] 외국인 순매수량 추출 중 오류 발생: {e}")
+            # 해당 날짜 데이터 찾기
+            target_data = investor_df[investor_df['stck_bsop_date'] == date]
+            
+            if target_data.empty:
+                logging.warning(f"[{code}] {date} 날짜 데이터 없음 (최근 30일 범위 내에서만 조회 가능)")
+                # 사용 가능한 날짜 범위 표시
+                available_dates = investor_df['stck_bsop_date'].tolist()
+                logging.info(f"[{code}] 사용 가능한 날짜: {available_dates[0]} ~ {available_dates[-1]}")
+                return None
+            
+            # 외국인 매매 데이터 추출
+            row = target_data.iloc[0]
+            frgn_ntby_qty = int(row.get('frgn_ntby_qty', 0)) if row.get('frgn_ntby_qty') else 0
+            frgn_buy_vol = int(row.get('frgn_shnu_vol', 0)) if row.get('frgn_shnu_vol') else 0
+            frgn_sell_vol = int(row.get('frgn_seln_vol', 0)) if row.get('frgn_seln_vol') else 0
+            
+            details = {
+                'brokers': [],  # 과거 날짜는 개별 거래원 정보 없음
+                'buy_total': frgn_buy_vol,
+                'sell_total': frgn_sell_vol,
+                'total_brokers_found': 0,
+                'query_date': date,
+                'note': '투자자별 매매 동향 기반 외국인 전체 순매수 (과거 날짜)',
+                'api_method': 'stock_investor',
+                'data_range': f"{investor_df['stck_bsop_date'].iloc[0]} ~ {investor_df['stck_bsop_date'].iloc[-1]}"
+            }
+            
+            logging.info(f"[{code}] {date} 외국인 순매수: {frgn_ntby_qty:,}주 (매수: {frgn_buy_vol:,}, 매도: {frgn_sell_vol:,})")
+            return frgn_ntby_qty, details
+            
+        except Exception as e:
+            logging.error(f"[{code}] 과거 날짜 외국인 순매수 조회 실패 ({date}): {e}")
             return None
+    
+    def _get_foreign_broker_current(self, code: str, date: str = None) -> Optional[tuple]:
+        """당일 외국계 증권사 순매수 조회 (거래원 정보 기반)"""
+        # 외국계 증권사 패턴 (실제 거래원명에서 확인된 것들)
+        foreign_patterns = [
+            'JP모간', '모간스탠리', '모건스탠리', '모간증권',
+            '골드만', '골드만삭스', 
+            '메릴린치', '메릴',
+            'UBS', 'UBS코리아',
+            'CS증권', '크레디트',
+            'BNP', 'BNP파리바',
+            'HSBC', 'HSBC증권',
+            '도이치', '도이치은행',
+            '노무라', '노무라증권',
+            '다이와', '다이와증권',
+            '씨티그룹', '씨티',
+            '바클레이', '바클레이즈'
+        ]
+        
+        # 거래원 정보 조회
+        member_data = self.get_member(code)
+        if not member_data or 'output' not in member_data:
+            logging.warning(f"[{code}] 거래원 정보 조회 실패")
+            return None
+        
+        output = member_data['output']
+        
+        # 외국계 증권사 매수/매도 집계
+        foreign_buy_total = 0
+        foreign_sell_total = 0
+        foreign_brokers_found = []
+        
+        # 매수 거래원 확인 (상위 5개)
+        for i in range(1, 6):
+            broker_name = output.get(f'shnu_mbcr_name{i}', '')
+            volume = int(output.get(f'total_shnu_qty{i}', 0))
+            
+            # 외국계 증권사 패턴 매칭
+            is_foreign = any(pattern in broker_name for pattern in foreign_patterns)
+            if is_foreign and volume > 0:
+                foreign_buy_total += volume
+                foreign_brokers_found.append({
+                    'name': broker_name,
+                    'type': 'buy',
+                    'volume': volume,
+                    'rank': i
+                })
+        
+        # 매도 거래원 확인 (상위 5개)
+        for i in range(1, 6):
+            broker_name = output.get(f'seln_mbcr_name{i}', '')
+            volume = int(output.get(f'total_seln_qty{i}', 0))
+            
+            # 외국계 증권사 패턴 매칭
+            is_foreign = any(pattern in broker_name for pattern in foreign_patterns)
+            if is_foreign and volume > 0:
+                foreign_sell_total += volume
+                foreign_brokers_found.append({
+                    'name': broker_name,
+                    'type': 'sell',
+                    'volume': volume,
+                    'rank': i
+                })
+        
+        net_buy = foreign_buy_total - foreign_sell_total
+        
+        # 상세 정보 구성
+        details = {
+            'brokers': foreign_brokers_found,
+            'buy_total': foreign_buy_total,
+            'sell_total': foreign_sell_total,
+            'total_brokers_found': len(foreign_brokers_found),
+            'query_date': date or 'today',
+            'note': '거래원 정보 기반 외국계 증권사 순매수 (상위 5개 매수/매도 거래원 분석)',
+            'api_method': 'member'
+        }
+        
+        # 로그 출력
+        if foreign_brokers_found:
+            logging.info(f"[{code}] 외국계 증권사 {len(foreign_brokers_found)}개 발견, 순매수: {net_buy:,}주 (매수: {foreign_buy_total:,}, 매도: {foreign_sell_total:,})")
+        else:
+            logging.info(f"[{code}] 상위 5개 거래원에 외국계 증권사 없음")
+        
+        return net_buy, details
 
     def get_pbar_tratio(self, code: str, retries: int = 10) -> Optional[dict]:
         """매물대/거래비중 조회"""

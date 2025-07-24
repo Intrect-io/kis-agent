@@ -170,6 +170,10 @@ class Agent:
         """거래원 조회"""
         return self.stock_api.get_member(code)
     
+    def get_foreign_broker_net_buy(self, code: str, foreign_brokers=None, date: str = None):
+        """외국계 증권사 순매수 조회"""
+        return self.stock_api.get_foreign_broker_net_buy(code, foreign_brokers, date)
+    
     def get_program_trade_by_stock(self, code: str):
         """종목별 프로그램매매추이(체결) 조회"""
         return self.program_api.get_program_trade_by_stock(code)
