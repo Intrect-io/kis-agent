@@ -66,6 +66,9 @@ class Agent:
         else:
             self.account_info = account_info
         
+        # [추가] STONKS 프로젝트 호환성을 위한 my_acct 속성
+        self.my_acct = self.account_info
+        
         # API 모듈 초기화
         self._init_apis()
         
@@ -492,7 +495,7 @@ class Agent:
             logging.error(f"휴장일 확인 실패: {e}")
             return None
 
-    def init_minute_db(self, db_path='stonks_candles.db'):
+    def init_minute_db(self, db_path='db/stonks_candles.db'):
         """분봉 데이터용 DB 및 테이블 생성 (최초 1회)"""
         try:
             conn = sqlite3.connect(db_path)
@@ -518,7 +521,7 @@ class Agent:
             logging.error(f"분봉 DB 초기화 실패: {e}")
             return False
 
-    def migrate_minute_csv_to_db(self, code, db_path='stonks_candles.db'):
+    def migrate_minute_csv_to_db(self, code, db_path='db/stonks_candles.db'):
         """기존 csv 분봉 데이터를 DB로 이관 (한 번만)"""
         cache_dir = 'cache'
         csv_file_path = os.path.join(cache_dir, f'{code}_minute_data.csv')
@@ -748,7 +751,7 @@ class Agent:
         # [변경 이유] DB 저장 로직을 별도 함수로 분리하여 가독성 향상
         try:
             import sqlite3
-            db_path = 'stonks_candles.db'
+            db_path = 'db/stonks_candles.db'
             conn = sqlite3.connect(db_path)
             # 기존 해당 날짜 데이터 삭제 후 새로 저장
             conn.execute('DELETE FROM minute_data WHERE code = ? AND date = ?', (code, date))

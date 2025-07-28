@@ -260,6 +260,56 @@ class StockAPI:
             logging.error(f"Failed to estimate accumulated volume: {e}", exc_info=True)
             return None
     
+    def get_orderbook_raw(self, code: str) -> Optional[Dict]:
+        """
+        실제 호가 정보 조회 (원본 데이터 반환)
+        
+        기존 get_orderbook과 달리 실제 호가 10단 정보를 포함한 원본 데이터를 반환합니다.
+        
+        Args:
+            code: 종목코드
+            
+        Returns:
+            Dict: 원본 API 응답 (output1에 호가 정보, output2에 현재가 정보)
+                - output1: 호가 정보
+                  - bidp1~bidp10: 매수호가 1~10단
+                  - askp1~askp10: 매도호가 1~10단  
+                  - bidp_rsqn1~bidp_rsqn10: 매수호가 잔량 1~10단
+                  - askp_rsqn1~askp_rsqn10: 매도호가 잔량 1~10단
+                  - total_bidp_rsqn: 총 매수호가 잔량
+                  - total_askp_rsqn: 총 매도호가 잔량
+                - output2: 현재가 정보
+        """
+        response = self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_ASKING_PRICE_EXP_CCN'],
+            tr_id="FHKST01010200",
+            params={
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code
+            }
+        )
+        
+        if response and response.get('rt_cd') == '0':
+            output1 = response.get('output1')  # 호가 정보
+            output2 = response.get('output2')  # 현재가 정보
+            
+            if output1 and output2:
+                return {
+                    'rt_cd': response.get('rt_cd'),
+                    'msg_cd': response.get('msg_cd'),
+                    'msg1': response.get('msg1'),
+                    'output1': output1,
+                    'output2': output2
+                }
+            else:
+                logging.warning(f"get_orderbook_raw: output1 또는 output2가 없음 for {code}")
+                return None
+        else:
+            error_msg = response.get('msg1') if response else 'No response'
+            rt_cd = response.get('rt_cd') if response else 'None'
+            logging.warning(f"get_orderbook_raw: API 호출 실패 for {code} - rt_cd: {rt_cd}, msg: {error_msg}")
+            return None
+    
     def get_orderbook(self, code: str) -> Optional[pd.DataFrame]:
         """호가 및 예상체결 데이터 조회 (개선된 버전 - 각 호가단별 실제 거래대금 계산)"""
         response = self.client.make_request(

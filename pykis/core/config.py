@@ -42,11 +42,12 @@ class KISConfig:
             
             config = dotenv_values(dotenv_path=env_path)
 
-            self.APP_KEY = config.get("KIS_APP_KEY") or ""
-            self.APP_SECRET = config.get("KIS_APP_SECRET") or ""
+            # [변경 이유] STONKS 프로젝트의 환경변수명과 호환성 제공
+            self.APP_KEY = config.get("KIS_APP_KEY") or config.get("KIS_APPKEY") or ""
+            self.APP_SECRET = config.get("KIS_APP_SECRET") or config.get("KIS_APPSECRET") or ""
             self.BASE_URL = config.get("KIS_BASE_URL") or ""
-            self.ACCOUNT_NO = config.get("KIS_ACCOUNT_NO") or ""
-            self.ACCOUNT_CODE = config.get("KIS_ACCOUNT_CODE") or ""
+            self.ACCOUNT_NO = config.get("KIS_ACCOUNT_NO") or config.get("KIS_ACCOUNT_CANO") or ""
+            self.ACCOUNT_CODE = config.get("KIS_ACCOUNT_CODE") or config.get("KIS_ACCOUNT_PRDT_CD") or ""
         
         self._validate()
 
