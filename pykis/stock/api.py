@@ -25,7 +25,8 @@ price = stock.get_stock_price("005930")
 """
 
 from typing import Optional, Dict, Any, List
-import pandas as pd
+# [변경 이유] pandas 로딩 시간 단축을 위해 필요한 메서드에서만 지역 import 사용
+# import pandas as pd  # 지역 import로 변경
 import logging
 from ..core.client import KISClient, API_ENDPOINTS
 from datetime import datetime, timedelta
@@ -101,7 +102,7 @@ class StockAPI:
         self.client = client
         self.account = account_info  # { 'CANO': '12345678', 'ACNT_PRDT_CD': '01' }
 
-    def _make_request_dataframe(self, endpoint: str, tr_id: str, params: dict, retries: int = 5) -> Optional[pd.DataFrame]:
+    def _make_request_dataframe(self, endpoint: str, tr_id: str, params: dict, retries: int = 5) -> Optional['pd.DataFrame']:
         """공통 요청 함수: 응답을 DataFrame으로 변환"""
         response = self.client.make_request(
             endpoint=endpoint,
@@ -110,6 +111,7 @@ class StockAPI:
             retries=retries
         )
         if response and response.get("rt_cd") == "0":
+            import pandas as pd  # 지역 import로 로딩 시간 단축
             output = response.get("output", [])
             return pd.DataFrame([output]) if isinstance(output, dict) else pd.DataFrame(output)
         return None
@@ -187,7 +189,7 @@ class StockAPI:
         
         return None
     
-    def get_stock_investor(self, ticker: str = '', retries: int = 10, force_refresh: bool = False) -> Optional[pd.DataFrame]:
+    def get_stock_investor(self, ticker: str = '', retries: int = 10, force_refresh: bool = False) -> Optional['pd.DataFrame']:
         """투자자별 매매 동향 조회
         개인 순매수 수량 및 거래대금은 'prsn_ntby_qty', 'prsn_ntby_tr_pbmn' 필드 사용.
         """
@@ -310,7 +312,7 @@ class StockAPI:
             logging.warning(f"get_orderbook_raw: API 호출 실패 for {code} - rt_cd: {rt_cd}, msg: {error_msg}")
             return None
     
-    def get_orderbook(self, code: str) -> Optional[pd.DataFrame]:
+    def get_orderbook(self, code: str) -> Optional['pd.DataFrame']:
         """호가 및 예상체결 데이터 조회 (개선된 버전 - 각 호가단별 실제 거래대금 계산)"""
         # [변경 이유] get_orderbook은 deprecated 되었으며, get_orderbook_raw로 대체됩니다.
         logging.warning("get_orderbook is deprecated. Use get_orderbook_raw instead.")
@@ -360,6 +362,7 @@ class StockAPI:
                 '저가': [float(output2.get('stck_lwpr', 0) or 0)]
             }
             
+            import pandas as pd  # 지역 import로 로딩 시간 단축
             return pd.DataFrame(df_dict)
             
         except (ValueError, TypeError, KeyError) as e:
@@ -446,7 +449,7 @@ class StockAPI:
         )
         return response  # Return raw response for debugging
 
-    def get_stock_info(self, ticker: str) -> Optional[pd.DataFrame]:
+    def get_stock_info(self, ticker: str) -> Optional['pd.DataFrame']:
         """주식 기본 정보 조회"""
         response = self.client.make_request(
             endpoint=API_ENDPOINTS['SEARCH_STOCK_INFO'],
@@ -455,6 +458,7 @@ class StockAPI:
         )
         if response and response.get('rt_cd') == '0':
             output = response.get('output', {})
+            import pandas as pd  # 지역 import로 로딩 시간 단축
             return pd.DataFrame([output]) if output else pd.DataFrame()
         return None
 

@@ -9,7 +9,8 @@ from typing import Optional, Dict
 import logging
 from datetime import datetime, timedelta
 import sqlite3
-import pandas as pd
+# [변경 이유] pandas 로딩 시간 단축을 위해 필요한 메서드에서만 지역 import 사용
+# import pandas as pd  # 지역 import로 변경
 import os
 import json
 import time
@@ -529,6 +530,7 @@ class Agent:
             logging.info(f"CSV 파일이 존재하지 않음: {csv_file_path}")
             return True  # 파일이 없는 것은 오류가 아님
         try:
+            import pandas as pd  # 지역 import로 로딩 시간 단축
             df = pd.read_csv(csv_file_path)
             if df.empty:
                 logging.info(f"CSV 파일이 비어있음: {csv_file_path}")
@@ -652,6 +654,7 @@ class Agent:
             if result and result.get('rt_cd') == '0':
                 minute_data = result.get('output2', [])
                 if minute_data:
+                    import pandas as pd  # 지역 import로 로딩 시간 단축
                     df = pd.DataFrame(minute_data)
                     df['code'] = code
                     df['date'] = target_date
@@ -677,6 +680,7 @@ class Agent:
         
         # 모든 데이터 합치기
         if all_data_frames:
+            import pandas as pd  # 지역 import로 로딩 시간 단축  
             combined_df = pd.concat(all_data_frames, ignore_index=True)
             # 시간 순서로 정렬 (최신 순)
             if 'stck_cntg_hour' in combined_df.columns:
@@ -685,7 +689,8 @@ class Agent:
             return combined_df
         else:
             logging.warning(f"[{code}] 분봉 데이터 수집 실패: 모든 API 응답 없음")
-            return pd.DataFrame()
+            import pandas as pd  # 지역 import로 로딩 시간 단축
+        return pd.DataFrame()
     
     def _check_cache(self, csv_file_path: str, target_date: str, now: 'datetime.datetime') -> 'pd.DataFrame':
         """
