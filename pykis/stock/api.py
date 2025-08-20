@@ -1138,20 +1138,20 @@ class StockAPI:
             }
         )
     
-    def get_stock_investor(self, code: str) -> Optional[pd.DataFrame]:
+    def get_stock_investor(self, code: str) -> Optional[Dict[str, Any]]:
         """
-        주식 투자자별 매매동향 조회
+        주식 투자자별 매매동향 조회 (원시 데이터)
         
         Args:
             code (str): 종목코드 (6자리)
             
         Returns:
-            pd.DataFrame: 투자자별 매매 데이터
+            Dict: 투자자별 매매 원시 데이터
             
         Example:
             >>> stock_api.get_stock_investor("005930")
         """
-        response = self.client.make_request(
+        return self.client.make_request(
             endpoint=API_ENDPOINTS['INQUIRE_INVESTOR'],
             tr_id="FHKST01010900",
             params={
@@ -1159,13 +1159,6 @@ class StockAPI:
                 "FID_INPUT_ISCD": code
             }
         )
-        
-        if response and response.get('rt_cd') == '0':
-            output = response.get('output', [])
-            if output:
-                return pd.DataFrame(output)
-        
-        return pd.DataFrame()
     def get_daily_credit_balance(self, 
                                 code: str, 
                                 date: str) -> Optional[Dict[str, Any]]:
@@ -1220,5 +1213,657 @@ class StockAPI:
             params={
                 "fid_cond_mrkt_div_code": market_div_code,
                 "fid_input_iscd": input_iscd
+            }
+        )
+
+    def get_vi_status(self, 
+                     code: str = "",
+                     div_cls_code: str = "0",
+                     mrkt_cls_code: str = "0",
+                     rank_sort_cls_code: str = "0",
+                     input_date: str = "") -> Optional[Dict[str, Any]]:
+        """
+        변동성완화장치(VI) 현황 조회
+        
+        Args:
+            code (str): 종목코드 (6자리, 예: "005930"), 전체 조회시 빈 문자열
+            div_cls_code (str): 구분코드 (0:전체, 1:상승, 2:하락)
+            mrkt_cls_code (str): 시장구분코드 (0:전체, K:거래소, Q:코스닥)
+            rank_sort_cls_code (str): 정렬구분코드 (0:전체, 1:정적, 2:동적, 3:정적&동적)
+            input_date (str): 영업일 (YYYYMMDD 형식)
+            
+        Returns:
+            Dict: VI 현황 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_vi_status("005930", input_date="20240126")
+        """
+        from datetime import datetime
+        if not input_date:
+            input_date = datetime.now().strftime("%Y%m%d")
+            
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_VI_STATUS'],
+            tr_id="FHPST01390000",
+            params={
+                "fid_div_cls_code": div_cls_code,
+                "fid_cond_scr_div_code": "20139",
+                "fid_mrkt_cls_code": mrkt_cls_code,
+                "fid_input_iscd": code,
+                "fid_rank_sort_cls_code": rank_sort_cls_code,
+                "fid_input_date_1": input_date,
+                "fid_trgt_cls_code": "",
+                "fid_trgt_exls_cls_code": ""
+            }
+        )
+
+    def get_elw_price(self, code: str) -> Optional[Dict[str, Any]]:
+        """
+        ELW(주식워런트증권) 현재가 조회
+        
+        Args:
+            code (str): ELW 종목코드
+            
+        Returns:
+            Dict: ELW 시세 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_elw_price("58F282")
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_ELW_PRICE'],
+            tr_id="FHKEW15010000",
+            params={
+                "fid_cond_mrkt_div_code": "W",  # W: ELW
+                "fid_input_iscd": code
+            }
+        )
+
+    def get_index_category_price(self, 
+                                 upjong_code: str = "0001") -> Optional[Dict[str, Any]]:
+        """
+        업종별 지수 시세 조회
+        
+        Args:
+            upjong_code (str): 업종코드 (예: "0001")
+            
+        Returns:
+            Dict: 업종별 지수 시세 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_index_category_price("0001")
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_INDEX_CATEGORY_PRICE'],
+            tr_id="FHKUP03500100",
+            params={
+                "fid_cond_mrkt_div_code": "U",  # U: 업종
+                "fid_input_iscd": upjong_code
+            }
+        )
+
+    def get_index_tick_price(self, 
+                            index_code: str = "0001",
+                            hour: str = "") -> Optional[Dict[str, Any]]:
+        """
+        지수 틱(체결) 시세 조회
+        
+        Args:
+            index_code (str): 지수코드 (예: "0001")
+            hour (str): 조회 시간 (HH24MISS 형식, 예: "090000")
+            
+        Returns:
+            Dict: 지수 틱 시세 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_index_tick_price("0001", "090000")
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_INDEX_TICKPRICE'],
+            tr_id="FHPUP02110100",
+            params={
+                "fid_cond_mrkt_div_code": "U",
+                "fid_input_iscd": index_code,
+                "fid_hour_cls_code": "0" if not hour else "1",
+                "fid_pw_data_incu_yn": "Y",
+                "fid_input_hour_1": hour if hour else ""
+            }
+        )
+
+    def get_index_time_price(self, 
+                            index_code: str = "0001",
+                            time_div: str = "0") -> Optional[Dict[str, Any]]:
+        """
+        지수 분/일봉 시세 조회
+        
+        Args:
+            index_code (str): 지수코드 (예: "0001")
+            time_div (str): 시간구분 (0:30초, 1:1분, 2:10분, 3:30분, D:일봉)
+            
+        Returns:
+            Dict: 지수 분/일봉 시세 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_index_time_price("0001", "1")  # 1분봉
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_INDEX_TIMEPRICE'],
+            tr_id="FHKUP03500200",
+            params={
+                "fid_cond_mrkt_div_code": "U",
+                "fid_input_iscd": index_code,
+                "fid_input_date_1": "",
+                "fid_input_date_2": "",
+                "fid_period_div_code": time_div
+            }
+        )
+
+    def get_investor_daily_by_market(self, 
+                                     market_code: str = "STK",
+                                     input_date: str = "") -> Optional[Dict[str, Any]]:
+        """
+        시장별 투자자별 일별 매매동향 조회
+        
+        Args:
+            market_code (str): 시장구분코드 (STK:전체, KSP:코스피, KSQ:코스닥)
+            input_date (str): 조회일자 (YYYYMMDD 형식)
+            
+        Returns:
+            Dict: 투자자별 일별 매매동향 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_investor_daily_by_market("STK", "20240126")
+        """
+        from datetime import datetime
+        if not input_date:
+            input_date = datetime.now().strftime("%Y%m%d")
+            
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_INVESTOR_DAILY_BY_MARKET'],
+            tr_id="FHPTJ04400000",
+            params={
+                "fid_cond_mrkt_div_code": market_code,
+                "fid_input_date_1": input_date
+            }
+        )
+
+    def get_investor_time_by_market(self, 
+                                    market_code: str = "STK",
+                                    time_div: str = "0") -> Optional[Dict[str, Any]]:
+        """
+        시장별 투자자별 당일 시간대별 매매동향 조회
+        
+        Args:
+            market_code (str): 시장구분코드 (STK:전체, KSP:코스피, KSQ:코스닭)
+            time_div (str): 시간구분 (0:당일전체, 1:1분, 2:10분, 3:30분)
+            
+        Returns:
+            Dict: 투자자별 시간대별 매매동향 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_investor_time_by_market("STK", "1")  # 1분 단위
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_INVESTOR_TIME_BY_MARKET'],
+            tr_id="FHPTJ04410000",
+            params={
+                "fid_cond_mrkt_div_code": market_code,
+                "fid_input_hour_1": "",
+                "fid_pw_data_incu_yn": "Y",
+                "fid_hour_cls_code": time_div
+            }
+        )
+
+    def get_member_daily(self, 
+                        code: str,
+                        start_date: str = "",
+                        end_date: str = "") -> Optional[Dict[str, Any]]:
+        """
+        종목별 회원사 일별 매매동향 조회
+        
+        Args:
+            code (str): 종목코드 (6자리)
+            start_date (str): 시작일자 (YYYYMMDD 형식)
+            end_date (str): 종료일자 (YYYYMMDD 형식)
+            
+        Returns:
+            Dict: 회원사 일별 매매동향 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_member_daily("005930", "20240101", "20240131")
+        """
+        from datetime import datetime
+        if not end_date:
+            end_date = datetime.now().strftime("%Y%m%d")
+        if not start_date:
+            start_date = end_date
+            
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_MEMBER_DAILY'],
+            tr_id="FHKST01010700",
+            params={
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code,
+                "fid_input_date_1": start_date,
+                "fid_input_date_2": end_date
+            }
+        )
+
+    def get_overtime_asking_price(self, code: str) -> Optional[Dict[str, Any]]:
+        """
+        시간외 호가 조회
+        
+        Args:
+            code (str): 종목코드 (6자리)
+            
+        Returns:
+            Dict: 시간외 호가 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_overtime_asking_price("005930")
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_OVERTIME_ASKING_PRICE'],
+            tr_id="FHKST01010200",
+            params={
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code
+            }
+        )
+
+    def get_overtime_price(self, code: str) -> Optional[Dict[str, Any]]:
+        """
+        시간외 시세 조회
+        
+        Args:
+            code (str): 종목코드 (6자리)
+            
+        Returns:
+            Dict: 시간외 시세 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_overtime_price("005930")
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_OVERTIME_PRICE'],
+            tr_id="FHKST01010300",
+            params={
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code
+            }
+        )
+
+    def get_time_daily_chart_price(self, 
+                                   code: str,
+                                   period_div: str = "0") -> Optional[Dict[str, Any]]:
+        """
+        종목 분/일봉 차트 조회
+        
+        Args:
+            code (str): 종목코드 (6자리)
+            period_div (str): 기간구분 (0:30초, 1:1분, 2:3분, 3:5분, 4:10분, 5:15분, 6:30분, 7:60분, D:일)
+            
+        Returns:
+            Dict: 분/일봉 차트 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_time_daily_chart_price("005930", "1")  # 1분봉
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_TIME_DAILYCHARTPRICE'],
+            tr_id="FHKST03010200",
+            params={
+                "fid_etc_cls_code": "",
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code,
+                "fid_input_date_1": "",
+                "fid_input_date_2": "",
+                "fid_period_div_code": period_div,
+                "fid_org_adj_prc": "0"
+            }
+        )
+
+    def get_time_index_chart_price(self, 
+                                   index_code: str = "0001",
+                                   period_div: str = "1") -> Optional[Dict[str, Any]]:
+        """
+        지수 분봉 차트 조회
+        
+        Args:
+            index_code (str): 지수코드 (예: "0001")
+            period_div (str): 기간구분 (1:1분, 2:3분, 3:5분, 4:10분, 5:15분, 6:30분, 7:60분)
+            
+        Returns:
+            Dict: 지수 분봉 차트 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_time_index_chart_price("0001", "1")  # 1분봉
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_TIME_INDEXCHARTPRICE'],
+            tr_id="FHKUP03500100",
+            params={
+                "fid_cond_mrkt_div_code": "U",
+                "fid_input_iscd": index_code,
+                "fid_input_date_1": "",
+                "fid_input_date_2": "",
+                "fid_period_div_code": period_div,
+                "fid_pw_data_incu_yn": "Y"
+            }
+        )
+
+    def get_time_item_conclusion(self, 
+                                code: str,
+                                hour: str = "") -> Optional[Dict[str, Any]]:
+        """
+        종목별 체결 조회 (틱 데이터)
+        
+        Args:
+            code (str): 종목코드 (6자리)
+            hour (str): 조회시간 (HH24MISS 형식)
+            
+        Returns:
+            Dict: 체결 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_time_item_conclusion("005930", "090000")
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_TIME_ITEMCONCLUSION'],
+            tr_id="FHPST01060000",
+            params={
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code,
+                "fid_input_hour_1": hour if hour else "",
+                "fid_pw_data_incu_yn": "Y"
+            }
+        )
+
+    def get_time_overtime_conclusion(self, 
+                                    code: str,
+                                    hour: str = "") -> Optional[Dict[str, Any]]:
+        """
+        시간외 체결 조회
+        
+        Args:
+            code (str): 종목코드 (6자리)
+            hour (str): 조회시간 (HH24MISS 형식)
+            
+        Returns:
+            Dict: 시간외 체결 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_time_overtime_conclusion("005930")
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_TIME_OVERTIMECONCLUSION'],
+            tr_id="FHPST02320000",
+            params={
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code,
+                "fid_input_hour_1": hour if hour else "",
+                "fid_pw_data_incu_yn": "Y"
+            }
+        )
+
+    def get_asking_price_exp_ccn(self, code: str) -> Optional[Dict[str, Any]]:
+        """
+        주식 호가 및 예상체결 조회
+        
+        Args:
+            code (str): 종목코드 (6자리)
+            
+        Returns:
+            Dict: 호가 및 예상체결 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_asking_price_exp_ccn("005930")
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_ASKING_PRICE_EXP_CCN'],
+            tr_id="FHKST01010200",
+            params={
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code
+            }
+        )
+
+    def get_price_2(self, code: str) -> Optional[Dict[str, Any]]:
+        """
+        주식 현재가 시세2 조회 (확장 정보)
+        
+        Args:
+            code (str): 종목코드 (6자리)
+            
+        Returns:
+            Dict: 주식 시세2 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_price_2("005930")
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_PRICE_2'],
+            tr_id="FHPST01010000",
+            params={
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code
+            }
+        )
+
+    def get_daily_overtimeprice(self, 
+                                code: str,
+                                start_date: str = "",
+                                end_date: str = "") -> Optional[Dict[str, Any]]:
+        """
+        시간외 일자별 주가 조회
+        
+        Args:
+            code (str): 종목코드 (6자리)
+            start_date (str): 시작일자 (YYYYMMDD 형식)
+            end_date (str): 종료일자 (YYYYMMDD 형식)
+            
+        Returns:
+            Dict: 시간외 일자별 주가 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_daily_overtimeprice("005930", "20240101", "20240131")
+        """
+        from datetime import datetime
+        if not end_date:
+            end_date = datetime.now().strftime("%Y%m%d")
+        if not start_date:
+            start_date = end_date
+            
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_DAILY_OVERTIMEPRICE'],
+            tr_id="FHPST02320000",
+            params={
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code,
+                "fid_input_date_1": start_date,
+                "fid_input_date_2": end_date,
+                "fid_period_div_code": "D"
+            }
+        )
+
+    def get_daily_trade_volume(self, 
+                              code: str,
+                              start_date: str = "",
+                              end_date: str = "") -> Optional[Dict[str, Any]]:
+        """
+        종목별 일별 매수매도 체결량 조회
+        
+        Args:
+            code (str): 종목코드 (6자리)
+            start_date (str): 시작일자 (YYYYMMDD 형식)
+            end_date (str): 종료일자 (YYYYMMDD 형식)
+            
+        Returns:
+            Dict: 일별 매수매도 체결량 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_daily_trade_volume("005930", "20240101", "20240131")
+        """
+        from datetime import datetime
+        if not end_date:
+            end_date = datetime.now().strftime("%Y%m%d")
+        if not start_date:
+            from datetime import timedelta
+            start_date = (datetime.strptime(end_date, "%Y%m%d") - timedelta(days=30)).strftime("%Y%m%d")
+            
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INQUIRE_DAILY_TRADE_VOLUME'],
+            tr_id="FHKST03010800",
+            params={
+                "fid_cond_mrkt_div_code": "J",
+                "fid_input_iscd": code,
+                "fid_input_date_1": start_date,
+                "fid_input_date_2": end_date
+            }
+        )
+
+    def get_program_trade_by_stock(self, 
+                                   code: str,
+                                   market_code: str = "J") -> Optional[Dict[str, Any]]:
+        """
+        종목별 프로그램매매 추이(체결) 조회
+        
+        Args:
+            code (str): 종목코드 (6자리)
+            market_code (str): 시장구분코드 (J:KRX, NX:NXT, UN:통합)
+            
+        Returns:
+            Dict: 프로그램매매 추이 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_program_trade_by_stock("005930")
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['PROGRAM_TRADE_BY_STOCK'],
+            tr_id="FHPPG04650101",
+            params={
+                "fid_cond_mrkt_div_code": market_code,
+                "fid_input_iscd": code
+            }
+        )
+
+    def get_program_trade_by_stock_daily(self, 
+                                         code: str,
+                                         start_date: str = "",
+                                         end_date: str = "",
+                                         market_code: str = "J") -> Optional[Dict[str, Any]]:
+        """
+        종목별 프로그램매매 추이(일별) 조회
+        
+        Args:
+            code (str): 종목코드 (6자리)
+            start_date (str): 시작일자 (YYYYMMDD 형식)
+            end_date (str): 종료일자 (YYYYMMDD 형식)
+            market_code (str): 시장구분코드 (J:KRX, NX:NXT, UN:통합)
+            
+        Returns:
+            Dict: 일별 프로그램매매 추이 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_program_trade_by_stock_daily("005930", "20240101", "20240131")
+        """
+        from datetime import datetime
+        if not end_date:
+            end_date = datetime.now().strftime("%Y%m%d")
+        if not start_date:
+            from datetime import timedelta
+            start_date = (datetime.strptime(end_date, "%Y%m%d") - timedelta(days=30)).strftime("%Y%m%d")
+            
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['PROGRAM_TRADE_BY_STOCK_DAILY'],
+            tr_id="FHPPG04650200",
+            params={
+                "fid_cond_mrkt_div_code": market_code,
+                "fid_input_iscd": code,
+                "fid_input_date_1": start_date,
+                "fid_input_date_2": end_date
+            }
+        )
+
+    def get_comp_program_trade_daily(self, 
+                                     market_code: str = "J",
+                                     start_date: str = "",
+                                     end_date: str = "") -> Optional[Dict[str, Any]]:
+        """
+        프로그램매매 종합현황(일별) 조회
+        
+        Args:
+            market_code (str): 시장구분코드 (J:거래소, Q:코스닥, JQ:KRX)
+            start_date (str): 시작일자 (YYYYMMDD 형식)
+            end_date (str): 종료일자 (YYYYMMDD 형식)
+            
+        Returns:
+            Dict: 프로그램매매 종합현황 일별 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_comp_program_trade_daily("J", "20240101", "20240131")
+        """
+        from datetime import datetime
+        if not end_date:
+            end_date = datetime.now().strftime("%Y%m%d")
+        if not start_date:
+            from datetime import timedelta
+            start_date = (datetime.strptime(end_date, "%Y%m%d") - timedelta(days=30)).strftime("%Y%m%d")
+            
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['COMP_PROGRAM_TRADE_DAILY'],
+            tr_id="FHPPG04600000",
+            params={
+                "fid_input_option": market_code,
+                "fid_input_date_1": start_date,
+                "fid_input_date_2": end_date
+            }
+        )
+
+    def get_comp_program_trade_today(self, 
+                                     market_code: str = "J",
+                                     time_div: str = "0") -> Optional[Dict[str, Any]]:
+        """
+        프로그램매매 종합현황(당일/시간별) 조회
+        
+        Args:
+            market_code (str): 시장구분코드 (J:거래소, Q:코스닥, JQ:KRX)
+            time_div (str): 시간구분 (0:당일전체, 1:1분, 2:10분, 3:30분)
+            
+        Returns:
+            Dict: 프로그램매매 종합현황 당일 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_comp_program_trade_today("J", "1")  # 거래소 1분 단위
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['COMP_PROGRAM_TRADE_TODAY'],
+            tr_id="FHPPG04600100",
+            params={
+                "fid_input_option": market_code,
+                "fid_hour_cls_code": time_div,
+                "fid_pw_data_incu_yn": "Y"
+            }
+        )
+
+    def get_investor_program_trade_today(self, 
+                                         market_code: str = "J") -> Optional[Dict[str, Any]]:
+        """
+        프로그램매매 투자자별 매매동향(당일) 조회
+        
+        Args:
+            market_code (str): 시장구분코드 (J:거래소, Q:코스닥, JQ:KRX)
+            
+        Returns:
+            Dict: 투자자별 프로그램매매 동향 데이터, 실패 시 None
+            
+        Example:
+            >>> stock_api.get_investor_program_trade_today("J")
+        """
+        return self.client.make_request(
+            endpoint=API_ENDPOINTS['INVESTOR_PROGRAM_TRADE_TODAY'],
+            tr_id="HHPPG046600C0",
+            params={
+                "fid_input_option": market_code
             }
         )

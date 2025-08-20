@@ -43,6 +43,11 @@ API_ENDPOINTS = {
     'INQUIRE_OVERTIME_ASKING_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-overtime-asking-price',  # 국내주식 시간외호가 (TR: FHPST02300400)
     'INQUIRE_OVERTIME_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-overtime-price',  # 국내주식 시간외현재가 (TR: FHPST02300000)
     'INQUIRE_PRICE_2': '/uapi/domestic-stock/v1/quotations/inquire-price-2',  # 주식현재가 시세2 (TR: FHPST01010000)
+    'INQUIRE_ELW_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-elw-price',  # ELW 현재가 조회 (TR: FHKEW15010000)
+    'INQUIRE_INDEX_CATEGORY_PRICE': '/uapi/domestic-stock/v1/quotations/inquire-index-category-price',  # 업종별 지수 시세 (TR: FHKUP03500100)
+    'INQUIRE_INDEX_TICKPRICE': '/uapi/domestic-stock/v1/quotations/inquire-index-tickprice',  # 지수 틱 시세 (TR: FHPUP02110100)
+    'INQUIRE_INDEX_TIMEPRICE': '/uapi/domestic-stock/v1/quotations/inquire-index-timeprice',  # 지수 분/일봉 시세 (TR: FHKUP03500200)
+    'INQUIRE_TIME_INDEXCHARTPRICE': '/uapi/domestic-stock/v1/quotations/inquire-time-indexchartprice',  # 지수 분봉 차트 (TR: FHKUP03500100)
     
     # === 프로그램매매 ===
     'PROGRAM_TRADE_BY_STOCK_DAILY': '/uapi/domestic-stock/v1/quotations/program-trade-by-stock-daily',  # 종목별 프로그램매매추이(일별) (TR: FHPPG04650200)
