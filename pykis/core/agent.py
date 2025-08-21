@@ -47,20 +47,29 @@ class Agent:
         >>> condition_stocks = agent.get_condition_stocks()
     """
     
-    def __init__(self, client: Optional[KISClient] = None, account_info: Optional[Dict] = None):
+    def __init__(self, client: Optional[KISClient] = None, account_info: Optional[Dict] = None, env_path: Optional[str] = None):
         """
         Agent를 초기화합니다.
         
         Args:
             client (KISClient, optional): API 클라이언트. None이면 새로 생성
             account_info (Dict, optional): 계좌 정보. None이면 .env에서 자동 로드
+            env_path (str, optional): 커스텀 .env 파일 경로. None이면 기본 .env 사용
         """
-        self.client = client or KISClient()
+        # 커스텀 .env 파일 로딩
+        if env_path:
+            load_dotenv(env_path, override=True)
+        
+        # 설정 및 클라이언트 초기화
+        config_path = env_path if env_path else ".env"
+        config = KISConfig(config_path) if not client else None
+        self.client = client or KISClient(config=config)
         
         # 계좌 정보 설정
         if account_info is None:
             # .env 파일에서 계좌 정보 자동 로드
-            config = KISConfig()
+            if not config:
+                config = KISConfig(config_path)
             self.account_info = {
                 'CANO': config.account_stock,
                 'ACNT_PRDT_CD': config.account_product
@@ -231,13 +240,13 @@ class Agent:
     
     def get_stock_investor(self, code: str):
         """
-        주식 투자자별 매매동향 조회
+        주식 투자자별 매매동향 조회 (원시 데이터)
         
         Args:
             code (str): 종목코드 (6자리)
             
         Returns:
-            pd.DataFrame: 투자자별 매매 데이터
+            Dict: 투자자별 매매 원시 데이터
         """
         return self.stock_api.get_stock_investor(code)
     # ============================================================================

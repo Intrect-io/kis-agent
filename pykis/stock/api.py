@@ -30,6 +30,7 @@ from typing import Optional, Dict, Any, List
 import logging
 import pandas as pd
 from ..core.client import KISClient, API_ENDPOINTS
+from ..core.base_api import BaseAPI
 from datetime import datetime, timedelta
 
 def get_kospi200_futures_code(today=None):
@@ -98,10 +99,9 @@ def get_kospi200_futures_code(today=None):
     # 101W + MM 형태로 종목코드 생성 (MM은 2자리)
     return f"101W{expiry:02d}"
 
-class StockAPI:
+class StockAPI(BaseAPI):
     def __init__(self, client: KISClient, account_info: Dict[str, str]):
-        self.client = client
-        self.account = account_info  # { 'CANO': '12345678', 'ACNT_PRDT_CD': '01' }
+        super().__init__(client, account_info)
 
     def _make_request_dataframe(self, endpoint: str, tr_id: str, params: dict, retries: int = 5) -> Optional['pd.DataFrame']:
         """공통 요청 함수: 응답을 DataFrame으로 변환"""
@@ -117,24 +117,25 @@ class StockAPI:
             return pd.DataFrame([output]) if isinstance(output, dict) else pd.DataFrame(output)
         return None
 
-    def get_stock_price(self, code: str) -> Optional[Dict[str, Any]]:
-        """주식 현재가 조회"""
-        return self.client.make_request(
+    def get_stock_price(self, code: str) -> Optional[pd.DataFrame]:
+        """주식 현재가 조회 (숫자형 자동 변환)"""
+        return self._make_request_with_conversion(
             endpoint=API_ENDPOINTS['INQUIRE_PRICE'],
             tr_id="FHKST01010100",
-            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code}
+            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code},
+            field_type='stock_price'
         )
 
-    def get_daily_price(self, code: str, period: str = "D", org_adj_prc: str = "1") -> Optional[Dict]:
+    def get_daily_price(self, code: str, period: str = "D", org_adj_prc: str = "1") -> Optional[pd.DataFrame]:
         """
-        일별 시세 조회 (Postman 검증된 방식)
+        일별 시세 조회 (숫자형 자동 변환)
         
         Args:
             code: 종목코드 (6자리)
             period: 기간구분 (D: 일, W: 주, M: 월, Y: 년)
             org_adj_prc: 수정주가구분 (0: 수정주가 미사용, 1: 수정주가 사용)
         """
-        return self.client.make_request(
+        return self._make_request_with_conversion(
             endpoint=API_ENDPOINTS['INQUIRE_DAILY_ITEMCHARTPRICE'],
             tr_id="FHKST01010400",
             params={
@@ -142,7 +143,8 @@ class StockAPI:
                 "fid_input_iscd": code,
                 "fid_period_div_code": period,
                 "fid_org_adj_prc": org_adj_prc
-            }
+            },
+            field_type='daily_price'
         )
 
     
@@ -370,15 +372,15 @@ class StockAPI:
             logging.error(f"get_orderbook: 데이터 파싱 오류 for {code}: {e}")
             return None
 
-    def get_volume_power(self, volume: int = 0) -> Optional[Dict[str, Any]]:
+    def get_volume_power(self, volume: int = 0) -> Optional[pd.DataFrame]:
         """
-        체결강도 순위 조회
+        체결강도 순위 조회 (숫자형 자동 변환)
         
         Args:
             volume (int): 거래량 기준 (기본값: 0)
             
         Returns:
-            Optional[Dict[str, Any]]: 체결강도 순위 정보
+            Optional[pd.DataFrame]: 체결강도 순위 정보
         """
         try:
             # [변경 이유] Postman에서 확인된 올바른 체결강도 API 사용
@@ -394,10 +396,11 @@ class StockAPI:
                 "fid_trgt_cls_code": "0"
             }
             
-            return self.client.make_request(
+            return self._make_request_with_conversion(
                 endpoint=API_ENDPOINTS['VOLUME_POWER'],
                 tr_id="FHPST01680000",
-                params=params
+                params=params,
+                field_type='volume_power'
             )
         except Exception as e:
             logging.error(f"체결강도 순위 조회 실패: {e}")
@@ -1138,27 +1141,6 @@ class StockAPI:
             }
         )
     
-    def get_stock_investor(self, code: str) -> Optional[Dict[str, Any]]:
-        """
-        주식 투자자별 매매동향 조회 (원시 데이터)
-        
-        Args:
-            code (str): 종목코드 (6자리)
-            
-        Returns:
-            Dict: 투자자별 매매 원시 데이터
-            
-        Example:
-            >>> stock_api.get_stock_investor("005930")
-        """
-        return self.client.make_request(
-            endpoint=API_ENDPOINTS['INQUIRE_INVESTOR'],
-            tr_id="FHKST01010900",
-            params={
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_ISCD": code
-            }
-        )
     def get_daily_credit_balance(self, 
                                 code: str, 
                                 date: str) -> Optional[Dict[str, Any]]:

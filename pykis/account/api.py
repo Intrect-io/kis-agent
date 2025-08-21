@@ -1,5 +1,6 @@
 import pandas as pd
 from ..core.client import KISClient, API_ENDPOINTS
+from ..core.base_api import BaseAPI
 from typing import Optional, Dict, Any
 import logging
 
@@ -25,7 +26,7 @@ account = AccountAPI(client, {"CANO": "12345678", "ACNT_PRDT_CD": "01"})
 df = account.get_account_balance()
 """
 
-class AccountAPI:
+class AccountAPI(BaseAPI):
     def __init__(self, client: KISClient, account_info: Dict[str, str]):
         """Wrapper around KIS account related endpoints.
 
@@ -42,8 +43,7 @@ class AccountAPI:
         >>> account = load_account_info()
         >>> api = AccountAPI(KISClient(), account)
         """
-        self.client = client
-        self.account = account_info  # { 'CANO': '12345678', 'ACNT_PRDT_CD': '01' }
+        super().__init__(client, account_info)
 
     def get_account_balance(self) -> Optional[pd.DataFrame]:
         """Return current holdings and profit/loss information.
@@ -51,7 +51,7 @@ class AccountAPI:
         Returns
         -------
         Optional[pandas.DataFrame]
-            ``output1`` from the API on success.
+            ``output1`` from the API on success with numeric fields converted.
 
         Example
         -------
@@ -75,7 +75,8 @@ class AccountAPI:
             }
         )
         if res and 'output1' in res:
-            return pd.DataFrame(res['output1'])
+            df = pd.DataFrame(res['output1'])
+            return self._convert_numeric_fields(df, 'account_balance')
         return None
 
     def get_cash_available(self, stock_code: str = "005930") -> Optional[Dict[str, Any]]:
