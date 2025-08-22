@@ -97,4 +97,23 @@ src/kis/core/credit/KIS_Token.json
 kis_devlp.yaml
 stonks_candles.db
 test_api_call.py
-test_token.py 
+test_token.py
+
+# BS Detector and test files
+bs_detector_comparison.py
+pykis_bs_detector.py
+*_bs_detector*.py
+
+# Audit reports  
+audit_report.json
+audit_report_*.md
+audit_report_*.py
+
+# Postman collections
+postman_collections/
+
+# Excel files
+*.xlsx
+
+# Empty directories
+scripts/
