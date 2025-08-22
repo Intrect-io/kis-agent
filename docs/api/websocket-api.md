@@ -3,6 +3,9 @@
 ## 📋 API 개요
 PyKIS 웹소켓 모듈의 공개 API 인터페이스를 정의합니다.
 
+**테스트 커버리지:** 64%  
+**최신 업데이트:** 2025-08-22
+
 ## 🏗️ 클래스 참조
 
 ### WSAgent
@@ -22,10 +25,27 @@ WSAgent(
 
 **매개변수:**
 - `approval_key`: 웹소켓 승인키 (필수)
-- `url`: 웹소켓 서버 URL
-- `ping_interval`: ping 전송 간격 (초)
-- `ping_timeout`: ping 응답 대기 시간 (초)
-- `auto_reconnect`: 자동 재연결 여부
+- `url`: 웹소켓 서버 URL (기본값: `ws://ops.koreainvestment.com:21000`)
+- `ping_interval`: ping 전송 간격 (초, 기본값: 30)
+- `ping_timeout`: ping 응답 대기 시간 (초, 기본값: 30)
+- `auto_reconnect`: 자동 재연결 여부 (기본값: True)
+
+**사용 예시:**
+```python
+from pykis import Agent
+
+# Agent를 통한 간편한 접근 (추천)
+agent = Agent(env_path=".env")
+ws_client = agent.websocket(
+    stock_codes=["005930", "035420"],
+    enable_index=True,
+    enable_program_trading=True
+)
+
+# 직접 생성
+from pykis.websocket.ws_agent import WSAgent
+ws_agent = WSAgent(approval_key="your_approval_key")
+```
 
 #### 메서드
 

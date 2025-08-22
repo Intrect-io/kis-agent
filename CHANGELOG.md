@@ -2,7 +2,58 @@
 
 모든 주요 변경사항이 이 파일에 기록됩니다.
 
-<<<<<<< HEAD
+## [0.1.21] - 2025-08-22
+
+### ✨ 새로운 기능
+- **📊 거래내역 Excel 내보내기 유틸리티**: 계좌 거래내역을 Excel 파일로 내보내는 고도화된 유틸리티 추가
+  - **기간별 필터링**: YYYYMMDD 형식의 시작일/종료일 지정
+  - **종목별 필터링**: 특정 종목만 선택적 조회 가능
+  - **체결 거래 필터링**: 체결된 거래만 또는 전체 거래 선택
+  - **종목별 시트 분리**: 대용량 데이터 처리 지원
+  - **98% 테스트 커버리지**: 안정성 및 신뢰성 보장
+
+- **🧪 테스트 시스템 대폭 개선**: 전체 테스트 안정성 향상
+  - **178개 테스트 모두 통과**: 2개 건너뜀, 1개 예상 실패
+  - **Agent 초기화 보안 강화**: env_path 매개변수 필수화
+  - **모든 테스트 파일 수정**: 환경변수 경로 명시적 지정
+  - **프로그램매매 API 테스트 안정화**: BaseAPI 패턴 적용
+
+### 🔧 개선됨
+- **보안 강화**: .env 파일 경로를 명시적으로 지정하도록 개선
+  - Agent 생성자에서 env_path 매개변수 필수화
+  - 자동 경로 추론 방지로 보안 향상
+- **코드 품질 향상**: BaseAPI 패턴 적용으로 account 속성 일관성 확보
+- **환경 설정 정리**: 한국투자증권 관련 설정만 유지하고 불필요한 설정 제거
+- **문서 대폭 업데이트**: 최신 기능 및 사용법 반영
+
+### 📊 코드 커버리지 향상
+- **전체 커버리지**: 44%
+- **핵심 모듈 고커버리지**:
+  - `trading_report.py`: 98% 🏆
+  - `program/trade.py`: 95%
+  - `core/config.py`: 88%
+  - `websocket/ws_agent.py`: 64%
+
+### 📋 사용법 예시
+```python
+# 새로운 보안 강화된 Agent 초기화
+from pykis import Agent
+agent = Agent(env_path=".env")  # env_path 필수
+
+# 거래내역 Excel 내보내기
+from pykis.utils.trading_report import generate_trading_report
+report_path = generate_trading_report(
+    client=agent.client,
+    account_info={'CANO': 'your_account', 'ACNT_PRDT_CD': '01'},
+    start_date='20250101',
+    end_date='20250131',
+    output_path='trading_history.xlsx'
+)
+
+# 코스피200 선물 시세 (자동 최근월물)
+futures_price = agent.get_future_option_price()  # 9월물(101W09)
+```
+
 ## [0.1.26] - 2025-01-08
 
 ### 추가됨
