@@ -110,10 +110,10 @@ class Agent:
             else:
                 # 기본값 또는 사용자 정의 설정 사용
                 default_config = {
-                    "requests_per_second": 15,
-                    "requests_per_minute": 900,
-                    "min_interval_ms": 70,
-                    "burst_size": 5,
+                    "requests_per_second": 20,  # API 최대 제한 활용
+                    "requests_per_minute": 1000,  # API 최대 제한 활용
+                    "min_interval_ms": 10,  # 최적화된 최소 간격
+                    "burst_size": 15,  # 순간 처리량 증대
                     "enable_adaptive": True
                 }
                 if rate_limiter_config:

@@ -204,10 +204,10 @@ class KISClient:
         self.enable_rate_limiter = enable_rate_limiter
         if enable_rate_limiter:
             self.rate_limiter = rate_limiter or RateLimiter(
-                requests_per_second=15,  # 안전 마진을 두고 15회로 설정 (실제 제한: 20회)
-                requests_per_minute=900,  # 안전 마진을 두고 900회로 설정 (실제 제한: 1000회)
-                min_interval_ms=70,       # 안전 마진을 두고 70ms로 설정 (권장: 50ms)
-                burst_size=5,
+                requests_per_second=20,  # API 최대 제한 활용 (20회/초)
+                requests_per_minute=1000,  # API 최대 제한 활용 (1000회/분)
+                min_interval_ms=10,       # 최적화된 최소 간격 (10ms)
+                burst_size=15,
                 enable_adaptive=True
             )
         else:
