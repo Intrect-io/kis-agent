@@ -368,7 +368,8 @@ class APIResp:
                 self._error_code = self.getBody()['msg_cd']
                 self._error_message = self.getBody()['msg1']
                 return False
-        except:
+        except Exception as e:
+            self._error_message = f"Authentication failed: {str(e)}"
             return False
 
     def getErrorCode(self):
