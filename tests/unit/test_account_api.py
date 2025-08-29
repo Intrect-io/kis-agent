@@ -8,8 +8,7 @@ AccountAPI 클래스의 계좌 관련 메서드들을 테스트합니다.
 """
 
 import unittest
-import pandas as pd
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 from pykis.core.client import KISClient
 from pykis.account.api import AccountAPI
 
@@ -17,16 +16,16 @@ from pykis.account.api import AccountAPI
 class TestAccountAPI(unittest.TestCase):
     """AccountAPI 클래스의 포괄적인 테스트"""
     
-    @classmethod
-    def setUpClass(cls):
-        """테스트 클래스 설정"""
-        cls.client = KISClient()
-        cls.account_info = {
+    def setUp(self):
+        """각 테스트마다 새로운 인스턴스 생성"""
+        self.client = MagicMock(spec=KISClient)
+        self.account_info = {
             "CANO": "12345678",
             "ACNT_PRDT_CD": "01"
         }
-        cls.api = AccountAPI(cls.client, cls.account_info)
-        cls.test_code = "005930"
+        # 캐시 비활성화하여 테스트 독립성 보장
+        self.api = AccountAPI(self.client, self.account_info, enable_cache=False)
+        self.test_code = "005930"
         
     def test_init(self):
         """AccountAPI 초기화 테스트"""
@@ -36,10 +35,9 @@ class TestAccountAPI(unittest.TestCase):
         self.assertEqual(api.account['CANO'], "12345678")
         self.assertEqual(api.account['ACNT_PRDT_CD'], "01")
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_account_balance_success(self, mock_request):
+    def test_get_account_balance_success(self):
         """계좌 잔고 조회 성공 테스트"""
-        mock_request.return_value = {
+        self.client.make_request.return_value = {
             "rt_cd": "0",
             "output1": [
                 {
@@ -63,44 +61,44 @@ class TestAccountAPI(unittest.TestCase):
         
         result = self.api.get_account_balance()
         
-        self.assertIsInstance(result, pd.DataFrame)
-        self.assertEqual(len(result), 2)
-        self.assertEqual(result.iloc[0]["pdno"], "005930")
-        self.assertEqual(result.iloc[0]["prdt_name"], "삼성전자")
+        self.assertIsInstance(result, dict)
+        self.assertIn("output1", result)
+        self.assertEqual(len(result["output1"]), 2)
+        self.assertEqual(result["output1"][0]["pdno"], "005930")
+        self.assertEqual(result["output1"][0]["prdt_name"], "삼성전자")
         
         # API 호출 파라미터 확인
-        mock_request.assert_called_once()
-        args, kwargs = mock_request.call_args
+        self.client.make_request.assert_called_once()
+        args, kwargs = self.client.make_request.call_args
         self.assertIn("params", kwargs)
         params = kwargs["params"]
         self.assertEqual(params["CANO"], "12345678")
         self.assertEqual(params["ACNT_PRDT_CD"], "01")
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_account_balance_no_output1(self, mock_request):
+    def test_get_account_balance_no_output1(self):
         """계좌 잔고 조회 output1 없음 테스트"""
-        mock_request.return_value = {
+        self.client.make_request.return_value = {
             "rt_cd": "0",
             "output2": ["some data"]
         }
         
         result = self.api.get_account_balance()
         
-        self.assertIsNone(result)
+        # Dict 반환되지만 output1이 없음
+        self.assertIsInstance(result, dict)
+        self.assertNotIn("output1", result)
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_account_balance_no_response(self, mock_request):
+    def test_get_account_balance_no_response(self):
         """계좌 잔고 조회 응답 없음 테스트"""
-        mock_request.return_value = None
+        self.client.make_request.return_value = None
         
         result = self.api.get_account_balance()
         
         self.assertIsNone(result)
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_cash_available_success(self, mock_request):
+    def test_get_cash_available_success(self):
         """현금 매수 가능 금액 조회 성공 테스트"""
-        mock_request.return_value = {
+        self.client.make_request.return_value = {
             "rt_cd": "0",
             "output": {
                 "ord_psbl_cash": "1000000",
@@ -116,8 +114,8 @@ class TestAccountAPI(unittest.TestCase):
         self.assertIn("output", result)
         
         # API 호출 파라미터 확인
-        mock_request.assert_called_once()
-        args, kwargs = mock_request.call_args
+        self.client.make_request.assert_called_once()
+        args, kwargs = self.client.make_request.call_args
         self.assertIn("params", kwargs)
         params = kwargs["params"]
         self.assertEqual(params["CANO"], "12345678")
@@ -128,10 +126,9 @@ class TestAccountAPI(unittest.TestCase):
         self.assertEqual(params["CMA_EVLU_AMT_ICLD_YN"], "Y")
         self.assertEqual(params["OVRS_ICLD_YN"], "N")
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_cash_available_json_decode_error(self, mock_request):
+    def test_get_cash_available_json_decode_error(self):
         """현금 매수 가능 금액 조회 JSON 디코드 오류 테스트"""
-        mock_request.return_value = {
+        self.client.make_request.return_value = {
             "rt_cd": "JSON_DECODE_ERROR",
             "msg1": "서버 오류"
         }
@@ -143,10 +140,9 @@ class TestAccountAPI(unittest.TestCase):
         self.assertIn("디버깅_정보", result)
         self.assertIn("원시 응답 텍스트 확인 필요", result["디버깅_정보"])
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_cash_available_404_error(self, mock_request):
+    def test_get_cash_available_404_error(self):
         """현금 매수 가능 금액 조회 404 오류 테스트"""
-        mock_request.return_value = {
+        self.client.make_request.return_value = {
             "status_code": 404,
             "rt_cd": "ERROR",
             "msg1": "서비스 이용 불가"
@@ -158,10 +154,9 @@ class TestAccountAPI(unittest.TestCase):
         self.assertEqual(result["rt_cd"], "ERROR")
         self.assertEqual(result["status_code"], 404)
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_cash_available_normal_response(self, mock_request):
+    def test_get_cash_available_normal_response(self):
         """현금 매수 가능 금액 조회 정상 응답 테스트"""
-        mock_request.return_value = {
+        self.client.make_request.return_value = {
             "rt_cd": "0",
             "output": {"ord_psbl_cash": "1000000"}
         }
@@ -172,10 +167,9 @@ class TestAccountAPI(unittest.TestCase):
         self.assertEqual(result["rt_cd"], "0")
         self.assertIn("output", result)
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_total_asset_success(self, mock_request):
+    def test_get_total_asset_success(self):
         """총 자산 평가 조회 성공 테스트"""
-        mock_request.return_value = {
+        self.client.make_request.return_value = {
             "rt_cd": "0",
             "output2": {
                 "tot_evlu_amt": "5000000",
@@ -192,8 +186,8 @@ class TestAccountAPI(unittest.TestCase):
         self.assertIn("output2", result)
         
         # API 호출 파라미터 확인
-        mock_request.assert_called_once()
-        args, kwargs = mock_request.call_args
+        self.client.make_request.assert_called_once()
+        args, kwargs = self.client.make_request.call_args
         self.assertIn("params", kwargs)
         params = kwargs["params"]
         self.assertEqual(params["CANO"], "12345678")
@@ -201,10 +195,9 @@ class TestAccountAPI(unittest.TestCase):
         self.assertEqual(params["INQR_DVSN_1"], "")  # 조회구분1 공백
         self.assertEqual(params["BSPR_BF_DT_APLY_YN"], "")  # 기준가이전일자적용여부 공백
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_total_asset_json_decode_error(self, mock_request):
+    def test_get_total_asset_json_decode_error(self):
         """총 자산 평가 조회 JSON 디코드 오류 테스트"""
-        mock_request.return_value = {
+        self.client.make_request.return_value = {
             "rt_cd": "JSON_DECODE_ERROR",
             "msg1": "서버 오류"
         }
@@ -216,10 +209,9 @@ class TestAccountAPI(unittest.TestCase):
         self.assertIn("디버깅_정보", result)
         self.assertIn("원시 응답 텍스트 확인 필요", result["디버깅_정보"])
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_total_asset_404_error(self, mock_request):
+    def test_get_total_asset_404_error(self):
         """총 자산 평가 조회 404 오류 테스트"""
-        mock_request.return_value = {
+        self.client.make_request.return_value = {
             "status_code": 404,
             "rt_cd": "ERROR",
             "msg1": "서비스 이용 불가"
@@ -231,10 +223,9 @@ class TestAccountAPI(unittest.TestCase):
         self.assertEqual(result["rt_cd"], "ERROR")
         self.assertEqual(result["status_code"], 404)
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_account_order_quantity_success(self, mock_request):
+    def test_get_account_order_quantity_success(self):
         """계좌별 주문 수량 조회 성공 테스트"""
-        mock_request.return_value = {
+        self.client.make_request.return_value = {
             "rt_cd": "0",
             "output": {
                 "ord_psbl_qty": "100",
@@ -248,27 +239,25 @@ class TestAccountAPI(unittest.TestCase):
         self.assertEqual(result["rt_cd"], "0")
         
         # API 호출 파라미터 확인
-        mock_request.assert_called_once()
-        args, kwargs = mock_request.call_args
+        self.client.make_request.assert_called_once()
+        args, kwargs = self.client.make_request.call_args
         self.assertIn("params", kwargs)
         params = kwargs["params"]
         self.assertEqual(params["CANO"], "12345678")
         self.assertEqual(params["ACNT_PRDT_CD"], "01")
         self.assertEqual(params["PDNO"], self.test_code)
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_account_order_quantity_exception(self, mock_request):
+    def test_get_account_order_quantity_exception(self):
         """계좌별 주문 수량 조회 예외 테스트"""
-        mock_request.side_effect = Exception("API 오류")
+        self.client.make_request.side_effect = Exception("API 오류")
         
         result = self.api.get_account_order_quantity(self.test_code)
         
         self.assertIsNone(result)
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_possible_order_amount_success(self, mock_request):
+    def test_get_possible_order_amount_success(self):
         """주문 가능 금액 조회 성공 테스트"""
-        mock_request.return_value = {
+        self.client.make_request.return_value = {
             "rt_cd": "0",
             "output": {
                 "ord_psbl_cash": "1000000",
@@ -282,8 +271,8 @@ class TestAccountAPI(unittest.TestCase):
         self.assertEqual(result["rt_cd"], "0")
         
         # API 호출 파라미터 확인
-        mock_request.assert_called_once()
-        args, kwargs = mock_request.call_args
+        self.client.make_request.assert_called_once()
+        args, kwargs = self.client.make_request.call_args
         self.assertIn("params", kwargs)
         params = kwargs["params"]
         self.assertEqual(params["CANO"], "12345678")
@@ -291,10 +280,9 @@ class TestAccountAPI(unittest.TestCase):
         self.assertEqual(params["CMA_EVLU_AMT_ICLD_YN"], "Y")
         self.assertEqual(params["OVRS_ICLD_YN"], "N")
 
-    @patch('pykis.core.client.KISClient.make_request')
-    def test_get_possible_order_amount_exception(self, mock_request):
+    def test_get_possible_order_amount_exception(self):
         """주문 가능 금액 조회 예외 테스트"""
-        mock_request.side_effect = Exception("API 오류")
+        self.client.make_request.side_effect = Exception("API 오류")
         
         result = self.api.get_possible_order_amount()
         
@@ -317,4 +305,4 @@ class TestAccountAPI(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main() 
+    unittest.main()
