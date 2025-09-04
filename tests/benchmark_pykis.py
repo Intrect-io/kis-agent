@@ -12,7 +12,7 @@ from pykis import Agent
 
 def benchmark_sequential(agent: Agent, codes: List[str], iterations: int = 3):
     """순차 처리 벤치마크"""
-    print("\n📊 순차 처리 벤치마크")
+    print("\n 순차 처리 벤치마크")
     print("-" * 40)
     
     total_requests = len(codes) * iterations
@@ -40,7 +40,7 @@ def benchmark_sequential(agent: Agent, codes: List[str], iterations: int = 3):
 
 def benchmark_parallel(agent: Agent, codes: List[str], iterations: int = 3, workers: int = 10):
     """병렬 처리 벤치마크"""
-    print(f"\n📊 병렬 처리 벤치마크 (workers={workers})")
+    print(f"\n 병렬 처리 벤치마크 (workers={workers})")
     print("-" * 40)
     
     total_requests = len(codes) * iterations
@@ -74,7 +74,7 @@ def benchmark_parallel(agent: Agent, codes: List[str], iterations: int = 3, work
 
 def verify_rate_limiter_settings(agent: Agent):
     """Rate Limiter 설정 확인"""
-    print("\n⚙️  Rate Limiter 설정")
+    print("\n  Rate Limiter 설정")
     print("-" * 40)
     
     if agent.client.rate_limiter:
@@ -85,12 +85,12 @@ def verify_rate_limiter_settings(agent: Agent):
         print(f"버스트 크기: {rl.burst_size}")
         print(f"적응형 모드: {rl.enable_adaptive}")
     else:
-        print("❌ Rate Limiter가 비활성화되어 있습니다!")
+        print(" Rate Limiter가 비활성화되어 있습니다!")
 
 
 def main():
     print("=" * 60)
-    print("🚀 PyKIS 성능 벤치마크")
+    print(" PyKIS 성능 벤치마크")
     print("=" * 60)
     
     # Agent 초기화
@@ -127,7 +127,7 @@ def main():
     
     # 결과 요약
     print("\n" + "=" * 60)
-    print("📈 벤치마크 결과 요약")
+    print(" 벤치마크 결과 요약")
     print("=" * 60)
     
     print(f"\n순차 처리:  {seq_speed:.2f} req/s")
@@ -135,18 +135,18 @@ def main():
     print(f"병렬 (10):  {par10_speed:.2f} req/s (순차 대비 {par10_speed/seq_speed:.1f}x)")
     
     # 판정
-    print("\n🎯 판정:")
+    print("\n 판정:")
     if par10_speed > 20:
-        print(f"✅ 초당 20회 이상 달성 ({par10_speed:.2f} req/s)")
+        print(f" 초당 20회 이상 달성 ({par10_speed:.2f} req/s)")
     elif par10_speed > 15:
-        print(f"⚠️  초당 15-20회 수준 ({par10_speed:.2f} req/s)")
+        print(f"  초당 15-20회 수준 ({par10_speed:.2f} req/s)")
     else:
-        print(f"❌ 초당 15회 미만 ({par10_speed:.2f} req/s)")
+        print(f" 초당 15회 미만 ({par10_speed:.2f} req/s)")
     
     # Rate Limiter 최종 통계
     if agent.client.rate_limiter:
         stats = agent.client.rate_limiter.get_current_rate()
-        print(f"\n📊 Rate Limiter 통계:")
+        print(f"\n Rate Limiter 통계:")
         print(f"  - 총 요청: {stats['total_requests']}")
         print(f"  - 스로틀링: {stats['throttled_count']}회")
         print(f"  - 평균 대기: {stats['avg_wait_time']:.3f}초")

@@ -83,7 +83,7 @@ def test_market_api():
         # 수익자산지표 순위 조회
         profit_rank = agent.get_market_rankings()
 
-        logger.info("\n✅ 모든 API 테스트가 성공적으로 완료되었습니다.")
+        logger.info("\n 모든 API 테스트가 성공적으로 완료되었습니다.")
 
     except Exception as e:
         logger.error(f"테스트 중 오류 발생: {e}")

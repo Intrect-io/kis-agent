@@ -2,18 +2,18 @@
 
 이 폴더에는 PyKIS 라이브러리의 다양한 기능을 시연하는 예제 파일들이 포함되어 있습니다.
 
-## 📋 목차
+##  목차
 
-- [📊 종합 테스트](#-종합-테스트)
-- [🌐 웹소켓 실시간 데이터](#-웹소켓-실시간-데이터)
-- [📈 주식 시세 분석](#-주식-시세-분석)
-- [🔄 프로그램 매매](#-프로그램-매매)
-- [📊 선물옵션](#-선물옵션)
-- [🎯 특화 기능](#-특화-기능)
+- [ 종합 테스트](#-종합-테스트)
+- [ 웹소켓 실시간 데이터](#-웹소켓-실시간-데이터)
+- [ 주식 시세 분석](#-주식-시세-분석)
+- [ 프로그램 매매](#-프로그램-매매)
+- [ 선물옵션](#-선물옵션)
+- [ 특화 기능](#-특화-기능)
 
 ---
 
-## 📊 종합 테스트
+##  종합 테스트
 
 ### `pykis.ipynb`
 **핵심 기능 종합 테스트 노트북**
@@ -28,7 +28,7 @@
 
 ---
 
-## 🌐 웹소켓 실시간 데이터
+##  웹소켓 실시간 데이터
 
 ### `websocket_enhanced_example.py` ⭐ **신규 추가**
 **향상된 웹소켓 실시간 데이터 수신 예제**
@@ -54,7 +54,7 @@ python examples/StockMonitor_example.py
 
 ---
 
-## 📈 주식 시세 분석
+##  주식 시세 분석
 
 ### `daily_index_chart_price_example.py`
 **업종별 시세 데이터 조회 예제**
@@ -78,7 +78,7 @@ python examples/list_interest_groups.py
 
 ---
 
-## 🔄 프로그램 매매
+##  프로그램 매매
 
 ### `program_trade_analysis.py`
 **프로그램 매매 분석 예제**
@@ -93,7 +93,7 @@ python examples/program_trade_analysis.py
 
 ---
 
-## 📊 선물옵션
+##  선물옵션
 
 ### `future_option_price_example.py`
 **선물옵션 시세 조회 예제**
@@ -117,7 +117,7 @@ python examples/calculate_basis.py
 
 ---
 
-## 🎯 특화 기능
+##  특화 기능
 
 ### `run.py`
 **고급 트레이딩 시스템 예제**
@@ -132,7 +132,7 @@ python examples/run.py
 
 ---
 
-## 🚀 시작하기
+##  시작하기
 
 ### 1. 환경 설정
 ```bash
@@ -161,7 +161,7 @@ python examples/websocket_enhanced_example.py
 
 ---
 
-## 📝 예제별 난이도
+##  예제별 난이도
 
 | 예제 | 난이도 | 설명 |
 |------|--------|------|
@@ -177,7 +177,7 @@ python examples/websocket_enhanced_example.py
 
 ---
 
-## 🔧 문제 해결
+##  문제 해결
 
 ### 일반적인 오류
 1. **인증 오류**: `.env` 파일의 API 키와 계좌 정보 확인
@@ -191,7 +191,7 @@ python examples/websocket_enhanced_example.py
 
 ---
 
-## 📚 추가 자료
+##  추가 자료
 
 - **API 문서**: `../PYKIS_API_METHODS.md`
 - **변경사항**: `../CHANGELOG.md`
@@ -200,4 +200,4 @@ python examples/websocket_enhanced_example.py
 
 ---
 
-**💡 팁**: 새로운 기능을 사용해보려면 `websocket_enhanced_example.py`부터 시작하세요! 
+** 팁**: 새로운 기능을 사용해보려면 `websocket_enhanced_example.py`부터 시작하세요! 

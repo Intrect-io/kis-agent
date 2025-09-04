@@ -32,45 +32,45 @@ class PortfolioMonitorTester:
         
     def test_agent_connection(self) -> bool:
         """Agent 연결 테스트"""
-        print("🔗 Agent 연결 테스트...")
+        print(" Agent 연결 테스트...")
         try:
             # 간단한 API 호출로 연결 테스트
             result = self.agent.get_stock_price("005930")  # 삼성전자
             if result and result.get('rt_cd') == '0':
-                print("✅ Agent 연결 성공")
+                print(" Agent 연결 성공")
                 return True
             else:
-                print("❌ Agent 연결 실패: API 응답 오류")
+                print(" Agent 연결 실패: API 응답 오류")
                 return False
         except Exception as e:
-            print(f"❌ Agent 연결 실패: {e}")
+            print(f" Agent 연결 실패: {e}")
             return False
     
     def test_balance_inquiry(self) -> bool:
         """잔고 조회 테스트"""
-        print("💰 잔고 조회 테스트...")
+        print(" 잔고 조회 테스트...")
         try:
             balance = self.agent.get_account_balance()
             
             if not balance:
-                print("❌ 잔고 조회 실패: 응답 없음")
+                print(" 잔고 조회 실패: 응답 없음")
                 return False
                 
             if balance.get('rt_cd') != '0':
-                print(f"❌ 잔고 조회 실패: {balance.get('msg1', 'Unknown error')}")
+                print(f" 잔고 조회 실패: {balance.get('msg1', 'Unknown error')}")
                 return False
             
             if 'output1' not in balance:
-                print("❌ 잔고 조회 실패: output1 필드 없음")
+                print(" 잔고 조회 실패: output1 필드 없음")
                 return False
             
             positions = balance['output1']
-            print(f"✅ 잔고 조회 성공: {len(positions)}개 항목")
+            print(f" 잔고 조회 성공: {len(positions)}개 항목")
             
             # 보유 종목 표시
             holdings = [p for p in positions if int(p.get('hldg_qty', 0)) > 0]
             if holdings:
-                print(f"📊 보유 종목: {len(holdings)}개")
+                print(f" 보유 종목: {len(holdings)}개")
                 for holding in holdings[:5]:  # 최대 5개만 표시
                     code = holding.get('pdno', '')
                     name = holding.get('prdt_name', '')
@@ -85,33 +85,33 @@ class PortfolioMonitorTester:
             return True
             
         except Exception as e:
-            print(f"❌ 잔고 조회 실패: {e}")
+            print(f" 잔고 조회 실패: {e}")
             return False
     
     def test_minute_data_fetch(self, code: str = "005930") -> bool:
         """분봉 데이터 조회 테스트"""
-        print(f"📈 분봉 데이터 조회 테스트 ({code})...")
+        print(f" 분봉 데이터 조회 테스트 ({code})...")
         try:
             minute_data = self.agent.fetch_minute_data(code)
             
             if minute_data is None:
-                print("❌ 분봉 데이터 조회 실패: 응답 없음")
+                print(" 분봉 데이터 조회 실패: 응답 없음")
                 return False
             
             if minute_data.empty:
-                print("❌ 분봉 데이터 조회 실패: 빈 데이터")
+                print(" 분봉 데이터 조회 실패: 빈 데이터")
                 return False
             
-            print(f"✅ 분봉 데이터 조회 성공: {len(minute_data)}건")
+            print(f" 분봉 데이터 조회 성공: {len(minute_data)}건")
             
             # 데이터 구조 확인
             required_columns = ['stck_cntg_hour', 'stck_prpr', 'cntg_vol']
             missing_columns = [col for col in required_columns if col not in minute_data.columns]
             
             if missing_columns:
-                print(f"⚠️ 경고: 필수 컬럼 누락 {missing_columns}")
+                print(f" 경고: 필수 컬럼 누락 {missing_columns}")
             else:
-                print("✅ 필수 컬럼 모두 존재")
+                print(" 필수 컬럼 모두 존재")
                 
                 # 샘플 데이터 표시
                 latest = minute_data.iloc[0]
@@ -122,12 +122,12 @@ class PortfolioMonitorTester:
             return True
             
         except Exception as e:
-            print(f"❌ 분봉 데이터 조회 실패: {e}")
+            print(f" 분봉 데이터 조회 실패: {e}")
             return False
     
     async def test_websocket_connection(self, test_codes: list = ["005930"]) -> bool:
         """웹소켓 연결 테스트"""
-        print("🌐 웹소켓 연결 테스트...")
+        print(" 웹소켓 연결 테스트...")
         try:
             # 웹소켓 클라이언트 생성
             ws_client = self.agent.websocket(
@@ -137,27 +137,27 @@ class PortfolioMonitorTester:
                 enable_ask_bid=False
             )
             
-            print("✅ 웹소켓 클라이언트 생성 성공")
+            print(" 웹소켓 클라이언트 생성 성공")
             
             # 승인키 발급 테스트
             approval_key = ws_client.get_approval()
             if not approval_key:
-                print("❌ 웹소켓 승인키 발급 실패")
+                print(" 웹소켓 승인키 발급 실패")
                 return False
             
-            print(f"✅ 웹소켓 승인키 발급 성공: {approval_key[:20]}...")
+            print(f" 웹소켓 승인키 발급 성공: {approval_key[:20]}...")
             
             # 실제 연결은 복잡하므로 여기서는 승인키 발급까지만 테스트
-            print("✅ 웹소켓 기본 설정 완료")
+            print(" 웹소켓 기본 설정 완료")
             return True
             
         except Exception as e:
-            print(f"❌ 웹소켓 연결 테스트 실패: {e}")
+            print(f" 웹소켓 연결 테스트 실패: {e}")
             return False
     
     def test_vwap_calculation(self) -> bool:
         """VWAP 계산 로직 테스트"""
-        print("📊 VWAP 계산 로직 테스트...")
+        print(" VWAP 계산 로직 테스트...")
         try:
             # 테스트 데이터
             test_data = [
@@ -173,39 +173,39 @@ class PortfolioMonitorTester:
             total_volume = sum(volume for _, volume in test_data)
             vwap = total_value / total_volume if total_volume > 0 else 0
             
-            print(f"✅ VWAP 계산 성공: {vwap:,.0f}원")
+            print(f" VWAP 계산 성공: {vwap:,.0f}원")
             
             # 이격률 계산 테스트
             current_price = 101500
             deviation = ((current_price - vwap) / vwap) * 100
-            print(f"✅ 이격률 계산 성공: {deviation:+.2f}%")
+            print(f" 이격률 계산 성공: {deviation:+.2f}%")
             
             return True
             
         except Exception as e:
-            print(f"❌ VWAP 계산 테스트 실패: {e}")
+            print(f" VWAP 계산 테스트 실패: {e}")
             return False
     
     def test_program_trade_data(self, code: str = "005930") -> bool:
         """프로그램 매매 데이터 조회 테스트"""
-        print(f"🔄 프로그램 매매 데이터 테스트 ({code})...")
+        print(f" 프로그램 매매 데이터 테스트 ({code})...")
         try:
             today = datetime.now().strftime('%Y%m%d')
             program_data = self.agent.get_program_trade_daily_summary(code, today)
             
             if not program_data:
-                print("❌ 프로그램 매매 데이터 조회 실패: 응답 없음")
+                print(" 프로그램 매매 데이터 조회 실패: 응답 없음")
                 return False
             
             if program_data.get('rt_cd') != '0':
-                print(f"❌ 프로그램 매매 데이터 조회 실패: {program_data.get('msg1', 'Unknown error')}")
+                print(f" 프로그램 매매 데이터 조회 실패: {program_data.get('msg1', 'Unknown error')}")
                 return False
             
             if 'output' not in program_data or not program_data['output']:
-                print("❌ 프로그램 매매 데이터 조회 실패: output 필드 없음")
+                print(" 프로그램 매매 데이터 조회 실패: output 필드 없음")
                 return False
             
-            print("✅ 프로그램 매매 데이터 조회 성공")
+            print(" 프로그램 매매 데이터 조회 성공")
             
             # 오늘 데이터 확인
             today_data = None
@@ -224,17 +224,17 @@ class PortfolioMonitorTester:
                 print(f"   당일 프로그램 매도: {sell_vol:,}주")
                 print(f"   매수 비율: {buy_ratio:.2f}%")
             else:
-                print("⚠️ 당일 프로그램 매매 데이터 없음")
+                print(" 당일 프로그램 매매 데이터 없음")
             
             return True
             
         except Exception as e:
-            print(f"❌ 프로그램 매매 데이터 테스트 실패: {e}")
+            print(f" 프로그램 매매 데이터 테스트 실패: {e}")
             return False
     
     async def run_all_tests(self) -> None:
         """모든 테스트 실행"""
-        print("🧪 포트폴리오 모니터링 시스템 테스트 시작")
+        print(" 포트폴리오 모니터링 시스템 테스트 시작")
         print("=" * 60)
         
         tests = [
@@ -254,7 +254,7 @@ class PortfolioMonitorTester:
                 result = test_func()
                 results.append((test_name, result))
             except Exception as e:
-                print(f"❌ {test_name} 테스트 예외 발생: {e}")
+                print(f" {test_name} 테스트 예외 발생: {e}")
                 results.append((test_name, False))
         
         # 웹소켓 테스트 (비동기)
@@ -263,19 +263,19 @@ class PortfolioMonitorTester:
             ws_result = await self.test_websocket_connection()
             results.append(("웹소켓 연결", ws_result))
         except Exception as e:
-            print(f"❌ 웹소켓 테스트 예외 발생: {e}")
+            print(f" 웹소켓 테스트 예외 발생: {e}")
             results.append(("웹소켓 연결", False))
         
         # 결과 요약
         print("\n" + "=" * 60)
-        print("🎯 테스트 결과 요약")
+        print(" 테스트 결과 요약")
         print("=" * 60)
         
         passed = 0
         total = len(results)
         
         for test_name, result in results:
-            status = "✅ 통과" if result else "❌ 실패"
+            status = " 통과" if result else " 실패"
             print(f"{test_name:<15}: {status}")
             if result:
                 passed += 1
@@ -284,16 +284,16 @@ class PortfolioMonitorTester:
         print(f"전체 테스트: {passed}/{total} 통과 ({passed/total*100:.1f}%)")
         
         if passed == total:
-            print("\n🎉 모든 테스트 통과! 포트폴리오 모니터링을 시작할 수 있습니다.")
+            print("\n 모든 테스트 통과! 포트폴리오 모니터링을 시작할 수 있습니다.")
             print("실행 명령: python portfolio_realtime_monitor.py")
         else:
-            print(f"\n⚠️ {total-passed}개 테스트 실패. 문제를 해결한 후 다시 시도하세요.")
+            print(f"\n {total-passed}개 테스트 실패. 문제를 해결한 후 다시 시도하세요.")
             print("문제 해결 가이드는 README_portfolio_monitor.md를 참고하세요.")
 
 
 async def main():
     """메인 함수"""
-    print("🌟 포트폴리오 실시간 모니터링 시스템 테스트")
+    print(" 포트폴리오 실시간 모니터링 시스템 테스트")
     print("이 테스트는 모니터링 시스템의 모든 구성 요소를 검증합니다.")
     print()
     

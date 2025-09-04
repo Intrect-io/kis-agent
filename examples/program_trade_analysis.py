@@ -175,25 +175,25 @@ def main():
     # 테스트 종목들
     test_stocks = ["005930", "000660", "035420"]  # 삼성전자, SK하이닉스, 네이버
     
-    print("\n📊 개별 종목 분석:")
+    print("\n 개별 종목 분석:")
     for stock in test_stocks:
         print(f"\n🏢 종목: {stock}")
         result = analyzer.analyze_program_trade(stock)
         if result:
-            print(f"   📈 29일 누적: {result['net29']:,}주")
-            print(f"   📅 당일 순매수: {result['today']:,}주")
-            print(f"   💰 당일 매수비율: {result['today_ratio']}%")
-            print(f"   🔄 총 거래량: {result['program_day_total_volume']:,}주")
+            print(f"    29일 누적: {result['net29']:,}주")
+            print(f"    당일 순매수: {result['today']:,}주")
+            print(f"    당일 매수비율: {result['today_ratio']}%")
+            print(f"    총 거래량: {result['program_day_total_volume']:,}주")
         else:
-            print("   ❌ 데이터 조회 실패")
+            print("    데이터 조회 실패")
     
-    print("\n🔍 비교 분석:")
+    print("\n 비교 분석:")
     comparison = analyzer.compare_program_trade(test_stocks)
     for code, data in comparison.items():
         if data:
             print(f"   {code}: 매수비율 {data['today_ratio']}%, 순매수 {data['today']:,}주")
     
-    print("\n✅ 분석 완료!")
+    print("\n 분석 완료!")
 
 
 if __name__ == "__main__":

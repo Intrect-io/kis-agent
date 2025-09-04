@@ -6,7 +6,7 @@
 PyKIS 거래내역 유틸리티를 사용하여 계좌의 거래내역을
 Excel 파일로 내보내는 다양한 방법을 보여줍니다.
 
-테스트 커버리지: 98% 🏆
+테스트 커버리지: 98% 
 기능:
 - 기간별 거래내역 조회
 - 종목별 필터링
@@ -87,9 +87,9 @@ def main():
             output_path="전체_거래내역.xlsx",
             only_executed=True  # 체결된 거래만
         )
-        logger.info(f"✅ 파일 생성 완료: {file_path}")
+        logger.info(f" 파일 생성 완료: {file_path}")
     except Exception as e:
-        logger.error(f"❌ 오류 발생: {e}")
+        logger.error(f" 오류 발생: {e}")
     
     # =============================================================
     # 예제 2: 특정 종목들만 조회
@@ -109,9 +109,9 @@ def main():
             tickers=watch_list,
             only_executed=True
         )
-        logger.info(f"✅ 파일 생성 완료: {file_path}")
+        logger.info(f" 파일 생성 완료: {file_path}")
     except Exception as e:
-        logger.error(f"❌ 오류 발생: {e}")
+        logger.error(f" 오류 발생: {e}")
     
     # =============================================================
     # 예제 3: 종목별로 시트 분리
@@ -129,9 +129,9 @@ def main():
             only_executed=True,
             separate_sheets=True  # 종목별로 시트 분리
         )
-        logger.info(f"✅ 파일 생성 완료: {file_path}")
+        logger.info(f" 파일 생성 완료: {file_path}")
     except Exception as e:
-        logger.error(f"❌ 오류 발생: {e}")
+        logger.error(f" 오류 발생: {e}")
     
     # =============================================================
     # 예제 4: 고급 사용법 - TradingReportGenerator 직접 사용
@@ -169,7 +169,7 @@ def main():
             logger.info("삼성전자 거래내역이 없습니다.")
             
     except Exception as e:
-        logger.error(f"❌ 오류 발생: {e}")
+        logger.error(f" 오류 발생: {e}")
     
     # =============================================================
     # 예제 5: 월별 리포트 생성
@@ -189,11 +189,11 @@ def main():
             output_path=f"월간리포트_{month_start.strftime('%Y%m')}.xlsx",
             only_executed=True
         )
-        logger.info(f"✅ 월간 리포트 생성 완료: {file_path}")
+        logger.info(f" 월간 리포트 생성 완료: {file_path}")
     except Exception as e:
-        logger.error(f"❌ 오류 발생: {e}")
+        logger.error(f" 오류 발생: {e}")
     
-    logger.info("\n✨ 모든 예제 실행 완료!")
+    logger.info("\n 모든 예제 실행 완료!")
     
     # 생성된 파일 목록 출력
     logger.info("\n📁 생성된 파일 목록:")

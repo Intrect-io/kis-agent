@@ -76,13 +76,13 @@ def test_websocket_message_handling(agent):
     for message in sample_messages:
         try:
             ws_client.handle_message(message)
-            print(f"✅ 메시지 처리 성공: {message[:50]}...")
+            print(f" 메시지 처리 성공: {message[:50]}...")
         except Exception as e:
-            print(f"❌ 메시지 처리 실패: {str(e)}")
+            print(f" 메시지 처리 실패: {str(e)}")
             
     # 데이터 저장 확인
     assert "005930" in ws_client.latest_trade
-    print("✅ 체결 데이터 저장 확인")
+    print(" 체결 데이터 저장 확인")
 
 @pytest.mark.asyncio
 async def test_websocket_real_connection_with_new_features(agent):
@@ -103,7 +103,7 @@ async def test_websocket_real_connection_with_new_features(agent):
         approval_key = ws_client.get_approval()
         assert approval_key is not None
         assert len(approval_key) > 10
-        print(f"✅ 승인키 발급 성공: {approval_key[:20]}...")
+        print(f" 승인키 발급 성공: {approval_key[:20]}...")
     
     # 실제 연결 테스트 (30초 타임아웃)
     connection_successful = False
@@ -114,7 +114,7 @@ async def test_websocket_real_connection_with_new_features(agent):
         import websockets
         async with websockets.connect(ws_client.url, ping_interval=30, ping_timeout=30) as websocket:
             ws_client.ws = websocket
-            print("✅ 웹소켓 연결 성공")
+            print(" 웹소켓 연결 성공")
             connection_successful = True
             
             # 지수 구독 테스트
@@ -136,7 +136,7 @@ async def test_websocket_real_connection_with_new_features(agent):
                         }
                     }
                     await websocket.send(json.dumps(senddata_index))
-                    print(f"✅ {ws_client.get_index_name(index_code)} 지수 구독 요청 완료")
+                    print(f" {ws_client.get_index_name(index_code)} 지수 구독 요청 완료")
             
             # 체결 정보 구독
             for stock_code in ws_client.stock_codes:
@@ -155,7 +155,7 @@ async def test_websocket_real_connection_with_new_features(agent):
                     }
                 }
                 await websocket.send(json.dumps(senddata_trade))
-                print(f"✅ {stock_code} 체결 정보 구독 요청 완료")
+                print(f" {stock_code} 체결 정보 구독 요청 완료")
                 
                 # 프로그램매매 구독
                 if ws_client.enable_program_trading:
@@ -174,14 +174,14 @@ async def test_websocket_real_connection_with_new_features(agent):
                         }
                     }
                     await websocket.send(json.dumps(senddata_program))
-                    print(f"✅ {stock_code} 프로그램매매 구독 요청 완료")
+                    print(f" {stock_code} 프로그램매매 구독 요청 완료")
             
             # 데이터 수신 대기 (최대 30초)
             try:
                 for _ in range(30):  # 30초 대기
                     data = await asyncio.wait_for(websocket.recv(), timeout=1.0)
                     if data and 'PINGPONG' not in data and 'SUBSCRIBE SUCCESS' not in data:
-                        print(f"✅ 실시간 데이터 수신: {data[:100]}...")
+                        print(f" 실시간 데이터 수신: {data[:100]}...")
                         ws_client.handle_message(data)
                         data_received = True
                         break
@@ -189,11 +189,11 @@ async def test_websocket_real_connection_with_new_features(agent):
                 pass
                 
     except Exception as e:
-        print(f"❌ 연결 오류: {e}")
+        print(f" 연결 오류: {e}")
     
     assert connection_successful, "웹소켓 연결에 실패했습니다"
     if data_received:
-        print("✅ 실시간 데이터 수신 확인")
+        print(" 실시간 데이터 수신 확인")
     else:
         print("ℹ️ 실시간 데이터 수신 없음 (정상적일 수 있음)")
 
@@ -218,23 +218,23 @@ def test_websocket_data_processing_with_new_features(agent):
     # 기술적 지표 계산 확인 (데이터가 충분하지 않을 수 있음)
     rsi = ws_client.compute_RSI_candles("005930")
     macd = ws_client.compute_MACD_candles("005930")
-    print(f"✅ RSI: {rsi}, MACD: {macd}")
+    print(f" RSI: {rsi}, MACD: {macd}")
     
     # 지수 데이터 저장 확인
     sample_index_data = "0|H0IF1000|001|0001^2650.50^+15.30^+0.58^2635.20^2665.80^100000^15000000000^12:34:56^Y"
     ws_client.handle_message(sample_index_data)
     
     if 'KOSPI' in ws_client.latest_index:
-        print("✅ 지수 데이터 저장 확인")
+        print(" 지수 데이터 저장 확인")
     
     # 프로그램매매 데이터 저장 확인
     sample_program_data = "0|H0GSCNT0|001|005930^093000^500^1000000^300^800000^200^200000^100^150^50"
     ws_client.handle_message(sample_program_data)
     
     if "005930" in ws_client.latest_program_trading:
-        print("✅ 프로그램매매 데이터 저장 확인")
+        print(" 프로그램매매 데이터 저장 확인")
         
-    print("✅ 모든 새로운 기능 테스트 완료")
+    print(" 모든 새로운 기능 테스트 완료")
 
 # 실제 웹소켓 테스트 실행을 위한 메인 함수
 if __name__ == "__main__":

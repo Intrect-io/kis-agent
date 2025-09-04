@@ -629,7 +629,7 @@ class Agent:
         # 메서드 카테고리별 분류
         methods_info = {
             "stock": {
-                "title": "📈 주식 시세 관련",
+                "title": " 주식 시세 관련",
                 "methods": [
                     ("get_stock_price", "현재가 조회", 'get_stock_price("005930")'),
                     (
@@ -674,7 +674,7 @@ class Agent:
                 ],
             },
             "market": {
-                "title": "📊 시장 정보 관련",
+                "title": " 시장 정보 관련",
                 "methods": [
                     ("get_volume_power", "체결강도 순위", "get_volume_power(0)"),
                     ("get_top_gainers", "상위 상승주", "get_top_gainers()"),
@@ -703,7 +703,7 @@ class Agent:
                 ],
             },
             "account": {
-                "title": "💰 계좌 관련",
+                "title": " 계좌 관련",
                 "methods": [
                     ("get_account_balance", "계좌 잔고 조회", "get_account_balance()"),
                     (
@@ -755,7 +755,7 @@ class Agent:
                 ],
             },
             "utility": {
-                "title": "🛠️ 유틸리티",
+                "title": " 유틸리티",
                 "methods": [
                     ("get_holiday_info", "휴장일 정보", "get_holiday_info()"),
                     ("is_holiday", "휴장일 여부 확인", 'is_holiday("20250107")'),
@@ -788,7 +788,7 @@ class Agent:
                 ],
             },
             "websocket": {
-                "title": "⚡ 실시간 웹소켓",
+                "title": " 실시간 웹소켓",
                 "methods": [
                     (
                         "websocket",
@@ -911,21 +911,21 @@ class Agent:
 
             for method in category_info["methods"]:
                 if method["name"] == method_name:
-                    print(f"📋 메서드: {method['name']}")
-                    print(f"📝 설명: {method['description']}")
-                    print(f"📂 카테고리: {category_info['title']}")
-                    print(f"💡 사용 예시: agent.{method['example']}")
+                    print(f" 메서드: {method['name']}")
+                    print(f" 설명: {method['description']}")
+                    print(f" 카테고리: {category_info['title']}")
+                    print(f" 사용 예시: agent.{method['example']}")
 
                     # 실제 메서드가 있는지 확인하고 docstring 출력
                     if hasattr(self, method_name):
                         actual_method = getattr(self, method_name)
                         if hasattr(actual_method, "__doc__") and actual_method.__doc__:
-                            print("📖 상세 문서:")
+                            print(" 상세 문서:")
                             print(f"    {actual_method.__doc__.strip()}")
                     return
 
-        print(f"❌ '{method_name}' 메서드를 찾을 수 없습니다.")
-        print("💡 사용 가능한 메서드 확인: agent.get_all_methods()")
+        print(f" '{method_name}' 메서드를 찾을 수 없습니다.")
+        print(" 사용 가능한 메서드 확인: agent.get_all_methods()")
 
     @staticmethod
     def classify_broker(name: str) -> str:

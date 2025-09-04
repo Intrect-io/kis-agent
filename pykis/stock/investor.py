@@ -7,16 +7,16 @@ investor.py - 투자자별 포지션 분석 전용 모듈
 - 당일 매매 패턴 해석 및 컨텍스트 제공
 - 패닉 방지를 위한 장기/단기 트렌드 비교
 
-✅ 의존:
+ 의존:
 - kis_core.KISClient: API 호출 실행기
 - datetime: 날짜 계산
 - logging: 로깅
 
-🔗 연관 모듈:
+ 연관 모듈:
 - stock.api.StockAPI: 기존 투자자 조회 연동
 - examples_llm/domestic_stock: 투자자 관련 원시 API들
 
-💡 사용 예시:
+ 사용 예시:
 client = KISClient()
 account = {"CANO": "12345678", "ACNT_PRDT_CD": "01"}
 investor = InvestorPositionAnalyzer(client, account)
@@ -281,13 +281,13 @@ class InvestorPositionAnalyzer:
                 cumulative_net = cumulative_foreign.get('net_amount', 0)
                 
                 if daily_net > 0 and cumulative_net > 0:
-                    interpretation_parts.append("🌍 외국인: 당일 순매수 지속, 30일간도 지속적 매수 우위 (강한 매수 신호)")
+                    interpretation_parts.append(" 외국인: 당일 순매수 지속, 30일간도 지속적 매수 우위 (강한 매수 신호)")
                 elif daily_net < 0 and cumulative_net > 0:
-                    interpretation_parts.append(f"🌍 외국인: 당일 순매도 {abs(daily_net/100000000):.1f}억원이지만, 30일간 누적 순매수 {cumulative_net/100000000:.1f}억원 (단기 조정, 전체적으로는 매수 우위)")
+                    interpretation_parts.append(f" 외국인: 당일 순매도 {abs(daily_net/100000000):.1f}억원이지만, 30일간 누적 순매수 {cumulative_net/100000000:.1f}억원 (단기 조정, 전체적으로는 매수 우위)")
                 elif daily_net > 0 and cumulative_net < 0:
-                    interpretation_parts.append("🌍 외국인: 당일 순매수이지만 30일간은 순매도 우위 (패턴 변화 주목)")
+                    interpretation_parts.append(" 외국인: 당일 순매수이지만 30일간은 순매도 우위 (패턴 변화 주목)")
                 else:
-                    interpretation_parts.append("🌍 외국인: 당일 및 30일간 순매도 우위 (약세 신호)")
+                    interpretation_parts.append(" 외국인: 당일 및 30일간 순매도 우위 (약세 신호)")
             
             # 기관 해석
             if 'institution' in daily_data and 'institution' in cumulative_data:
@@ -315,14 +315,14 @@ class InvestorPositionAnalyzer:
                 cumulative_net = cumulative_indiv.get('net_amount', 0)
                 
                 if daily_net > 0 and cumulative_net > 0:
-                    interpretation_parts.append("👥 개인: 당일 및 30일간 지속적 순매수")
+                    interpretation_parts.append(" 개인: 당일 및 30일간 지속적 순매수")
                 elif daily_net < 0 and cumulative_net > 0:
-                    interpretation_parts.append("👥 개인: 당일 순매도이지만 30일간은 순매수 우위")
+                    interpretation_parts.append(" 개인: 당일 순매도이지만 30일간은 순매수 우위")
                 else:
-                    interpretation_parts.append("👥 개인: 매도 우위 패턴")
+                    interpretation_parts.append(" 개인: 매도 우위 패턴")
             
             # 종합 해석
-            summary = "\n\n📊 종합 해석: "
+            summary = "\n\n 종합 해석: "
             foreign_cumul = cumulative_data.get('foreign', {}).get('net_amount', 0)
             inst_cumul = cumulative_data.get('institution', {}).get('net_amount', 0)
             
@@ -333,7 +333,7 @@ class InvestorPositionAnalyzer:
             else:
                 summary += "기관투자자들의 매도 우위가 지속되고 있어 신중한 접근이 필요합니다."
             
-            summary += "\n⚠️ 단기 변동에 휘둘리지 말고 30일 누적 트렌드를 중심으로 판단하세요."
+            summary += "\n 단기 변동에 휘둘리지 말고 30일 누적 트렌드를 중심으로 판단하세요."
             
             return "\n".join(interpretation_parts) + summary
             
@@ -466,20 +466,20 @@ class InvestorPositionAnalyzer:
             
             # KOSPI 요약
             if kospi_data is not None and not kospi_data.empty:
-                summary_parts.append("📈 KOSPI: 투자자 동향 데이터 수집 완료")
+                summary_parts.append(" KOSPI: 투자자 동향 데이터 수집 완료")
             
             # KOSDAQ 요약
             if kosdaq_data is not None and not kosdaq_data.empty:
-                summary_parts.append("📊 KOSDAQ: 투자자 동향 데이터 수집 완료")
+                summary_parts.append(" KOSDAQ: 투자자 동향 데이터 수집 완료")
             
             # 집계 데이터 요약
             if aggregate_data is not None and not aggregate_data.empty:
-                summary_parts.append("🏛️ 외국인/기관 집계: 실시간 데이터 수집 완료")
+                summary_parts.append(" 외국인/기관 집계: 실시간 데이터 수집 완료")
             
             if not summary_parts:
                 return "시장 데이터 수집에 실패했습니다."
             
-            return "\n".join(summary_parts) + "\n\n✅ 시장 전체 투자자 동향 분석이 완료되었습니다."
+            return "\n".join(summary_parts) + "\n\n 시장 전체 투자자 동향 분석이 완료되었습니다."
             
         except Exception as e:
             self.logger.error(f"시장 요약 생성 실패: {e}")

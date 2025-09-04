@@ -441,7 +441,7 @@ class KisWebSocket:
                 change_str = f"+{change}" if not change.startswith(('+', '-')) else change
                 change_rate_str = f"+{change_rate}" if not change_rate.startswith(('+', '-')) else change_rate
                 
-                print(f"[{current_time}] 📊 {index_name}: {index_value} ({change_str}, {change_rate_str}%)")
+                print(f"[{current_time}] {index_name}: {index_value} ({change_str}, {change_rate_str}%)")
         except Exception as e:
             logging.error(f"지수 데이터 처리 오류 ({index_name}): {e}")
             raise
@@ -462,7 +462,7 @@ class KisWebSocket:
                 net_volume = self.format_price(recv[6])      # 순매수체결량
                 net_amount = self.format_price(recv[7])      # 순매수대금
                 
-                print(f"[{current_time}] 🔄 프로그램매매 - {name}({stock_code})")
+                print(f"[{current_time}] 프로그램매매 - {name}({stock_code})")
                 print(f"  매도량: {sell_volume} | 매수량: {buy_volume}")
                 print(f"  순매수량: {net_volume} | 순매수대금: {net_amount}")
                 print("-" * 50)

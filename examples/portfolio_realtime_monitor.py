@@ -86,11 +86,11 @@ class PortfolioRealtimeMonitor:
     async def initialize_portfolio(self) -> bool:
         """포트폴리오 초기화 (잔고 조회 및 종목 등록)"""
         try:
-            logging.info("🔍 계좌 잔고 조회 중...")
+            logging.info(" 계좌 잔고 조회 중...")
             balance = self.agent.get_account_balance()
             
             if not balance or 'output1' not in balance:
-                logging.error("❌ 잔고 조회 실패")
+                logging.error(" 잔고 조회 실패")
                 return False
             
             positions = balance['output1']
@@ -114,13 +114,13 @@ class PortfolioRealtimeMonitor:
                     # 가격-거래량 데이터 초기화
                     self.price_volume_data[code] = []
                     
-                    logging.info(f"✅ 종목 등록: {name}({code}) - {quantity:,}주 @ {avg_price:,}원")
+                    logging.info(f" 종목 등록: {name}({code}) - {quantity:,}주 @ {avg_price:,}원")
             
-            logging.info(f"📊 총 {len(self.positions)}개 종목 등록 완료")
+            logging.info(f" 총 {len(self.positions)}개 종목 등록 완료")
             return True
             
         except Exception as e:
-            logging.error(f"❌ 포트폴리오 초기화 실패: {e}")
+            logging.error(f" 포트폴리오 초기화 실패: {e}")
             return False
 
     async def fetch_historical_minute_data(self, code: str) -> None:
@@ -149,10 +149,10 @@ class PortfolioRealtimeMonitor:
                     except Exception:
                         continue
                         
-                logging.info(f"📈 {code} 과거 분봉 데이터 {len(self.price_volume_data[code])}건 로드")
+                logging.info(f" {code} 과거 분봉 데이터 {len(self.price_volume_data[code])}건 로드")
                 
         except Exception as e:
-            logging.warning(f"⚠️ {code} 과거 분봉 데이터 로드 실패: {e}")
+            logging.warning(f" {code} 과거 분봉 데이터 로드 실패: {e}")
 
     def calculate_vwap(self, code: str) -> float:
         """VWAP (거래량 가중 평균가) 계산"""
@@ -178,7 +178,7 @@ class PortfolioRealtimeMonitor:
             return total_value / total_volume if total_volume > 0 else 0.0
             
         except Exception as e:
-            logging.error(f"❌ {code} VWAP 계산 실패: {e}")
+            logging.error(f" {code} VWAP 계산 실패: {e}")
             return 0.0
 
     def calculate_vwap_deviation(self, code: str, current_price: float, vwap: float) -> float:
@@ -191,7 +191,7 @@ class PortfolioRealtimeMonitor:
         """웹소켓 연결 설정"""
         try:
             if not self.positions:
-                logging.error("❌ 등록된 종목이 없습니다")
+                logging.error(" 등록된 종목이 없습니다")
                 return False
             
             stock_codes = list(self.positions.keys())
@@ -204,30 +204,30 @@ class PortfolioRealtimeMonitor:
                 enable_ask_bid=False  # 호가는 비활성화
             )
             
-            logging.info("🌐 웹소켓 클라이언트 생성 완료")
+            logging.info(" 웹소켓 클라이언트 생성 완료")
             
             # 승인키 발급
             approval_key = self.ws_client.get_approval()
             if not approval_key:
-                logging.error("❌ 웹소켓 승인키 발급 실패")
+                logging.error(" 웹소켓 승인키 발급 실패")
                 return False
             
             logging.info("🔑 웹소켓 승인키 발급 완료")
             return True
             
         except Exception as e:
-            logging.error(f"❌ 웹소켓 설정 실패: {e}")
+            logging.error(f" 웹소켓 설정 실패: {e}")
             return False
 
     async def start_realtime_monitoring(self) -> None:
         """실시간 모니터링 시작"""
         try:
             if not self.ws_client:
-                logging.error("❌ 웹소켓 클라이언트가 설정되지 않았습니다")
+                logging.error(" 웹소켓 클라이언트가 설정되지 않았습니다")
                 return
             
             # 모든 종목의 과거 분봉 데이터 로드
-            logging.info("📊 과거 분봉 데이터 로드 중...")
+            logging.info(" 과거 분봉 데이터 로드 중...")
             for code in self.positions.keys():
                 await self.fetch_historical_minute_data(code)
             
@@ -246,11 +246,11 @@ class PortfolioRealtimeMonitor:
                     
                     await asyncio.sleep(0.1)  # 요청 간격
                 
-                logging.info("🎯 실시간 모니터링 시작")
+                logging.info(" 실시간 모니터링 시작")
                 await self._start_monitoring_loop(websocket)
                 
         except Exception as e:
-            logging.error(f"❌ 실시간 모니터링 실행 실패: {e}")
+            logging.error(f" 실시간 모니터링 실행 실패: {e}")
 
     async def _subscribe_stock_trade(self, websocket, approval_key: str, stock_code: str) -> None:
         """종목 체결정보 구독"""
@@ -316,7 +316,7 @@ class PortfolioRealtimeMonitor:
         except KeyboardInterrupt:
             logging.info("🛑 사용자에 의해 모니터링 중단")
         except Exception as e:
-            logging.error(f"❌ 모니터링 루프 오류: {e}")
+            logging.error(f" 모니터링 루프 오류: {e}")
 
     async def _process_websocket_message(self, data: str) -> None:
         """웹소켓 메시지 처리"""
@@ -332,7 +332,7 @@ class PortfolioRealtimeMonitor:
                 await self._process_program_trade_data(data)
                 
         except Exception as e:
-            logging.error(f"❌ 웹소켓 메시지 처리 실패: {e}")
+            logging.error(f" 웹소켓 메시지 처리 실패: {e}")
 
     async def _process_trade_data(self, data: str) -> None:
         """체결 데이터 처리"""
@@ -372,7 +372,7 @@ class PortfolioRealtimeMonitor:
                 position.profit_loss_rate = (position.profit_loss / (position.quantity * position.avg_price)) * 100
                 
         except Exception as e:
-            logging.error(f"❌ 체결 데이터 처리 실패: {e}")
+            logging.error(f" 체결 데이터 처리 실패: {e}")
 
     async def _process_program_trade_data(self, data: str) -> None:
         """프로그램매매 데이터 처리"""
@@ -396,7 +396,7 @@ class PortfolioRealtimeMonitor:
                 # position.program_net_ratio = position.program_buy_ratio - position.program_sell_ratio
                 
         except Exception as e:
-            logging.error(f"❌ 프로그램매매 데이터 처리 실패: {e}")
+            logging.error(f" 프로그램매매 데이터 처리 실패: {e}")
 
     async def _refresh_balance_if_needed(self) -> None:
         """필요시 잔고 새로고침"""
@@ -411,7 +411,7 @@ class PortfolioRealtimeMonitor:
         
         print("=" * 120)
         print("💼 포트폴리오 실시간 모니터링 대시보드")
-        print(f"⏰ 마지막 업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f" 마지막 업데이트: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         print("=" * 120)
         
         if not self.positions:
@@ -448,15 +448,15 @@ class PortfolioRealtimeMonitor:
         total_profit_loss_rate = (total_profit_loss / total_investment * 100) if total_investment > 0 else 0
         
         print("-" * 120)
-        print(f"💰 총 투자금액: {total_investment:>15,.0f}원")
+        print(f" 총 투자금액: {total_investment:>15,.0f}원")
         print(f"💎 총 평가금액: {total_market_value:>15,.0f}원")
-        print(f"📊 총 손익금액: {total_profit_loss:>+15,.0f}원 ({total_profit_loss_rate:+.2f}%)")
+        print(f" 총 손익금액: {total_profit_loss:>+15,.0f}원 ({total_profit_loss_rate:+.2f}%)")
         print("=" * 120)
 
     async def run(self) -> None:
         """메인 실행 함수"""
         try:
-            logging.info("🚀 포트폴리오 실시간 모니터링 시작")
+            logging.info(" 포트폴리오 실시간 모니터링 시작")
             
             # 1. 포트폴리오 초기화
             if not await self.initialize_portfolio():
@@ -470,14 +470,14 @@ class PortfolioRealtimeMonitor:
             await self.start_realtime_monitoring()
             
         except Exception as e:
-            logging.error(f"❌ 실행 실패: {e}")
+            logging.error(f" 실행 실패: {e}")
         finally:
             logging.info("🛑 포트폴리오 모니터링 종료")
 
 
 async def main():
     """메인 함수"""
-    print("🌟 포트폴리오 실시간 모니터링 시스템")
+    print(" 포트폴리오 실시간 모니터링 시스템")
     print("기능:")
     print("- 계좌 잔고 자동 조회")
     print("- 보유 종목 실시간 시세 모니터링")

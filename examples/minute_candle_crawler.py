@@ -205,13 +205,13 @@ class MinuteCandleCrawler:
         total_days = len(business_days)
         
         if total_days == 0:
-            print("📅 수집할 영업일이 없습니다.")
+            print(" 수집할 영업일이 없습니다.")
             return
         
-        print(f"📊 수집 시작: {self.stock_name}({self.stock_code})")
-        print(f"📅 기간: {self.start_date} ~ {self.end_date}")
-        print(f"📈 총 영업일: {total_days}일")
-        print(f"💾 저장 경로: {self.db_path}")
+        print(f" 수집 시작: {self.stock_name}({self.stock_code})")
+        print(f" 기간: {self.start_date} ~ {self.end_date}")
+        print(f" 총 영업일: {total_days}일")
+        print(f" 저장 경로: {self.db_path}")
         print("=" * 60)
         
         success_count = 0
@@ -227,28 +227,28 @@ class MinuteCandleCrawler:
                 if not df.empty:
                     # 데이터베이스 저장
                     self.save_minute_data(df, date)
-                    print(f"✅ 완료 ({len(df)}건)")
+                    print(f" 완료 ({len(df)}건)")
                     success_count += 1
                 else:
-                    print("❌ 데이터 없음")
+                    print(" 데이터 없음")
                     failed_dates.append(date)
                 
                 # API 호출 간격 (서버 부하 방지)
                 time.sleep(0.1)
                 
             except Exception as e:
-                print(f"❌ 오류: {e}")
+                print(f" 오류: {e}")
                 failed_dates.append(date)
                 logging.error(f"[{date}] 수집 실패: {e}")
         
         # 수집 결과 요약
         print("=" * 60)
-        print(f"✅ 수집 완료!")
-        print(f"📊 성공: {success_count}/{total_days}일")
-        print(f"💾 저장 위치: {self.db_path}")
+        print(f" 수집 완료!")
+        print(f" 성공: {success_count}/{total_days}일")
+        print(f" 저장 위치: {self.db_path}")
         
         if failed_dates:
-            print(f"❌ 실패한 날짜: {', '.join(failed_dates)}")
+            print(f" 실패한 날짜: {', '.join(failed_dates)}")
         
         # 저장된 데이터 통계
         self.show_statistics()
@@ -276,7 +276,7 @@ class MinuteCandleCrawler:
             
             conn.close()
             
-            print(f"\n📊 저장된 데이터 통계:")
+            print(f"\n 저장된 데이터 통계:")
             print(f"   총 분봉 개수: {total_count:,}건")
             print(f"   수집된 날짜: {len(date_counts)}일")
             
@@ -293,14 +293,14 @@ class MinuteCandleCrawler:
     
     def run(self):
         """크롤러 실행"""
-        print("🚀 분봉 데이터 크롤러")
+        print(" 분봉 데이터 크롤러")
         print("=" * 40)
         
         # 1. 종목 입력
         while True:
-            stock_input = input("📈 종목명 또는 종목코드를 입력하세요: ").strip()
+            stock_input = input(" 종목명 또는 종목코드를 입력하세요: ").strip()
             if not stock_input:
-                print("❌ 종목을 입력해주세요.")
+                print(" 종목을 입력해주세요.")
                 continue
                 
             self.stock_code = self.get_stock_code_from_name(stock_input)
@@ -310,22 +310,22 @@ class MinuteCandleCrawler:
                 stock_info = self.agent.get_stock_price(self.stock_code)
                 if stock_info and 'output' in stock_info:
                     self.stock_name = stock_info['output'].get('hts_kor_isnm', stock_input)
-                    print(f"✅ 종목 확인: {self.stock_name} ({self.stock_code})")
+                    print(f" 종목 확인: {self.stock_name} ({self.stock_code})")
                     break
                 else:
-                    print(f"❌ 종목을 찾을 수 없습니다: {stock_input}")
+                    print(f" 종목을 찾을 수 없습니다: {stock_input}")
             except Exception as e:
-                print(f"❌ 종목 조회 실패: {e}")
+                print(f" 종목 조회 실패: {e}")
         
         # 2. 기간 입력
-        print("\n📅 수집 기간 설정")
+        print("\n 수집 기간 설정")
         
         while True:
             start_input = input("시작일 (YYYYMMDD): ").strip()
             if len(start_input) == 8 and start_input.isdigit():
                 self.start_date = start_input
                 break
-            print("❌ 올바른 형식으로 입력하세요 (예: 20240101)")
+            print(" 올바른 형식으로 입력하세요 (예: 20240101)")
         
         while True:
             end_input = input("종료일 (YYYYMMDD): ").strip()
@@ -334,29 +334,29 @@ class MinuteCandleCrawler:
                     self.end_date = end_input
                     break
                 else:
-                    print("❌ 종료일은 시작일보다 늦어야 합니다.")
+                    print(" 종료일은 시작일보다 늦어야 합니다.")
             else:
-                print("❌ 올바른 형식으로 입력하세요 (예: 20240131)")
+                print(" 올바른 형식으로 입력하세요 (예: 20240131)")
         
         # 3. 데이터베이스 경로 설정
         self.db_path = f"{self.stock_code}_candles.db"
         
         # 4. 확인 및 실행
-        print(f"\n🔍 설정 확인")
+        print(f"\n 설정 확인")
         print(f"   종목: {self.stock_name} ({self.stock_code})")
         print(f"   기간: {self.start_date} ~ {self.end_date}")
         print(f"   저장: {self.db_path}")
         
         confirm = input("\n수집을 시작하시겠습니까? (y/N): ").strip().lower()
         if confirm != 'y':
-            print("❌ 수집을 취소했습니다.")
+            print(" 수집을 취소했습니다.")
             return
         
         # 5. 데이터베이스 초기화
         self.setup_database()
         
         # 6. 데이터 수집 시작
-        print("\n🚀 데이터 수집 시작...")
+        print("\n 데이터 수집 시작...")
         start_time = datetime.now()
         
         self.crawl_minute_data()
@@ -365,7 +365,7 @@ class MinuteCandleCrawler:
         elapsed = end_time - start_time
         
         print(f"\n⏱️ 총 소요 시간: {elapsed}")
-        print(f"🎉 수집 완료!")
+        print(f" 수집 완료!")
 
 def main():
     """메인 함수"""
@@ -373,9 +373,9 @@ def main():
         crawler = MinuteCandleCrawler()
         crawler.run()
     except KeyboardInterrupt:
-        print("\n❌ 사용자가 수집을 중단했습니다.")
+        print("\n 사용자가 수집을 중단했습니다.")
     except Exception as e:
-        print(f"\n❌ 오류 발생: {e}")
+        print(f"\n 오류 발생: {e}")
         logging.error(f"크롤러 실행 오류: {e}")
 
 if __name__ == "__main__":

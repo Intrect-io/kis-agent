@@ -43,7 +43,7 @@ def test_cache_ttl_configuration():
     assert cache.get_ttl_for_endpoint("/uapi/domestic-stock/v1/trading/order-cash") == 0
     assert cache.get_ttl_for_endpoint("/uapi/domestic-stock/v1/trading/order-credit") == 0
     
-    print("✅ 모든 TTL 설정이 시간 민감성에 맞게 구성됨")
+    print(" 모든 TTL 설정이 시간 민감성에 맞게 구성됨")
 
 
 def test_cache_expiry_behavior():
@@ -62,7 +62,7 @@ def test_cache_expiry_behavior():
     assert cache.get("test_key") is None
     assert cache.misses == 1
     
-    print("✅ 캐시 만료 동작 정상")
+    print(" 캐시 만료 동작 정상")
 
 
 def test_cache_performance_with_different_ttls():
@@ -84,14 +84,14 @@ def test_cache_performance_with_different_ttls():
     assert cache.get(cache_key_price) is None  # 만료됨
     assert cache.get(cache_key_info) is not None  # 아직 유효
     
-    print("✅ TTL별 차등 만료 동작 정상")
+    print(" TTL별 차등 만료 동작 정상")
 
 
 def display_ttl_summary():
     """TTL 설정 요약 표시"""
     cache = APICache()
     
-    print("\n📊 PyKIS 캐시 TTL 설정 요약")
+    print("\n PyKIS 캐시 TTL 설정 요약")
     print("=" * 60)
     
     categories = [

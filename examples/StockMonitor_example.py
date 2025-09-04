@@ -180,7 +180,7 @@ class StockMonitor:
                 # 알림 출력
                 if alerts:
                     name = stock_data['name']
-                    logging.info(f"📊 종목 알림 [{name}({code})]: {', '.join(alerts)}")
+                    logging.info(f" 종목 알림 [{name}({code})]: {', '.join(alerts)}")
 
             # 데이터 업데이트
             stock_data['last_price'] = current_price
@@ -195,7 +195,7 @@ class StockMonitor:
         조건검색식 종목들을 처리합니다 (pykis Agent 사용)
         """
         try:
-            logging.info("🔍 조건검색 종목 처리 시작")
+            logging.info(" 조건검색 종목 처리 시작")
             
             # pykis Agent를 사용한 조건검색 (통일된 방식)
             condition_result = self.agent.get_condition_stocks("unohee", 0, "N")
@@ -230,9 +230,9 @@ class StockMonitor:
                         if foreign_rate >= self.foreign_exhaustion_threshold:
                             stock['foreign_exhaustion_rate'] = foreign_rate
                             filtered_stocks.append(stock)
-                            logging.info(f"✅ [{name}({code})] 외국인소진율 {foreign_rate:.1f}% - 통과")
+                            logging.info(f" [{name}({code})] 외국인소진율 {foreign_rate:.1f}% - 통과")
                         else:
-                            logging.debug(f"❌ [{name}({code})] 외국인소진율 {foreign_rate:.1f}% - 필터링")
+                            logging.debug(f" [{name}({code})] 외국인소진율 {foreign_rate:.1f}% - 필터링")
                     except (ValueError, TypeError):
                         logging.warning(f"[{name}({code})] 외국인소진율 변환 실패: {foreign_rate_str}")
             
@@ -276,7 +276,7 @@ class StockMonitor:
                 
                 # 결과 출력
                 logging.info(
-                    f"📈 분석결과 [{name}({code})]: "
+                    f" 분석결과 [{name}({code})]: "
                     f"현재가 {current_price}원, 등락률 {change_rate}%, "
                     f"거래량 {volume}, 외국인소진율 {foreign_rate:.1f}%, "
                     f"{program_info}"
@@ -289,7 +289,7 @@ class StockMonitor:
         """
         등록된 종목들의 지속적인 모니터링 실행
         """
-        logging.info("📊 주식 모니터링 시작")
+        logging.info(" 주식 모니터링 시작")
         try:
             while True:
                 current_time = datetime.now()
@@ -308,7 +308,7 @@ class StockMonitor:
         """
         조건검색 기반 종목 분석 실행
         """
-        logging.info("🔍 조건검색 기반 종목 분석 시작")
+        logging.info(" 조건검색 기반 종목 분석 시작")
         try:
             # 조건검색 종목 처리
             condition_stocks = self.process_condition_stocks()

@@ -2,20 +2,20 @@
 
 한국투자증권 OpenAPI를 Python으로 쉽게 사용할 수 있는 래퍼 라이브러리입니다.
 
-**🎉 NEW: NXT(넥스트레이드) 시장 지원!** - KOSPI/KOSDAQ과 함께 차세대 대체거래소 통합 지원
+** NEW: NXT(넥스트레이드) 시장 지원!** - KOSPI/KOSDAQ과 함께 차세대 대체거래소 통합 지원
 
 [![Tests](https://img.shields.io/badge/tests-232%20passed-brightgreen)](https://github.com/your-repo/pykis)
 [![Coverage](https://img.shields.io/badge/coverage-52%25-orange)](https://github.com/your-repo/pykis)
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
 [![NXT](https://img.shields.io/badge/NXT-지원-green)](https://www.nextrade.co.kr/)
 
-## 🚀 설치 방법
+##  설치 방법
 
 ```bash
 pip install pykis
 ```
 
-## 📋 환경 설정
+##  환경 설정
 
 프로젝트 루트에 `.env` 파일을 생성하고 한국투자증권 API 정보를 설정하세요:
 
@@ -29,7 +29,7 @@ CANO=your_account_number
 ACNT_PRDT_CD=01
 ```
 
-## 🔧 기본 사용법
+##  기본 사용법
 
 ```python
 from pykis import Agent
@@ -37,39 +37,39 @@ from pykis import Agent
 # .env 파일 경로 지정하여 Agent 인스턴스 생성
 agent = Agent(env_path=".env")
 
-# 📊 계좌 정보 조회
+#  계좌 정보 조회
 balance = agent.get_account_balance()  # 계좌 잔고
 cash = agent.get_cash_available()      # 주문 가능 현금
 total = agent.get_total_asset()        # 총 자산
 
-# 📈 주식 시세 조회 (KOSPI/KOSDAQ/NXT 통합 지원)
+#  주식 시세 조회 (KOSPI/KOSDAQ/NXT 통합 지원)
 price = agent.get_stock_price("005930")      # 삼성전자 현재가 (KOSPI)
 daily = agent.get_daily_price("035720")      # 카카오 일별시세 (KOSDAQ)
 orderbook = agent.get_orderbook("NXT종목")   # NXT 시장 종목도 동일하게 조회 가능
 
-# 📊 분봉 데이터 조회
+#  분봉 데이터 조회
 minute_data = agent.get_minute_price("005930", "093000")  # 특정 시간 분봉
 daily_minute = agent.get_daily_minute_price("005930", "20250715", "153000")  # 과거일자 분봉
 
-# 🚀 고효율 분봉 수집 (4번 호출로 전일 분봉 수집)
+#  고효율 분봉 수집 (4번 호출로 전일 분봉 수집)
 minute_data = agent.fetch_minute_data("005930", "20250715")  # 특정일
 recent_data = agent.fetch_minute_data("005930")             # 최근 영업일
 
-# 📈 매물대 분석 (지지선/저항선, VWAP, 피벗)
+#  매물대 분석 (지지선/저항선, VWAP, 피벗)
 support_resistance = agent.calculate_support_resistance("005930")
 
-# 🔍 조건검색 & 투자자 정보
+#  조건검색 & 투자자 정보
 condition_stocks = agent.get_condition_stocks("user_id", 0, "N")
 investor_trend = agent.get_stock_investor("005930")  # 투자자별 매매동향
 
-# 📅 휴장일 & 시장 정보
+#  휴장일 & 시장 정보
 is_holiday = agent.is_holiday("20250101")  # 휴장일 여부
 holiday_info = agent.get_holiday_info()    # 휴장일 목록
 
-# 💰 코스피200 선물 시세 (자동 최근월물)
+#  코스피200 선물 시세 (자동 최근월물)
 futures_price = agent.get_future_option_price()  # 9월물(101W09) 자동 조회
 
-# 📊 거래내역 Excel 내보내기
+#  거래내역 Excel 내보내기
 from pykis.utils.trading_report import generate_trading_report
 report_path = generate_trading_report(
     agent.client, 
@@ -79,7 +79,7 @@ report_path = generate_trading_report(
 )
 ```
 
-## 🚀 웹소켓 실시간 데이터
+##  웹소켓 실시간 데이터
 
 ```python
 # 웹소켓으로 실시간 시세 수신
@@ -95,7 +95,7 @@ import asyncio
 asyncio.run(ws_client.start())
 ```
 
-## 📊 거래내역 Excel 내보내기
+##  거래내역 Excel 내보내기
 
 ```python
 from pykis.utils.trading_report import generate_trading_report
@@ -113,7 +113,7 @@ report_path = generate_trading_report(
 print(f"거래내역이 저장되었습니다: {report_path}")
 ```
 
-## 🔄 분봉 데이터 크롤러
+##  분봉 데이터 크롤러
 
 대량의 분봉 데이터를 SQLite에 저장하는 크롤러:
 
@@ -131,39 +131,39 @@ python minute_candle_crawler.py
 
 ### 실행 예시
 ```
-🚀 분봉 데이터 크롤러
+ 분봉 데이터 크롤러
 ========================================
-📈 종목명 또는 종목코드를 입력하세요: 삼성전자
-✅ 종목 확인: 삼성전자 (005930)
+ 종목명 또는 종목코드를 입력하세요: 삼성전자
+ 종목 확인: 삼성전자 (005930)
 
-📅 수집 기간 설정
+ 수집 기간 설정
 시작일 (YYYYMMDD): 20240101
 종료일 (YYYYMMDD): 20240131
 
-📊 수집 시작: 삼성전자(005930)
-📅 기간: 20240101 ~ 20240131
-📈 총 영업일: 22일
-💾 저장 경로: 005930_candles.db
+ 수집 시작: 삼성전자(005930)
+ 기간: 20240101 ~ 20240131
+ 총 영업일: 22일
+ 저장 경로: 005930_candles.db
 ============================================================
-[  1/22] 20240102 수집 중... ✅ 완료 (361건)
-[  2/22] 20240103 수집 중... ✅ 완료 (361건)
+[  1/22] 20240102 수집 중...  완료 (361건)
+[  2/22] 20240103 수집 중...  완료 (361건)
 ...
 ============================================================
-✅ 수집 완료!
-📊 성공: 22/22일 
-💾 저장 위치: 005930_candles.db
+ 수집 완료!
+ 성공: 22/22일 
+ 저장 위치: 005930_candles.db
 
-📊 저장된 데이터 통계:
+ 저장된 데이터 통계:
    총 분봉 개수: 7,942건
    수집된 날짜: 22일
    일평균 분봉: 361.0건
 ```
 
-## 🧪 테스트 현황
+##  테스트 현황
 
-- ✅ **178개 테스트 통과** (2개 건너뜀, 1개 예상 실패)
-- 📊 **44% 코드 커버리지** 
-- 🏆 **핵심 모듈 고커버리지**:
+-  **178개 테스트 통과** (2개 건너뜀, 1개 예상 실패)
+-  **44% 코드 커버리지** 
+-  **핵심 모듈 고커버리지**:
   - `trading_report.py`: 98%
   - `program/trade.py`: 95% 
   - `core/config.py`: 88%
@@ -174,7 +174,7 @@ python minute_candle_crawler.py
 pytest tests/ -v --cov=pykis
 ```
 
-## 🎯 주요 기능
+##  주요 기능
 
 ### 계좌 관련
 - `get_account_balance()`: 계좌 잔고 조회
@@ -203,7 +203,7 @@ pytest tests/ -v --cov=pykis
 - `get_kospi200_futures_code()`: 현재 활성 선물코드 계산
 
 ### 유틸리티
-- `generate_trading_report()`: 거래내역 Excel 내보내기 📊
+- `generate_trading_report()`: 거래내역 Excel 내보내기 
 
 ### 투자자 정보
 - `get_stock_investor(ticker)`: 투자자별 매매 동향 조회
@@ -228,63 +228,63 @@ pytest tests/ -v --cov=pykis
 - `is_holiday(date)`: 특정일 휴장일 여부 확인
 - `get_daily_credit_balance(code, date)`: 국내주식 신용잔고 일별추이 조회
 
-## 🆕 최신 업데이트 (v0.1.21)
+##  최신 업데이트 (v0.1.21)
 
-### ✨ 새로운 기능
-- **📊 거래내역 Excel 내보내기**: 계좌 거래내역을 Excel 파일로 내보내는 유틸리티 추가
+###  새로운 기능
+- ** 거래내역 Excel 내보내기**: 계좌 거래내역을 Excel 파일로 내보내는 유틸리티 추가
   - 기간별, 종목별 필터링 지원
   - 체결된 거래만 필터링 옵션
   - 98% 테스트 커버리지 달성
-- **🧪 테스트 시스템 대폭 개선**: 178개 테스트 모두 통과 달성
+- ** 테스트 시스템 대폭 개선**: 178개 테스트 모두 통과 달성
   - Agent 초기화 시 env_path 매개변수 필수화로 보안 강화
   - 모든 테스트 파일에서 환경변수 경로 명시적 지정
   - 프로그램매매 API 테스트 안정화
 
-### 🔧 개선됨
+###  개선됨
 - **보안 강화**: .env 파일 경로를 명시적으로 지정하도록 개선
 - **코드 품질**: BaseAPI 패턴 적용으로 account 속성 일관성 확보
 - **문서 정리**: 한국투자증권 관련 설정만 유지하고 불필요한 설정 제거
 
 ## 이전 업데이트 (v0.1.20)
 
-## 📈 최신 업데이트 (v0.1.22)
+##  최신 업데이트 (v0.1.22)
 
-### 🎉 NXT(넥스트레이드) 시장 지원 추가
+###  NXT(넥스트레이드) 시장 지원 추가
 - **통합 시장 지원**: 모든 API에서 KOSPI/KOSDAQ/NXT 동시 지원
   - `FID_COND_MRKT_DIV_CODE` 값을 "J"에서 "UN"으로 변경
   - 기존 KOSPI/KOSDAQ 종목 100% 호환성 보장
   - NXT 종목도 기존과 동일한 방식으로 조회 가능
 - **영향받는 기능**: 현재가 조회, 일별/분봉 시세, 호가 정보, 투자자별 매매 동향, 조건 검색 등 모든 주식 관련 API
 
-### ✅ 테스트 및 코드 품질 향상
+###  테스트 및 코드 품질 향상
 - **테스트 확대**: 232개 테스트 통과 (기존 178개에서 54개 추가)
 - **코드 커버리지**: 52%로 향상 (기존 44%에서 개선)
 - **신규 테스트 모듈**: DataFrame 헬퍼, 투자자 DB, WebSocket 클라이언트 기본 기능 테스트 추가
 
-### ✨ 이전 업데이트
-- **🌐 웹소켓 멀티 구독 시스템**: 여러 종목을 동시에 구독할 수 있는 `WSAgent` 클래스 추가
+###  이전 업데이트
+- ** 웹소켓 멀티 구독 시스템**: 여러 종목을 동시에 구독할 수 있는 `WSAgent` 클래스 추가
   - 실시간 시세, 호가, 지수, 프로그램매매 데이터 동시 수신
   - 자동 연결 관리 및 오류 복구 기능
   - 유연한 구독 설정 및 콜백 시스템
 
-### 🔧 개선됨
+###  개선됨
 - **웹소켓 모듈 통합**: `KIS_WS.py`를 `pykis.websocket` 서브모듈로 통합
 - **Agent 접근성**: `agent.websocket()` 메서드로 쉬운 웹소켓 접근
 
 ## 이전 업데이트 (v0.1.18)
 
-### ✅ 테스트 시스템 100% 통과 달성
+###  테스트 시스템 100% 통과 달성
 - **전체 테스트 결과**: 121개 통과, 2개 스킵, 1개 xfail (예상된 실패)
 - **PyKIS 노트북 핵심 기능 100% 통과**: 모든 주요 API 메서드 정상 작동 확인
 
-### 🔧 개선됨
+###  개선됨
 - **테스트 안정성 강화**: CI/CD 환경에서 외부 의존성 문제 해결
 - **설정 클래스 로직 개선**: `KISConfig` 클래스의 부분적 인자 제공 시에도 올바른 검증 수행
 
 ## 이전 업데이트 (v0.1.16)
 
-### ✨ 새로운 기능
-- **📊 KOSPI200 지수 베이시스 계산 기능**: 선물옵션 API에 자동 최근월물 계산 기능 추가
+###  새로운 기능
+- ** KOSPI200 지수 베이시스 계산 기능**: 선물옵션 API에 자동 최근월물 계산 기능 추가
   - `get_kospi200_futures_code` 함수: 두 번째 주 목요일 만기 규칙을 적용하여 다음 만기월(3,6,9,12월) 중 가장 가까운 미래 월물 자동 계산
   - `get_future_option_price` 메서드 개선: 별도 파라미터 없이 호출해도 최신 KOSPI200 선물 시세 자동 조회
 

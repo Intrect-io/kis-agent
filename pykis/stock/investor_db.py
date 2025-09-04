@@ -7,16 +7,16 @@ investor_db.py - 투자자 포지션 데이터 저장소
 - 데이터 무결성 검증
 - 자동 백업 및 복구
 
-✅ 의존:
+ 의존:
 - sqlite3: 데이터베이스 엔진
 - datetime: 날짜 계산
 - logging: 로깅
 
-🔗 연관 모듈:
+ 연관 모듈:
 - investor.py: 투자자 포지션 분석기
 - core/config: 설정 관리
 
-💡 사용 예시:
+ 사용 예시:
 db = InvestorPositionDB()
 db.save_daily_position(position_data)
 positions = db.get_30day_positions("005930")

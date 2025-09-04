@@ -12,15 +12,15 @@ account.py - 계좌 정보 조회 전용 모듈
 - 현금 매수 가능 금액 조회
 - 총 자산 평가 (예수금, 주식, 평가손익 등 포함)
 
-✅ 의존:
+ 의존:
 - client.py: 모든 API 요청은 이 객체를 통해 수행됩니다.
 
-🔗 연관 모듈:
+ 연관 모듈:
 - stock.py: 종목 단위 시세 및 주문 API 담당
 - program.py: 프로그램 매매 추이 및 순매수량 확인
 - (전략 관련 모듈은 deprecated되어 제거됨)
 
-💡 사용 예시:
+ 사용 예시:
 client = KISClient()
 account = AccountAPI(client, {"CANO": "12345678", "ACNT_PRDT_CD": "01"})
 df = account.get_account_balance()

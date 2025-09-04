@@ -2,7 +2,7 @@
 
 PyKIS는 한국투자증권 OpenAPI를 위한 Python SDK입니다. 이 가이드는 PyKIS를 처음 사용하는 개발자를 위한 시작 가이드입니다.
 
-## 📋 사전 준비
+##  사전 준비
 
 ### 1. 한국투자증권 OpenAPI 가입
 1. [한국투자증권 OpenAPI 포털](https://apiportal.koreainvestment.com/)에서 회원가입
@@ -20,7 +20,7 @@ python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 ```
 
-## 🚀 설치
+##  설치
 
 ### 기본 설치
 ```bash
@@ -34,7 +34,7 @@ cd pykis
 pip install -e .
 ```
 
-## ⚙️ 환경 설정
+##  환경 설정
 
 ### 1. 환경변수 설정
 `.env` 파일을 생성하여 API 인증 정보를 설정합니다:
@@ -77,7 +77,7 @@ client = KISClient(
 print("인증 토큰:", client.get_access_token()[:20] + "...")
 ```
 
-## 📊 REST API 사용
+##  REST API 사용
 
 ### 주식 정보 조회
 ```python
@@ -117,7 +117,7 @@ buyable = account_api.get_buyable_amount("005930", "76000")
 print(f"주문 가능 수량: {buyable['output']['ord_psbl_qty']}주")
 ```
 
-## ⚡ 실시간 웹소켓 사용
+##  실시간 웹소켓 사용
 
 ### 기본 실시간 데이터 수신
 ```python
@@ -178,7 +178,7 @@ async def advanced_websocket():
 asyncio.run(advanced_websocket())
 ```
 
-## 📈 주문 실행
+##  주문 실행
 
 ### 현금 매수 주문
 ```python
@@ -205,7 +205,7 @@ sell_order = account_api.order_stock_cash(
 )
 ```
 
-## 🔍 실전 예제
+##  실전 예제
 
 ### 간단한 자동매매 봇
 ```python
@@ -242,9 +242,9 @@ class SimpleBot:
             )
             if order.get('rt_cd') == '0':  # 성공
                 self.positions[code] = {'qty': qty, 'avg_price': price}
-                print(f"✅ 매수 성공: {code} {qty}주 @ {price:,}원")
+                print(f" 매수 성공: {code} {qty}주 @ {price:,}원")
         except Exception as e:
-            print(f"❌ 매수 실패: {e}")
+            print(f" 매수 실패: {e}")
             
     def sell_stock(self, code, price):
         if code not in self.positions:
@@ -259,10 +259,10 @@ class SimpleBot:
             )
             if order.get('rt_cd') == '0':  # 성공
                 profit = (price - self.positions[code]['avg_price']) * qty
-                print(f"✅ 매도 성공: {code} {qty}주 @ {price:,}원 (수익: {profit:,.0f}원)")
+                print(f" 매도 성공: {code} {qty}주 @ {price:,}원 (수익: {profit:,.0f}원)")
                 del self.positions[code]
         except Exception as e:
-            print(f"❌ 매도 실패: {e}")
+            print(f" 매도 실패: {e}")
 
 # 봇 실행
 async def run_bot():
@@ -282,7 +282,7 @@ async def run_bot():
 # asyncio.run(run_bot())
 ```
 
-## ⚠️ 주의사항
+##  주의사항
 
 ### 1. 보안
 - **API 키를 코드에 직접 작성하지 마세요**
@@ -346,14 +346,14 @@ response = stock_api.get_stock_price("005930")
 print("Full response:", response)
 ```
 
-## 📚 더 알아보기
+##  더 알아보기
 
 - **[API 문서](../api/websocket-api.md)**: 완전한 API 레퍼런스
 - **[아키텍처 문서](../architecture/websocket-architecture.md)**: 시스템 구조 이해
 - **[예제 코드](../../examples/)**: 더 많은 실전 예제
 - **[공식 문서](https://apiportal.koreainvestment.com/)**: 한국투자증권 공식 API 문서
 
-## 💡 다음 단계
+##  다음 단계
 
 1. **실전 예제 실행**: `examples/` 디렉토리의 예제 코드 실행
 2. **자신만의 전략 개발**: 기술적 지표와 조건을 활용한 자동매매 전략 구현

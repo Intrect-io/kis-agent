@@ -2,44 +2,44 @@
 
 모든 주요 변경사항이 이 파일에 기록됩니다.
 
-## [1.0.0] - 2025-01-03 🎉
+## [1.0.0] - 2025-01-03 
 
-### 🚀 메이저 릴리스: 주식일별주문체결조회 연속조회 페이지네이션 기능 추가
+###  메이저 릴리스: 주식일별주문체결조회 연속조회 페이지네이션 기능 추가
 
-### 🔥 Breaking Changes
+###  Breaking Changes
 - **API 응답 형식 변경**: 기존 `inquire_daily_ccld` 메소드가 DataFrame 대신 Dict 형태로 데이터 반환 (pykis 기본 규칙 준수)
 - **새로운 매개변수 추가**: `pagination: bool = False` 매개변수로 일회성/연속조회 구분
 
-### ✨ 새로운 기능
-- **🔄 연속조회 페이지네이션**: 
+###  새로운 기능
+- ** 연속조회 페이지네이션**: 
   - CTX_AREA_FK100/NK100 연속조회키 지원으로 실전계좌 100건 제한 극복
   - 최대 10,000건 조회 지원 (100페이지 × 100건)
   - 콜백 함수 지원으로 페이지별 실시간 처리 가능
   - 자동 중복 제거 및 정렬 기능
   
-- **📊 완전한 데이터 모델**: 
+- ** 완전한 데이터 모델**: 
   - `OrderExecutionItem`: 개별 주문체결 항목 (27개 필드)
   - `OrderExecutionSummary`: 주문체결 요약 정보
   - `OrderExecutionResponse`: 완전한 API 응답 구조
   - 실용적인 프로퍼티: `is_buy`, `is_sell`, `is_executed`, `execution_rate` 등
 
-- **🎯 향상된 타입 안전성**:
+- ** 향상된 타입 안전성**:
   - 완전한 타입 힌트 지원
   - NumPy 스타일 독스트링 문서화
   - 포괄적인 에러 처리
 
-### 🔧 기술적 개선
+###  기술적 개선
 - **메모리 효율성**: Dict 반환으로 메모리 사용량 최적화
 - **확장성**: 콜백 시스템으로 커스텀 처리 로직 통합 가능
 - **신뢰성**: 연결 실패 시 부분 성공 데이터 보존
 - **유연성**: 정렬 방향, 최대 페이지 수 등 세부 제어 가능
 
-### 📈 성능 향상
+###  성능 향상
 - **대용량 데이터 처리**: 기존 100건 → 최대 10,000건 조회 지원
 - **실시간 처리**: 페이지별 콜백으로 스트리밍 처리 가능
 - **중복 방지**: (ord_dt, odno, pdno) 기반 자동 중복 제거
 
-### 💡 사용 예시
+###  사용 예시
 ```python
 # 기본 사용법 (기존과 동일)
 result = agent.inquire_daily_ccld(start_date="20250101", end_date="20250131")
@@ -60,7 +60,7 @@ buy_orders = response.get_buy_orders()
 executed_orders = response.get_executed_orders()
 ```
 
-### 🏆 개발 성과
+###  개발 성과
 - **94.4% 검증 성공률**: 종합적인 테스트 시스템 구축
 - **zero 브레이킹 체인지**: 기존 사용자는 `pagination=False`로 기존 방식 유지
 - **완전한 문서화**: 모든 매개변수와 응답 필드 상세 문서화
@@ -71,14 +71,14 @@ executed_orders = response.get_executed_orders()
 
 ## [0.1.22] - 2025-08-27
 
-### 🎉 NXT(넥스트레이드) 시장 지원 추가
+###  NXT(넥스트레이드) 시장 지원 추가
 - **통합 시장 지원**: 모든 API에서 KOSPI/KOSDAQ/NXT 동시 지원
   - `FID_COND_MRKT_DIV_CODE` 값을 "J"에서 "UN"으로 변경
   - 29개 위치 변경 (7개 모듈 + 2개 테스트 파일)
   - 기존 KOSPI/KOSDAQ 종목 100% 호환성 보장
   - NXT 종목도 기존과 동일한 방식으로 조회 가능
 
-### ✅ 테스트 및 코드 품질 대폭 향상  
+###  테스트 및 코드 품질 대폭 향상  
 - **테스트 확대**: 232개 테스트 통과 (54개 추가)
 - **코드 커버리지**: 52%로 향상 (8% 개선)
 - **신규 테스트 모듈**: 
@@ -86,39 +86,39 @@ executed_orders = response.get_executed_orders()
   - `test_investor_db.py`: 투자자 DB 모듈 16개 테스트 (75% 커버리지)
   - `test_websocket_client_basic.py`: WebSocket 클라이언트 기본 기능 15개 테스트
 
-### 🔧 변경된 모듈
+###  변경된 모듈
 - **Stock API 모듈들**: `api.py`, `investor_api.py`, `price_api.py`, `market_api.py`, `condition.py`
 - **Core 모듈**: `client.py` (예제 코드 업데이트)
 - **Program 모듈**: `trade.py` (주석도 업데이트)
 - **테스트 모듈**: `test_client.py`, `test_program_trade.py`
 
-### ⚡ 호환성 최적화 (2025-08-27 오후)
+###  호환성 최적화 (2025-08-27 오후)
 - **선별적 시장 코드 적용**: API별 호환성에 맞게 J/UN 코드 선택 적용
 - **investor_api.py**: 투자자/거래원 API는 J 코드로 롤백 (UN 지원 불가 확인)
   - `get_stock_investor()`, `get_stock_member()`, `get_member_transaction()` 
 - **기타 API**: 기본 시세/차트 API는 UN 코드 유지 (NXT 지원 계속)
 
-### 📚 문서 업데이트
+###  문서 업데이트
 - **README.md**: NXT 지원 내용 추가, 뱃지 업데이트
 - **NXT_SUPPORT_CHANGES.md**: 상세한 변경사항 문서화
 
 ## [0.1.21] - 2025-08-22
 
-### ✨ 새로운 기능
-- **📊 거래내역 Excel 내보내기 유틸리티**: 계좌 거래내역을 Excel 파일로 내보내는 고도화된 유틸리티 추가
+###  새로운 기능
+- ** 거래내역 Excel 내보내기 유틸리티**: 계좌 거래내역을 Excel 파일로 내보내는 고도화된 유틸리티 추가
   - **기간별 필터링**: YYYYMMDD 형식의 시작일/종료일 지정
   - **종목별 필터링**: 특정 종목만 선택적 조회 가능
   - **체결 거래 필터링**: 체결된 거래만 또는 전체 거래 선택
   - **종목별 시트 분리**: 대용량 데이터 처리 지원
   - **98% 테스트 커버리지**: 안정성 및 신뢰성 보장
 
-- **🧪 테스트 시스템 대폭 개선**: 전체 테스트 안정성 향상
+- ** 테스트 시스템 대폭 개선**: 전체 테스트 안정성 향상
   - **178개 테스트 모두 통과**: 2개 건너뜀, 1개 예상 실패
   - **Agent 초기화 보안 강화**: env_path 매개변수 필수화
   - **모든 테스트 파일 수정**: 환경변수 경로 명시적 지정
   - **프로그램매매 API 테스트 안정화**: BaseAPI 패턴 적용
 
-### 🔧 개선됨
+###  개선됨
 - **보안 강화**: .env 파일 경로를 명시적으로 지정하도록 개선
   - Agent 생성자에서 env_path 매개변수 필수화
   - 자동 경로 추론 방지로 보안 향상
@@ -126,15 +126,15 @@ executed_orders = response.get_executed_orders()
 - **환경 설정 정리**: 한국투자증권 관련 설정만 유지하고 불필요한 설정 제거
 - **문서 대폭 업데이트**: 최신 기능 및 사용법 반영
 
-### 📊 코드 커버리지 향상
+###  코드 커버리지 향상
 - **전체 커버리지**: 44%
 - **핵심 모듈 고커버리지**:
-  - `trading_report.py`: 98% 🏆
+  - `trading_report.py`: 98% 
   - `program/trade.py`: 95%
   - `core/config.py`: 88%
   - `websocket/ws_agent.py`: 64%
 
-### 📋 사용법 예시
+###  사용법 예시
 ```python
 # 새로운 보안 강화된 Agent 초기화
 from pykis import Agent
@@ -157,7 +157,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
 ## [0.1.26] - 2025-01-08
 
 ### 추가됨
-- **📊 포괄적인 계좌 관련 API 추가**
+- ** 포괄적인 계좌 관련 API 추가**
   - **주문/체결 관련 API**:
     - `inquire_daily_ccld`: 주식일별주문체결조회 (TTTC0081R)
     - `order_cash`: 주식주문(현금) - 매수/매도 (TTTC0011U/TTTC0012U)
@@ -198,7 +198,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
 ## [0.1.25] - 2025-07-15
 
 ### 추가됨
-- **📊 일별분봉시세조회 API 추가**
+- ** 일별분봉시세조회 API 추가**
   - **`get_daily_minute_price(code, date, hour)` 메서드 추가**:
     - 과거 특정 날짜의 분봉 데이터 조회 (최대 120건)
     - TR ID: FHKST03010230 사용
@@ -208,7 +208,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
   - **StockAPI 및 Agent 클래스에 통합**
 
 ### 개선됨
-- **🚀 분봉 데이터 수집 최적화**
+- ** 분봉 데이터 수집 최적화**
   - **`fetch_minute_data` 메서드 완전 리팩토링**:
     - 기존 30분 간격 루프 → 효율적인 4번 호출 방식으로 변경
     - 하루 전체 분봉 데이터(~480건) 수집 가능
@@ -220,7 +220,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
   - **캐시 시스템 개선**: 과거 데이터 영구 캐시, 당일 데이터 시간별 갱신
 
 ### 추가됨
-- **🎯 매물대 분석 기능 추가**
+- ** 매물대 분석 기능 추가**
   - **`calculate_support_resistance(code, date)` 메서드 추가**:
     - 분봉 데이터 기반 지지선/저항선 자동 감지
     - 가격대별 거래량 분포 분석 (Volume Profile)
@@ -235,7 +235,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
     - 가장 가까운 지지/저항선 거리 계산
 
 ### 추가됨
-- **🔧 분봉 데이터 크롤러 예제**
+- ** 분봉 데이터 크롤러 예제**
   - **`examples/minute_candle_crawler.py` 추가**:
     - 대화형 인터페이스로 종목명/코드와 기간 입력
     - 영업일 자동 계산 및 휴장일 제외
@@ -279,7 +279,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
 ## [0.1.24] - 2025-01-21
 
 ### 추가됨
-- **📊 국내주식 신용잔고 일별추이 조회 기능**
+- ** 국내주식 신용잔고 일별추이 조회 기능**
   - **`get_daily_credit_balance(code, date)` 메서드 추가**:
     - 종목별 신용잔고(융자/대주) 일별 추이 데이터 조회
     - TR ID: FHPST04760000 사용
@@ -317,7 +317,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
 ## [0.1.23] - 2025-07-10
 
 ### 수정됨
-- **🔄 분봉 수집 캐싱 메서드 시간 기반 최신화 로직 추가**
+- ** 분봉 수집 캐싱 메서드 시간 기반 최신화 로직 추가**
   - **`fetch_minute_data` 메서드 최신화 정책 적용**:
     - 장중(09:00~15:30): 5분마다 캐시 갱신
     - 장외: 30분마다 캐시 갱신
@@ -351,7 +351,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
     - 전체 시스템 통합 테스트 및 결과 요약
 
 ### 개선됨
-- **📊 실시간 데이터 처리 최적화**
+- ** 실시간 데이터 처리 최적화**
   - **StockPosition 데이터클래스 구조**:
     - 기본 정보: 코드, 종목명, 수량, 매입가
     - 실시간 데이터: 현재가, 거래량, VWAP, 이격률
@@ -405,7 +405,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
 ## [0.1.22] - 2025-07-07
 
 ### 수정됨
-- **🔧 pytest 테스트 시스템 완전 복구**
+- ** pytest 테스트 시스템 완전 복구**
   - **토큰 관리 시스템 안정화**: 
     - 가짜 테스트 토큰이 실제 토큰 파일을 덮어쓰는 문제 해결
     - `tests/test_token.py`에 백업/복구 로직 추가로 실제 토큰 파일 보호
@@ -420,7 +420,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
     - API 호출 실패 시 빠른 실패로 테스트 시간 최소화
 
 ### 개선됨
-- **✅ 테스트 시스템 99.2% 통과 달성**
+- ** 테스트 시스템 99.2% 통과 달성**
   - **전체 테스트 결과**: 127개 통과, 2개 스킵, 1개 xfail (예상된 실패)
   - **성능 개선**: 테스트 실행 시간 5분 → 30초로 90% 단축
   - **안정성 향상**: 토큰 무효화 문제 완전 해결로 일관된 테스트 결과 보장
@@ -455,7 +455,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
 ## [0.1.21] - 2025-07-07
 
 ### 수정됨
-- **📊 계좌 API 엔드포인트 수정 및 안정성 향상**
+- ** 계좌 API 엔드포인트 수정 및 안정성 향상**
   - **`get_cash_available` API 수정**: 
     - TR ID 변경: `TTTC8901R` → `TTTC8908R` (매수가능조회)
     - 종목코드 파라미터 추가: `PDNO` 매개변수로 종목별 매수가능금액 조회 지원
@@ -465,7 +465,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
     - 파라미터 구조 변경: `INQR_DVSN_1`, `BSPR_BF_DT_APLY_YN` 사용
     - 기존 404 오류 및 JSON 디코드 실패 문제 완전 해결
 
-- **🔧 메서드명 오류 수정**
+- ** 메서드명 오류 수정**
   - **`fetch_minute_data` 메서드 수정**: 
     - 존재하지 않는 `get_minute_chart` 호출을 `get_minute_price`로 수정
     - 분봉 데이터 수집 기능 정상화로 360개 분봉 데이터 성공적 수집 확인
@@ -477,7 +477,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
     - PyKIS 모듈 import 오류 해결로 모든 기능 정상 작동
 
 ### 개선됨
-- **✅ 테스트 시스템 100% 통과 달성**
+- ** 테스트 시스템 100% 통과 달성**
   - **전체 테스트 결과**: 127개 통과, 2개 스킵, 1개 xfail (예상된 실패)
   - **계좌 API 테스트 완전 수정**: 
     - "정산안내" 메시지 → "디버깅_정보" 키로 변경
@@ -505,7 +505,7 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
   - **Cell 0**: 제목을 "v2.0 - 헬퍼 모듈 분리 버전"으로 업데이트
 
 ### 검증됨
-- **🎯 RTX_ENV 가상환경에서 완전 검증**
+- ** RTX_ENV 가상환경에서 완전 검증**
   - 헬퍼 모듈 정상 작동 확인
   - PyKIS Agent 클래스 import/생성 성공
   - API 테스트 100% 성공률 달성
@@ -521,24 +521,24 @@ futures_price = agent.get_future_option_price()  # 9월물(101W09)
 ## [0.1.20] - 2025-07-07
 
 ### 추가됨
-- **🌟 웹소켓 실시간 지수 구독 기능 (H0IF1000)**
+- ** 웹소켓 실시간 지수 구독 기능 (H0IF1000)**
   - **코스피, 코스닥, 코스피200** 실시간 지수 데이터 구독 지원
   - 지수값, 등락률, 전일대비를 실시간으로 업데이트
   - `enable_index=True` 파라미터로 자동 구독 제어
   - 지수 코드 자동 매핑: 0001(KOSPI), 1001(KOSDAQ), 2001(KOSPI200)
 
-- **🔄 웹소켓 실시간 프로그램매매 구독 기능 (H0GSCNT0)**
+- ** 웹소켓 실시간 프로그램매매 구독 기능 (H0GSCNT0)**
   - **종목별 실시간 프로그램매매 추이** 데이터 구독 지원
   - 매도량, 매수량, 순매수량, 순매수대금 실시간 표시
   - `enable_program_trading=True` 파라미터로 자동 구독 제어
   - 프로그램매매 동향을 실시간으로 모니터링 가능
 
-- **📊 웹소켓 실시간 호가 구독 기능 개선 (H0STASP0)**
+- ** 웹소켓 실시간 호가 구독 기능 개선 (H0STASP0)**
   - **10단계 호가 실시간 업데이트** 지원 (기존 무시되던 호가 데이터 활성화)
   - 간결한 5단계 호가 표시로 가독성 개선
   - `enable_ask_bid=False` 파라미터로 선택적 구독 제어 (기본값: 비활성화)
 
-- **⚡ Agent 웹소켓 인터페이스 개선**
+- ** Agent 웹소켓 인터페이스 개선**
   - `agent.websocket()` 메서드에 새로운 파라미터 추가:
     - `enable_index`: 지수 실시간 데이터 구독 여부 (기본값: True)
     - `enable_program_trading`: 프로그램매매 실시간 데이터 구독 여부 (기본값: True)
@@ -618,7 +618,7 @@ await ws_client.connect()
 ## [0.1.16] - 2025-01-29
 
 ### 추가됨
-- **📊 KOSPI200 지수 베이시스 계산 기능**
+- ** KOSPI200 지수 베이시스 계산 기능**
   - **`get_kospi200_futures_code` 함수 개선**: 두 번째 주 목요일 만기 규칙 적용으로 정확한 만기월 계산
     - 현재 날짜를 기준으로 다음 만기월(3,6,9,12월) 중 가장 가까운 미래 물 계산
     - KOSPI200 선물 종목코드 자동 생성 (예: 101S12, 201S03 등)
@@ -646,7 +646,7 @@ futures_price = agent.get_future_option_price()  # 자동으로 최신 KOSPI200 
 ## [0.1.15] - 2025-01-29
 
 ### 추가됨
-- **📊 선물옵션 시세 API 추가**
+- ** 선물옵션 시세 API 추가**
   - **`get_future_option_price` 메서드 추가**: 선물옵션 시세 조회 기능
     - API 엔드포인트: `/uapi/domestic-futureoption/v1/quotations/inquire-price` (TR: FHMIF10000000)
     - 지수선물, 지수옵션, 주식선물, 주식옵션 시세 조회 지원
@@ -678,7 +678,7 @@ futures_price = agent.get_future_option_price()  # 자동으로 최신 KOSPI200 
 ## [0.1.14] - 2025-01-29
 
 ### 추가됨
-- **📈 업종 시세 API 추가**
+- ** 업종 시세 API 추가**
   - **`get_daily_index_chart_price` 메서드 추가**: 국내주식업종기간별시세 조회 기능
     - API 엔드포인트: `/uapi/domestic-stock/v1/quotations/inquire-daily-indexchartprice` (TR: FHKUP03500100)
     - 업종별 시세 데이터 조회 (종합, 대형주, 중형주, 소형주, KOSPI, KOSDAQ 등)
@@ -713,7 +713,7 @@ futures_price = agent.get_future_option_price()  # 자동으로 최신 KOSPI200 
 ## [0.1.13] - 2025-01-29
 
 ### 추가됨
-- **📊 체결 관련 API 확장**
+- ** 체결 관련 API 확장**
   - **`get_hourly_conclusion` 메서드 추가**: 시간대별 체결 조회 기능
     - API 엔드포인트: `/uapi/domestic-stock/v1/quotations/inquire-time-itemconclusion` (TR: FHPST01060000)
     - 기준시간 설정 가능 (HHMMSS 형식, 기본값: "115959")

@@ -13,15 +13,15 @@ program_trade_api.py - 프로그램 매매 정보 조회 전용 모듈
 - 일별 프로그램 매매 집계 (당일 총 매수/매도량 등) - 종목별 프로그램매매추이(일별) / FHPPG04650200
 - 기간별 프로그램 매매 상세 (차익/비차익 매매 내역)
 
-✅ 의존:
+ 의존:
 - kis_core.KISClient: API 호출 핸들링
 
-🔗 연관 모듈:
+ 연관 모듈:
 - agent_stock.py: 종목 시세 및 주문 처리
 - account_api.py: 계좌 상태 및 주문 가능 금액 확인
 - (전략 관련 모듈은 deprecated되어 제거됨)
 
-💡 사용 예시:
+ 사용 예시:
 client = KISClient()
 pgm_api = ProgramTradeAPI(client)
 hourly_trend = pgm_api.get_program_trade_hourly_trend("005930")

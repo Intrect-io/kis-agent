@@ -21,7 +21,7 @@ tests/
 └── conftest.py              # pytest 설정
 ```
 
-## 🚀 테스트 실행 방법
+##  테스트 실행 방법
 
 ### 전체 테스트 실행
 ```bash
@@ -68,9 +68,9 @@ pytest tests/integration/test_agent_comprehensive.py -k "parametrize" -v
 pytest tests/integration/test_agent_comprehensive.py::TestPerformance -v
 ```
 
-## 📋 주요 업데이트 사항
+##  주요 업데이트 사항
 
-### ✅ 업데이트된 파일들
+###  업데이트된 파일들
 
 1. **tests/unit/test_agent.py** - Agent facade 패턴에 맞게 수정
    - `get_program_trade_summary` → `get_program_trade_by_stock`
@@ -94,7 +94,7 @@ pytest tests/integration/test_agent_comprehensive.py::TestPerformance -v
    - 9개 테스트 클래스, 30+ 테스트 메서드
    - 현재 Agent facade 패턴에 완전히 맞춤
 
-## 🔧 테스트 환경 설정
+##  테스트 환경 설정
 
 ### 필수 환경 변수
 테스트 실행 전에 다음 환경 변수들이 설정되어 있어야 합니다:
@@ -115,27 +115,27 @@ pip install pytest pandas
 pip install -r requirements.txt
 ```
 
-## 📊 테스트 커버리지
+##  테스트 커버리지
 
 ### Agent facade 패턴 검증 완료
-- ✅ 주식 기본 정보 (현재가, 일봉, 분봉, 거래원)
-- ✅ 프로그램 매매 (종목별, 시간별, 일별, 시장 전체)
-- ✅ 회원사 및 거래 정보
-- ✅ 계좌 관련 (잔고 조회)
-- ✅ 추가 주식 정보 (호가, 기본정보, 순위)
-- ✅ 투자자별 매매동향
-- ✅ 조건검색
-- ✅ 차트 데이터 (분봉 수집, DB 처리)
-- ✅ 유틸리티 (휴장일, 거래원 분류)
-- ✅ 시장 정보
-- ✅ 성능 테스트
+-  주식 기본 정보 (현재가, 일봉, 분봉, 거래원)
+-  프로그램 매매 (종목별, 시간별, 일별, 시장 전체)
+-  회원사 및 거래 정보
+-  계좌 관련 (잔고 조회)
+-  추가 주식 정보 (호가, 기본정보, 순위)
+-  투자자별 매매동향
+-  조건검색
+-  차트 데이터 (분봉 수집, DB 처리)
+-  유틸리티 (휴장일, 거래원 분류)
+-  시장 정보
+-  성능 테스트
 
 ### 테스트 통계
 - **단위 테스트**: 25+ 메서드
 - **통합 테스트**: 35+ 메서드
 - **총 테스트**: 60+ 메서드
 
-## 🎯 테스트 실행 예시
+##  테스트 실행 예시
 
 ```bash
 # 빠른 테스트 (기본 기능만)
@@ -151,7 +151,7 @@ pytest tests/integration/test_agent_comprehensive.py::TestPerformance -v
 pytest tests/integration/test_agent_comprehensive.py -k "different_stocks" -v
 ```
 
-## ⚠️ 주의사항
+##  주의사항
 
 1. **실제 API 호출**: 대부분의 테스트는 실제 한국투자증권 API를 호출합니다
 2. **계좌 정보**: 계좌 관련 테스트는 실제 계좌 정보가 필요합니다

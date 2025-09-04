@@ -37,7 +37,7 @@ PyKIS에서 NXT (Next Market) 지원을 위해 `FID_COND_MRKT_DIV_CODE` 값을 "
 ## 테스트 결과
 
 모든 변경사항이 테스트를 통과했습니다:
-- `test_program_trade.py`: 10개 테스트 모두 통과 ✅
+- `test_program_trade.py`: 10개 테스트 모두 통과 
 - 코드 변경으로 인한 기능 오류 없음 확인
 
 ## 호환성

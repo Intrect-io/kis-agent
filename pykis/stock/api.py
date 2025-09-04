@@ -9,15 +9,15 @@ agent_stock.py - 종목 단위 시세 조회 및 주문 전용 모듈
 - 지정가/시장가 주문 실행
 - 시간외 단일가 정보 조회
 
-✅ 의존:
+ 의존:
 - kis_core.KISClient: API 호출 실행기
 
-🔗 연관 모듈:
+ 연관 모듈:
 - program_trade_api.py: 프로그램 매매 정보 필터링
 - account_api.py: 잔고 및 주문 가능 금액 확인
 - (전략 관련 모듈은 deprecated되어 제거됨)
 
-💡 사용 예시:
+ 사용 예시:
 client = KISClient()
 account = {"CANO": "12345678", "ACNT_PRDT_CD": "01"}
 stock = StockAPI(client, account)
@@ -359,9 +359,9 @@ class StockAPI(BaseAPI):
     #         df_dict = {
     #             '매도잔량': [total_ask_volume],
     #             '매수잔량': [total_bid_volume],
-    #             '총거래대금': [total_amount],  # 🆕 실제 각 호가×잔량의 정확한 합계
-    #             '매도거래대금': [total_ask_amount],  # 🆕 매도호가 거래대금
-    #             '매수거래대금': [total_bid_amount],  # 🆕 매수호가 거래대금
+    #             '총거래대금': [total_amount],  #  실제 각 호가×잔량의 정확한 합계
+    #             '매도거래대금': [total_ask_amount],  #  매도호가 거래대금
+    #             '매수거래대금': [total_bid_amount],  #  매수호가 거래대금
     #             '현재가': [float(output2.get('stck_prpr', 0) or 0)],
     #             '시가': [float(output2.get('stck_oprc', 0) or 0)],
     #             '고가': [float(output2.get('stck_hgpr', 0) or 0)],
