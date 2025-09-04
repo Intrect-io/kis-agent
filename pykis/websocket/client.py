@@ -424,6 +424,7 @@ class KisWebSocket:
                 print("-" * 50)
         except Exception as e:
             logging.error(f"호가 데이터 처리 오류 ({stock_code}): {e}")
+            raise
 
     def display_index_info(self, index_name, index_data):
         """
@@ -443,6 +444,7 @@ class KisWebSocket:
                 print(f"[{current_time}] 📊 {index_name}: {index_value} ({change_str}, {change_rate_str}%)")
         except Exception as e:
             logging.error(f"지수 데이터 처리 오류 ({index_name}): {e}")
+            raise
 
     def display_program_trading_info(self, stock_code, data):
         """
