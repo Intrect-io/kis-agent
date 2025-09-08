@@ -354,7 +354,8 @@ class EnhancedWebSocketClient:
                 info = self.stock_api.get_stock_info(code)
                 if isinstance(info, pd.DataFrame) and not info.empty:
                     self.stock_info[code] = info.iloc[0].get('prdt_name', code)
-            except:
+            except Exception as e:
+                logger.warning(f"종목 정보 조회 실패 {code}: {e}")
                 self.stock_info[code] = code
                 
             # 구독 추가

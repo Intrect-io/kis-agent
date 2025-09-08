@@ -232,8 +232,9 @@ class TestCallbackSystem:
         for callback in client.callbacks['on_trade']:
             try:
                 callback(test_data)
-            except:
-                pass
+            except Exception as e:
+                # 테스트 중 예외는 기록하지만 계속 진행
+                print(f"Test callback error: {e}")
         
         # 정상적인 콜백은 실행되었는지 확인
         assert success_count[0] == 1

@@ -446,8 +446,11 @@ class WSAgent:
                             try:
                                 pong_waiter = await websocket.ping()
                                 await asyncio.wait_for(pong_waiter, timeout=10)
-                            except:
-                                logger.warning("ping/pong 실패, 재연결 필요")
+                            except asyncio.TimeoutError:
+                                logger.error("ping/pong 타임아웃, 재연결 필요", exc_info=True)
+                                break
+                            except Exception as e:
+                                logger.error(f"ping/pong 실패: {e}", exc_info=True)
                                 break
                                 
                         except websockets.exceptions.ConnectionClosed:

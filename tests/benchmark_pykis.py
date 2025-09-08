@@ -50,7 +50,10 @@ def benchmark_parallel(agent: Agent, codes: List[str], iterations: int = 3, work
         try:
             result = agent.get_stock_price(code)
             return result and result.get('rt_cd') == '0'
-        except:
+        except Exception as e:
+            print(f"Error getting stock price for {code}: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     start_time = time.time()
