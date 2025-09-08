@@ -136,31 +136,34 @@ class TestCacheIntegration:
         # BaseAPI 인스턴스 생성 (캐시 활성화)
         api = BaseAPI(client=mock_client, enable_cache=True, cache_config={'default_ttl': 2})
         
-        # 첫 번째 요청 - API 호출
+        # 첫 번째 요청 - API 호출 (캐시 TTL을 명시적으로 2초로 설정)
         result1 = api._make_request_dict(
             endpoint="/uapi/domestic-stock/v1/quotations/inquire-price",
             tr_id="FHKST01010100",
-            params={"code": "005930"}
+            params={"code": "005930"},
+            cache_ttl=2
         )
         assert result1["rt_cd"] == "0"
         assert mock_client.make_request.call_count == 1
         
-        # 두 번째 요청 - 캐시에서 반환
+        # 두 번째 요청 - 캐시에서 반환 (동일한 TTL 설정 유지)
         result2 = api._make_request_dict(
             endpoint="/uapi/domestic-stock/v1/quotations/inquire-price",
             tr_id="FHKST01010100",
-            params={"code": "005930"}
+            params={"code": "005930"},
+            cache_ttl=2
         )
         assert result2["rt_cd"] == "0"
         assert result2.get("_cached") == True  # 캐시 플래그 확인
         assert mock_client.make_request.call_count == 1  # API가 다시 호출되지 않음
         
-        # TTL 만료 후 요청
+        # TTL 만료 후 요청 (2초 + 여유시간)
         time.sleep(2.1)
         result3 = api._make_request_dict(
             endpoint="/uapi/domestic-stock/v1/quotations/inquire-price",
             tr_id="FHKST01010100",
-            params={"code": "005930"}
+            params={"code": "005930"},
+            cache_ttl=2
         )
         assert mock_client.make_request.call_count == 2  # API가 다시 호출됨
     
@@ -172,18 +175,18 @@ class TestCacheIntegration:
         cache.set("price_key", {"price": 70000}, ttl=1)  # 1초
         cache.set("info_key", {"name": "삼성전자"}, ttl=5)  # 5초
         
-        # 즉시 조회 - 모두 캐시에 있음
+        # 즉시 조회 - 모두 캐시에 있음 (히트: 2)
         assert cache.get("price_key") is not None
         assert cache.get("info_key") is not None
         
-        # 1.5초 후 - price는 만료, info는 유지
+        # 1.5초 후 - price는 만료, info는 유지 (히트: 1, 미스: 1)
         time.sleep(1.5)
         assert cache.get("price_key") is None
         assert cache.get("info_key") is not None
         
-        # 통계 확인
+        # 통계 확인 - 총 히트: 3 (price_key 1번, info_key 2번), 미스: 1 (price_key 만료)
         stats = cache.get_stats()
-        assert stats["hits"] == 2  # info_key 2번 히트
+        assert stats["hits"] == 3  # info_key 2번 + price_key 1번 히트
         assert stats["misses"] == 1  # price_key 1번 미스
     
     def test_cache_clear(self):

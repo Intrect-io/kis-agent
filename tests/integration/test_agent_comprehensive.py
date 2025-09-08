@@ -21,8 +21,21 @@ from pykis import Agent
 @pytest.fixture(scope="session")
 def agent():
     """Agent 인스턴스를 제공하는 fixture"""
-    env_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
-    return Agent(env_path=env_path)
+    # 환경변수에서 API 키 가져오기
+    app_key = os.environ.get("KIS_APP_KEY")
+    app_secret = os.environ.get("KIS_APP_SECRET")
+    account_no = os.environ.get("KIS_ACCOUNT_NO")
+    account_code = os.environ.get("KIS_ACCOUNT_CODE", "01")
+    
+    if not all([app_key, app_secret, account_no]):
+        pytest.skip("필수 환경변수가 설정되지 않았습니다: KIS_APP_KEY, KIS_APP_SECRET, KIS_ACCOUNT_NO")
+    
+    return Agent(
+        app_key=app_key,
+        app_secret=app_secret,
+        account_no=account_no,
+        account_code=account_code
+    )
 
 
 @pytest.fixture(scope="session")

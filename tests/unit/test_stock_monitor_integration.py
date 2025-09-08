@@ -16,9 +16,13 @@ class TestStockMonitorIntegration:
     @pytest.fixture
     def agent(self, mock_client):
         """Agent 인스턴스를 생성합니다."""
-        env_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
-        with patch('pykis.core.agent.KISClient', return_value=mock_client):
-            return Agent(client=mock_client, env_path=env_path)
+        return Agent(
+            app_key="test_key",
+            app_secret="test_secret",
+            account_no="12345678",
+            account_code="01",
+            client=mock_client
+        )
 
     def test_stockmonitor_core_functions_integration(self, agent, mock_client):
         """StockMonitor 핵심 함수들 통합 테스트"""
@@ -267,20 +271,18 @@ class TestStockMonitorIntegration:
     def test_stockmonitor_initialization_scenario(self, mock_client):
         """StockMonitor 초기화 시나리오 테스트"""
         # Agent 초기화가 정상적으로 이루어지는지 확인
-        with patch('pykis.core.agent.KISClient', return_value=mock_client), \
-             patch('pykis.core.agent.KISConfig') as mock_config:
-            
-            # .env 파일에서 계좌 정보 로드 시뮬레이션
-            mock_config.return_value.account_stock = '12345678'
-            mock_config.return_value.account_product = '01'
-            
-            env_path = os.path.join(os.path.dirname(__file__), '..', '..', '.env')
-            agent = Agent(env_path=env_path)
-            
-            # StockMonitor.__init__에서 사용하는 것처럼 Agent가 정상 초기화됨
-            assert agent is not None
-            assert hasattr(agent, 'get_stock_price')
-            assert hasattr(agent, 'get_daily_price')
-            assert hasattr(agent, 'get_program_trade_by_stock')
-            assert hasattr(agent, 'get_member')
-            assert hasattr(agent, 'get_condition_stocks') 
+        agent = Agent(
+            app_key="test_key",
+            app_secret="test_secret",
+            account_no="12345678",
+            account_code="01",
+            client=mock_client
+        )
+        
+        # StockMonitor.__init__에서 사용하는 것처럼 Agent가 정상 초기화됨
+        assert agent is not None
+        assert hasattr(agent, 'get_stock_price')
+        assert hasattr(agent, 'get_daily_price')
+        assert hasattr(agent, 'get_program_trade_by_stock')
+        assert hasattr(agent, 'get_member')
+        assert hasattr(agent, 'get_condition_stocks') 

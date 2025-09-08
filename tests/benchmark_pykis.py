@@ -96,8 +96,23 @@ def main():
     print(" PyKIS 성능 벤치마크")
     print("=" * 60)
     
-    # Agent 초기화
-    agent = Agent(env_path=".env")
+    # Agent 초기화 - 환경변수에서 가져오기
+    import os
+    app_key = os.environ.get("KIS_APP_KEY")
+    app_secret = os.environ.get("KIS_APP_SECRET")
+    account_no = os.environ.get("KIS_ACCOUNT_NO")
+    account_code = os.environ.get("KIS_ACCOUNT_CODE", "01")
+    
+    if not all([app_key, app_secret, account_no]):
+        print("필수 환경변수가 설정되지 않았습니다: KIS_APP_KEY, KIS_APP_SECRET, KIS_ACCOUNT_NO")
+        return
+    
+    agent = Agent(
+        app_key=app_key,
+        app_secret=app_secret,
+        account_no=account_no,
+        account_code=account_code
+    )
     
     # Rate Limiter 설정 확인
     verify_rate_limiter_settings(agent)

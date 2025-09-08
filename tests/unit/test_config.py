@@ -32,13 +32,14 @@ class TestKISConfig(unittest.TestCase):
         self.assertEqual(config.ACCOUNT_NO, '1234567890')
         self.assertEqual(config.ACCOUNT_CODE, '01')
 
-    @patch('os.path.exists', return_value=False)
-    def test_init_without_env_file(self, mock_exists):
+    def test_init_without_required_params(self):
         """
-        .env 파일이 없을 때 FileNotFoundError를 발생하는지 테스트합니다.
+        필수 매개변수 없이 초기화할 때 ValueError를 발생하는지 테스트합니다.
         """
-        with self.assertRaises(FileNotFoundError):
+        with self.assertRaises(ValueError) as context:
             KISConfig()
+        
+        self.assertIn("필수 설정 값이 누락되었습니다", str(context.exception))
 
     def test_validate_config_missing_values(self):
         """
