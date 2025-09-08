@@ -250,13 +250,24 @@ def main():
     try:
         print("Initializing KIS Agent for holiday check...")
         sys.stdout.flush()
-        # Load account_info from kis_devlp.yaml
-        import yaml
-        cred_path = os.path.join(project_root, 'credit', 'kis_devlp.yaml')
-        with open(cred_path, 'r', encoding='utf-8') as f:
-            cred_cfg = yaml.safe_load(f)
-        account_info = {"CANO": cred_cfg["my_acct_stock"], "ACNT_PRDT_CD": cred_cfg["my_prod"]}
-        agent = KIS_Agent(account_info=account_info)
+        # Load account_info from environment variables
+        app_key = os.environ.get('KIS_APP_KEY')
+        app_secret = os.environ.get('KIS_APP_SECRET')
+        account_no = os.environ.get('KIS_ACCOUNT_NO')
+        account_code = os.environ.get('KIS_ACCOUNT_CODE', '01')
+        
+        if not all([app_key, app_secret, account_no]):
+            print("Error: Required environment variables not set")
+            print("Please set: KIS_APP_KEY, KIS_APP_SECRET, KIS_ACCOUNT_NO")
+            sys.exit(1)
+        
+        from pykis import Agent
+        agent = Agent(
+            app_key=app_key,
+            app_secret=app_secret,
+            account_no=account_no,
+            account_code=account_code
+        )
         today_str = now_dt.strftime('%Y%m%d')
         print(f"Checking if today ({today_str}) is a holiday...")
         sys.stdout.flush()

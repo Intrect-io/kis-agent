@@ -1,6 +1,5 @@
 import sys
 import os
-import yaml
 
 # src 디렉토리를 Python 경로에 추가
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -8,7 +7,11 @@ project_root = os.path.dirname(current_dir)  # STONKS 폴더
 if current_dir not in sys.path:
     sys.path.append(current_dir)
 
-from src.agent import KIS_Agent
+# PyKIS 프로젝트 경로 추가
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+from pykis import Agent
 import json
 
 def get_condition_stocks_dict():
@@ -17,14 +20,32 @@ def get_condition_stocks_dict():
     Returns:
         dict: {조건검색식명: [종목정보리스트]} 형태의 딕셔너리
     """
-    # 계좌 정보 로드
-    cred_path = os.path.join(project_root, 'credit', 'kis_devlp.yaml')
-    with open(cred_path, 'r', encoding='utf-8') as f:
-        cred_cfg = yaml.safe_load(f)
-    account_info = {"CANO": cred_cfg["my_acct_stock"], "ACNT_PRDT_CD": cred_cfg["my_prod"]}
+    # 환경변수에서 계좌 정보 로드
+    app_key = os.environ.get('KIS_APP_KEY')
+    app_secret = os.environ.get('KIS_APP_SECRET')
+    account_no = os.environ.get('KIS_ACCOUNT_NO')
+    account_code = os.environ.get('KIS_ACCOUNT_CODE', '01')
     
-    # KIS_Agent 인스턴스 생성
-    agent = KIS_Agent(account_info=account_info, verbose=False)
+    if not all([app_key, app_secret, account_no]):
+        print("Error: 필수 환경변수가 설정되지 않았습니다.")
+        print("다음 환경변수를 설정하세요:")
+        print("  export KIS_APP_KEY='your_app_key'")
+        print("  export KIS_APP_SECRET='your_app_secret'")
+        print("  export KIS_ACCOUNT_NO='your_account_no'")
+        print("  export KIS_ACCOUNT_CODE='01'  # 선택사항")
+        return {}
+    
+    try:
+        # Agent 인스턴스 생성
+        agent = Agent(
+            app_key=app_key,
+            app_secret=app_secret,
+            account_no=account_no,
+            account_code=account_code
+        )
+    except Exception as e:
+        print(f"Agent 생성 실패: {e}")
+        return {}
     
     # Agent를 통한 조건검색 결과 조회
     stocks = agent.get_condition_stocks("unohee", seq=0, tr_cont="N")
@@ -74,4 +95,4 @@ def main():
             print(f"  {name} ({code})")
 
 if __name__ == "__main__":
-    main() 
+    main()

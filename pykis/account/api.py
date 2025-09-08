@@ -36,8 +36,7 @@ class AccountAPI(BaseAPI):
         client : :class:`KISClient`
             Authenticated client instance.
         account_info : dict
-            Dictionary with ``CANO`` and ``ACNT_PRDT_CD`` keys. Values are
-            usually loaded from ``credit/kis_devlp.yaml``.
+            Dictionary with ``CANO`` and ``ACNT_PRDT_CD`` keys.
         enable_cache : bool
             캐시 사용 여부 (기본: True)
         cache_config : dict

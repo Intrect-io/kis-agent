@@ -62,11 +62,8 @@ _cfg = {
 }
 
 # 이전 설정 파일 로드 로직 제거
-# if not os.path.exists(config_path):
-#     raise FileNotFoundError(f"Configuration file not found at: {config_path}. Please create '{config_file_name}' in the '{config_root}' directory.")
-#
-# with open(config_path, encoding='UTF-8') as f:
-#     _cfg = yaml.load(f, Loader=yaml.FullLoader)
+# Configuration file loading has been removed.
+# API keys must be passed directly as parameters.
 
 _TRENV = tuple()
 _last_auth_time = datetime.now()
@@ -89,9 +86,6 @@ def save_token(my_token, my_expired, path: str = token_tmp):
         'valid-date': valid_date.isoformat()
     }
     # print('Save token date: ', valid_date)
-    # with open(token_tmp, 'w', encoding='utf-8') as f:
-    #     f.write(f'token: {my_token}\n') # 이전 YAML 형식 쓰기 제거
-    #     f.write(f'valid-date: {valid_date}\n')
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(token_data, f, ensure_ascii=False, indent=4)
 
@@ -111,7 +105,6 @@ def read_token(path: str = token_tmp):
             return None
 
         # 토큰 만료 일,시간 (ISO 형식 문자열에서 datetime 객체로 파싱)
-        # exp_dt = datetime.strftime(tkg_tmp['valid-date'], '%Y-%m-%d %H:%M:%S') # YAML 형식 파싱 제거
         exp_dt_str = tkg_tmp['valid-date']
         exp_dt_obj = datetime.fromisoformat(exp_dt_str)
         exp_dt = exp_dt_obj.strftime('%Y-%m-%d %H:%M:%S') # 비교를 위해 문자열로 변환
@@ -227,8 +220,7 @@ def auth(config=None, svr='prod', product=None, url=None):
             product = config.ACCOUNT_CODE
     if product is None:
         product = _cfg.get('my_prod', '')
-    # 개인 환경파일 "kis_devlp.yaml" 파일을 참조하여 앱키, 앱시크리트 정보 가져오기
-    # 개인 환경파일명과 위치는 고객님만 아는 위치로 설정 바랍니다.
+    # API 키는 config 매개변수로 전달되어야 합니다.
     if svr == 'prod':  # 실전투자
         ak1 = 'my_app'  # 앱키 (실전투자용)
         ak2 = 'my_sec'  # 앱시크리트 (실전투자용)
