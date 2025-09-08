@@ -5,6 +5,7 @@ from ..stock.api import StockAPI
 from ..stock import StockMarketAPI
 from ..program.trade import ProgramTradeAPI
 from ..websocket.client import KisWebSocket
+from .base_exception_handler import BaseExceptionHandler, exception_handler
 from typing import Optional, Dict, Any, List
 import pandas as pd
 import logging
@@ -15,7 +16,7 @@ from .auth import auth, read_token
 from .config import KISConfig
 
 
-class Agent:
+class Agent(BaseExceptionHandler):
     """
     한국투자증권 API의 통합 인터페이스입니다.
 
@@ -114,6 +115,9 @@ class Agent:
             API 키와 계좌 정보는 보안상 중요하므로 코드에 직접 하드코딩하지 마세요.
             환경변수나 별도의 설정 파일에서 로드하는 것을 권장합니다.
         """
+        # BaseExceptionHandler 초기화
+        super().__init__("Agent")
+        
         # 필수 매개변수 검증
         if not all([app_key, app_secret, account_no, account_code]):
             raise ValueError(
@@ -988,18 +992,24 @@ class Agent:
         else:
             return "기타"
 
+    @exception_handler(
+        message="휴장일 정보 조회 실패",
+        reraise=False,
+        default_return=None
+    )
     def get_holiday_info(self) -> Optional[Dict[str, Any]]:
         """휴장일 정보를 조회합니다.
 
         Returns:
             Dict: 휴장일 정보, 실패 시 None
         """
-        try:
-            return self.stock_api.get_holiday_info()
-        except Exception as e:
-            logging.error(f"휴장일 정보 조회 실패: {e}")
-            return None
+        return self.stock_api.get_holiday_info()
 
+    @exception_handler(
+        message="휴장일 확인 실패",
+        reraise=False,
+        default_return=None
+    )
     def is_holiday(self, date: str) -> Optional[bool]:
         """주어진 날짜(YYYYMMDD)가 한국 주식 시장 휴장일인지 확인합니다.
 
@@ -1009,11 +1019,7 @@ class Agent:
         Returns:
             bool: 휴장일이면 True, 거래일이면 False, 확인 불가면 None
         """
-        try:
-            return self.stock_api.is_holiday(date)
-        except Exception as e:
-            logging.error(f"휴장일 확인 실패: {e}")
-            return None
+        return self.stock_api.is_holiday(date)
 
     def init_minute_db(self, db_path: str = "db/stonks_candles.db") -> bool:
         """분봉 데이터용 DB 및 테이블 생성 (최초 1회)"""

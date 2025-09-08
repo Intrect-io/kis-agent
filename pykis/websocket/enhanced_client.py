@@ -8,13 +8,14 @@ import pandas as pd
 
 from .ws_agent import WSAgent, SubscriptionType
 from ..core.client import KISClient
+from ..core.base_exception_handler import BaseExceptionHandler, exception_handler
 from ..stock.api import StockAPI
 from ..account.api import AccountAPI
 
 logger = logging.getLogger(__name__)
 
 
-class EnhancedWebSocketClient:
+class EnhancedWebSocketClient(BaseExceptionHandler):
     """
     WSAgent를 활용한 향상된 웹소켓 클라이언트
     
@@ -72,6 +73,9 @@ class EnhancedWebSocketClient:
             enable_futures: 선물 구독 여부
             enable_options: 옵션 구독 여부
         """
+        # BaseExceptionHandler 초기화
+        super().__init__("EnhancedWebSocketClient")
+        
         self.client = client
         self.account_info = account_info
         self.stock_api = StockAPI(client=client, account_info=account_info)
