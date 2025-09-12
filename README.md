@@ -80,6 +80,26 @@ if balance and balance.get('rt_cd') == '0':
         total_asset = total_info.get('tot_evlu_amt')  # 총 평가금액
         available_cash = total_info.get('nass_amt')   # 순자산금액
 
+# 💰 주식 주문 (NEW 기능)
+# 삼성전자 1주 70000원 지정가 매수 (현금)
+result = agent.order_stock_cash("buy", "005930", "00", "1", "70000")
+
+# 삼성전자 1주 최유리지정가 매수 (빠른 체결)
+result = agent.order_stock_cash("buy", "005930", "03", "1", "0")
+
+# 삼화전기 1주 자기융자신규 매수 (신용, 실전만)
+from datetime import datetime
+today = datetime.now().strftime("%Y%m%d")
+result = agent.order_stock_credit("buy", "009470", "21", "00", "1", "12000", loan_dt=today)
+
+# 매수 가능 수량/금액 조회
+inquiry = agent.inquire_order_psbl("005930", "70000")
+print(f"매수가능수량: {inquiry['output']['max_buy_qty']}")
+
+# 신용매수 가능 수량/금액 조회
+credit_inquiry = agent.inquire_credit_order_psbl("005930", "70000", crdt_type="21")
+print(f"신용매수가능수량: {credit_inquiry['output']['crdt_psbl_qty']}")
+
 #  주식 시세 조회 (KOSPI/KOSDAQ/NXT 통합 지원)
 price = agent.get_stock_price("005930")      # 삼성전자 현재가 (KOSPI)
 daily = agent.get_daily_price("035720")      # 카카오 일별시세 (KOSDAQ)
@@ -199,8 +219,8 @@ python minute_candle_crawler.py
 
 ##  테스트 현황
 
--  **178개 테스트 통과** (2개 건너뜀, 1개 예상 실패)
--  **44% 코드 커버리지** 
+-  **246개 테스트 통과** (최신)
+-  **52% 코드 커버리지** (향상됨) 
 -  **핵심 모듈 고커버리지**:
   - `trading_report.py`: 98%
   - `program/trade.py`: 95% 
@@ -219,7 +239,13 @@ pytest tests/ -v --cov=pykis
 - `get_cash_available()`: 주문 가능 현금 조회
 - `get_total_asset()`: 총 자산 조회
 - `get_possible_order_amount(code, price)`: 주문 가능 수량 조회
-- `order_credit(code, qty, price, order_type)`: 신용 주문
+
+### 주식 주문 관련 (NEW)
+- `order_stock_cash(ord_dv, pdno, ord_dvsn, ord_qty, ord_unpr)`: 현금 주문 (매수/매도)
+- `order_stock_credit(ord_dv, pdno, crdt_type, ord_dvsn, ord_qty, ord_unpr)`: 신용 주문 (매수/매도, 실전만)
+- `inquire_order_psbl(pdno, ord_unpr)`: 매수 가능 수량/금액 조회
+- `inquire_credit_order_psbl(pdno, ord_unpr)`: 신용매수 가능 수량/금액 조회
+- `order_credit(code, qty, price, order_type)`: 신용 주문 (기존)
 - `order_rvsecncl(org_order_no, qty, price, order_type, cncl_type)`: 주문 정정/취소
 - `inquire_psbl_rvsecncl()`: 정정/취소 가능 주문 조회
 - `order_resv(code, qty, price, order_type)`: 예약 주문

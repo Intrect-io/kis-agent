@@ -202,7 +202,9 @@ class TestAgentOrderAPI:
             pdno="005930",
             ord_unpr="70000",
             ord_dvsn="00",
-            crdt_type="21"
+            crdt_type="21",
+            cma_evlu_amt_icld_yn="N",
+            ovrs_icld_yn="N"
         )
 
     def test_inquire_credit_order_psbl_with_options(self, mock_agent):
@@ -224,7 +226,9 @@ class TestAgentOrderAPI:
             pdno="005930",
             ord_unpr="70000",
             ord_dvsn="01",
-            crdt_type="23"
+            crdt_type="23",
+            cma_evlu_amt_icld_yn="N",
+            ovrs_icld_yn="N"
         )
 
     def test_stock_api_error_propagation(self, mock_agent):
