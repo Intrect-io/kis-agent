@@ -147,7 +147,7 @@ class StockAPI(BaseAPI):
         return self._make_request_dict(
             endpoint=API_ENDPOINTS['INQUIRE_PRICE'],
             tr_id="FHKST01010100",
-            params={"FID_COND_MRKT_DIV_CODE": "UN", "FID_INPUT_ISCD": code}
+            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code}
         )
 
     def get_daily_price(self, code: str, period: str = "D", org_adj_prc: str = "1") -> Optional[Dict[str, Any]]:
@@ -292,7 +292,7 @@ class StockAPI(BaseAPI):
             endpoint=API_ENDPOINTS['INQUIRE_ASKING_PRICE_EXP_CCN'],
             tr_id="FHKST01010200",
             params={
-                "fid_cond_mrkt_div_code": "UN",
+                "fid_cond_mrkt_div_code": "J",
                 "fid_input_iscd": code
             }
         )
@@ -436,7 +436,7 @@ class StockAPI(BaseAPI):
     def get_market_rankings(self, volume: int = 5000000) -> Optional[Dict[str, Any]]:
         """거래량 순위 조회 (rt_cd 메타데이터가 포함된)"""
         params = {
-            "FID_COND_MRKT_DIV_CODE": "UN",
+            "FID_COND_MRKT_DIV_CODE": "J",
             "FID_COND_SCR_DIV_CODE": "20171",
             "FID_INPUT_ISCD": "0000",
             "FID_DIV_CLS_CODE": "1",
@@ -723,7 +723,7 @@ class StockAPI(BaseAPI):
                   - cnqn: 체결건수
         """
         params = {
-            "fid_cond_mrkt_div_code": "UN",
+            "fid_cond_mrkt_div_code": "J",
             "fid_input_iscd": code,
         }
         return self._make_request_dict(
@@ -745,7 +745,7 @@ class StockAPI(BaseAPI):
             tr_id="FHKST03010200",
             params={
                 "FID_ETC_CLS_CODE": "",
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_INPUT_ISCD": code,
                 "FID_INPUT_HOUR_1": hour,
                 "FID_PW_DATA_INCU_YN": "Y"
@@ -775,7 +775,7 @@ class StockAPI(BaseAPI):
             tr_id="FHKST03010230",
             params={
                 "FID_ETC_CLS_CODE": "",
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_INPUT_ISCD": code,
                 "FID_INPUT_HOUR_1": hour,
                 "FID_PW_DATA_INCU_YN": "Y",
@@ -897,7 +897,7 @@ class StockAPI(BaseAPI):
         return self._make_request_dict(
             endpoint=API_ENDPOINTS['FINANCIAL_RATIO'],
             tr_id="FHKST66430300",
-            params={"FID_COND_MRKT_DIV_CODE": "UN", "FID_INPUT_ISCD": code}
+            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code}
         )
 
     def get_stock_basic(self, code: str) -> Optional[Dict[str, Any]]:
@@ -1146,7 +1146,7 @@ class StockAPI(BaseAPI):
             endpoint=API_ENDPOINTS['INQUIRE_ASKING_PRICE_EXP_CCN'],
             tr_id="FHKST01010200",
             params={
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_INPUT_ISCD": code
             }
         )

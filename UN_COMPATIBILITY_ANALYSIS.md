@@ -1,7 +1,7 @@
-# PyKIS FID_COND_MRKT_DIV_CODE "UN" 호환성 분석
+# PyKIS FID_COND_MRKT_DIV_CODE "J" 호환성 분석
 
 ##  개요
-PyKIS v0.1.22에서 FID_COND_MRKT_DIV_CODE를 "J"에서 "UN"으로 변경했으나, 일부 API는 UN 코드를 지원하지 않습니다.
+PyKIS v0.1.22에서 FID_COND_MRKT_DIV_CODE를 "J"에서 "J"으로 변경했으나, 일부 API는 UN 코드를 지원하지 않습니다.
 
 ##  UN 지원 가능 API (PyKIS에서 UN 사용)
 
@@ -32,7 +32,7 @@ PyKIS v0.1.22에서 FID_COND_MRKT_DIV_CODE를 "J"에서 "UN"으로 변경했으�
 
 ### 1. 동적 코드 선택
 ```python
-def get_market_code(api_name: str, default: str = "UN") -> str:
+def get_market_code(api_name: str, default: str = "J") -> str:
     """API별 최적 시장 코드 반환"""
     unsupported_apis = {
         'pbar_tratio': 'J',

@@ -315,7 +315,7 @@ pytest tests/ -v --cov=pykis
 
 ###  NXT()   
 - **  **:  API KOSPI/KOSDAQ/NXT  
-  - `FID_COND_MRKT_DIV_CODE`  "J" "UN" 
+  - `FID_COND_MRKT_DIV_CODE`  "J" "J" 
   -  KOSPI/KOSDAQ  100%  
   - NXT      
 - ** **:  , / ,  ,   ,       API

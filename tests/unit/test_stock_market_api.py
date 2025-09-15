@@ -51,7 +51,7 @@ class TestStockMarketAPI(unittest.TestCase):
         self.mock_client.make_request.assert_called_once_with(
             endpoint=API_ENDPOINTS['INQUIRE_ASKING_PRICE_EXP_CCN'],
             tr_id="FHKST01010600",
-            params={"FID_COND_MRKT_DIV_CODE": "UN"}
+            params={"FID_COND_MRKT_DIV_CODE": "J"}
         )
     
     def test_get_market_fluctuation_failure(self):
@@ -78,7 +78,7 @@ class TestStockMarketAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS['INQUIRE_INVESTOR'],
             tr_id="FHKST01010900",
             params={
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_COND_SCR_DIV_CODE": "20171",
                 "FID_INPUT_ISCD": "0000",
                 "FID_RANK_SORT_CLS_CODE": "0",
@@ -123,7 +123,7 @@ class TestStockMarketAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS['INQUIRE_INVESTOR'],
             tr_id="FHKST01010900",
             params={
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_COND_SCR_DIV_CODE": "20171",
                 "FID_INPUT_ISCD": "0000",
                 "FID_RANK_SORT_CLS_CODE": "0",
@@ -168,7 +168,7 @@ class TestStockMarketAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS['INQUIRE_PRICE'],
             tr_id="FHKST01010100",
             params={
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_INPUT_ISCD": "005930"
             }
         )

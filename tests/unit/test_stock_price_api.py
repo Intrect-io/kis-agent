@@ -52,7 +52,7 @@ class TestStockPriceAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS['INQUIRE_PRICE'],
             tr_id="FHKST01010100",
             params={
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_INPUT_ISCD": "005930"
             }
         )
@@ -131,7 +131,7 @@ class TestStockPriceAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS['INQUIRE_ASKING_PRICE_EXP_CCN'],
             tr_id="FHKST01010200",
             params={
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_INPUT_ISCD": "005930"
             }
         )
@@ -152,7 +152,7 @@ class TestStockPriceAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS['INQUIRE_ASKING_PRICE_EXP_CCN'],
             tr_id="FHKST01010200",
             params={
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_INPUT_ISCD": "005930"
             }
         )
@@ -176,7 +176,7 @@ class TestStockPriceAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS['INQUIRE_TIME_ITEMCHARTPRICE'],
             tr_id="FHKST01010300",
             params={
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_INPUT_ISCD": "005930",
                 "FID_INPUT_HOUR_1": "153000"
             }
@@ -218,7 +218,7 @@ class TestStockPriceAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS['INQUIRE_TIME_ITEMCHARTPRICE'],
             tr_id="FHKST01010300",
             params={
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_INPUT_ISCD": "005930",
                 "FID_INPUT_DATE_1": "20231215",
                 "FID_INPUT_HOUR_1": "153000"

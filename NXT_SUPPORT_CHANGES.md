@@ -1,7 +1,7 @@
 # NXT 지원을 위한 변경사항
 
 ## 개요
-PyKIS에서 NXT (Next Market) 지원을 위해 `FID_COND_MRKT_DIV_CODE` 값을 "J"에서 "UN"으로 변경했습니다.
+PyKIS에서 NXT (Next Market) 지원을 위해 `FID_COND_MRKT_DIV_CODE` 값을 "J"에서 "J"으로 변경했습니다.
 
 ## 변경된 파일들
 

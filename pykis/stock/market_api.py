@@ -33,7 +33,7 @@ class StockMarketAPI(BaseAPI):
         return self._make_request_dict(
             endpoint=API_ENDPOINTS['INQUIRE_ASKING_PRICE_EXP_CCN'],
             tr_id="FHKST01010600",
-            params={"FID_COND_MRKT_DIV_CODE": "UN"}
+            params={"FID_COND_MRKT_DIV_CODE": "J"}
         )
 
     def get_market_rankings(self, volume: int = 5000000) -> Optional[Dict[str, Any]]:
@@ -58,7 +58,7 @@ class StockMarketAPI(BaseAPI):
             endpoint=API_ENDPOINTS['INQUIRE_INVESTOR'],
             tr_id="FHKST01010900",
             params={
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_COND_SCR_DIV_CODE": "20171",
                 "FID_INPUT_ISCD": "0000",
                 "FID_RANK_SORT_CLS_CODE": "0",
@@ -92,7 +92,7 @@ class StockMarketAPI(BaseAPI):
             endpoint=API_ENDPOINTS['INQUIRE_INVESTOR'],
             tr_id="FHKST01010900",
             params={
-                "FID_COND_MRKT_DIV_CODE": "UN",
+                "FID_COND_MRKT_DIV_CODE": "J",
                 "FID_COND_SCR_DIV_CODE": "20171",
                 "FID_INPUT_ISCD": "0000",
                 "FID_RANK_SORT_CLS_CODE": "0",
@@ -124,7 +124,7 @@ class StockMarketAPI(BaseAPI):
         return self._make_request_dict(
             endpoint=API_ENDPOINTS['INQUIRE_PRICE'],
             tr_id="FHKST01010100",
-            params={"FID_COND_MRKT_DIV_CODE": "UN", "FID_INPUT_ISCD": ticker}
+            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": ticker}
         )
 
     def get_fluctuation_rank(

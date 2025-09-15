@@ -110,7 +110,7 @@ executed_orders = response.get_executed_orders()
 
 ###  NXT()   
 - **  **:  API KOSPI/KOSDAQ/NXT  
-  - `FID_COND_MRKT_DIV_CODE`  "J" "UN" 
+  - `FID_COND_MRKT_DIV_CODE`  "J" "J" 
   - 29   (7  + 2  )
   -  KOSPI/KOSDAQ  100%  
   - NXT      
