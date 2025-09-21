@@ -45,11 +45,11 @@ dev = [
     "pre-commit>=3.3.0,<4.0.0",
 ]
 websocket = [
-    "websockets>=12.0,<14.0",
+    "websockets>=12.0,<16.0",
     "aiohttp>=3.9.0,<4.0.0",
 ]
 all = [
-    "websockets>=12.0,<14.0",
+    "websockets>=12.0,<16.0",
     "aiohttp>=3.9.0,<4.0.0",
 ]
 
