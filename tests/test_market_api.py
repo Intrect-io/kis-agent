@@ -21,9 +21,17 @@ def test_market_api():
     국내주식 API 테스트를 실행합니다.
     """
     try:
+        # API 키 체크 및 스킵 처리
+        if not (os.getenv('KIS_APP_KEY') and os.getenv('KIS_APP_SECRET')):
+            pytest.skip("API 키가 설정되지 않아 테스트를 스킵합니다.")
+
         # KIS_Agent 초기화
-        env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
-        agent = Agent(env_path=env_path)
+        agent = Agent(
+            app_key=os.getenv('KIS_APP_KEY'),
+            app_secret=os.getenv('KIS_APP_SECRET'),
+            account_no=os.getenv('KIS_ACCOUNT_NO', ''),
+            account_code=os.getenv('KIS_ACCOUNT_CODE', '01')
+        )
         logger.info("KIS_Agent 초기화 완료")
 
         # 테스트할 종목 코드 (삼성전자)
