@@ -41,7 +41,11 @@ jobs:
 
     - name: Run tests
       run: |
-        pytest tests/ -v --cov=pykis --cov-report=xml --cov-report=term-missing
+        # Skip tests that require API keys in CI
+        pytest tests/ -v --cov=pykis --cov-report=xml --cov-report=term-missing \
+          -k "not (test_agent_usage or test_stock_api_integration or test_market_data or test_stock_monitor_integration)" \
+          --ignore=tests/integration/test_agent_comprehensive.py \
+          --ignore=tests/integration/test_stock_api_integration.py
 
     - name: Upload coverage to Codecov
       if: matrix.python-version == '3.12'
