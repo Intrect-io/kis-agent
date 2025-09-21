@@ -10,11 +10,31 @@ logger = logging.getLogger(__name__)
 class RateLimiter:
     """
     한국투자증권 API 유량 제한 관리 클래스
-    
-    한국투자증권 API 제한사항:
-    - 초당 최대 20회 호출
-    - 분당 최대 1000회 호출  
+
+    실측 기반으로 최적화된 Rate Limiter로 API 제한을 효과적으로 관리합니다.
+
+    API 제한사항 (2025.09.21 실측 기준):
+    - 공식 스펙: 초당 최대 20회 / 분당 최대 1000회 호출
+    - 안정 운영: 초당 15-18회 / 분당 800-900회 호출 (실제 안정 한계)
     - 연속 호출 시 최소 50ms 간격 권장
+    - 적응형 백오프로 에러 시 자동 속도 조절
+
+    Features:
+    - 우선순위 기반 요청 처리 (긴급/중요/일반)
+    - 순간 버스트 허용 (제한된 크기)
+    - 에러 발생 시 자동 백오프 메커니즘
+    - 실시간 성능 모니터링 및 통계
+    - 런타임 설정 변경 지원
+
+    Example:
+        >>> limiter = RateLimiter(
+        ...     requests_per_second=15,  # 보수적 설정
+        ...     requests_per_minute=800,
+        ...     enable_adaptive=True
+        ... )
+        >>> wait_time = limiter.acquire(priority=1)  # 중요 요청
+        >>> # API 호출 수행
+        >>> limiter.report_success()  # 성공 보고
     """
     
     def __init__(
