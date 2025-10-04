@@ -590,6 +590,8 @@ class AccountAPI(BaseAPI):
                 - tot_ord_qty: 총주문수량
                 - tot_ccld_qty: 총체결수량
                 - tot_ccld_amt: 총체결금액
+                - prsm_tlex_smtl: 추정제비용합계 (수수료+세금)
+                - pchs_avg_pric: 매입평균가격
                 - page_count: 조회한 페이지 수
                 - total_count: 전체 조회 건수
 
@@ -604,6 +606,22 @@ class AccountAPI(BaseAPI):
         - pagination=True 설정 시 CTX_AREA_FK100, CTX_AREA_NK100을 활용한 연속조회를 수행합니다.
         - 연속조회 시 중복 데이터는 자동으로 제거됩니다.
         - 조회 기간은 최대 3개월까지 권장됩니다.
+
+        **중요: 수수료 정보 (prsm_tlex_smtl) 정확도**
+        - **일별 조회 권장**: start_date와 end_date를 동일하게 설정하여 일별로 조회하면
+          prsm_tlex_smtl (추정제비용합계)이 정확하게 제공됩니다.
+        - **장기간 조회 시**: 여러 날짜를 포함하여 조회하면 prsm_tlex_smtl이 0 또는
+          부정확한 값으로 반환될 수 있습니다.
+        - **권장 방식**: 일별로 조회 후 수수료를 합산하는 방식을 사용하세요.
+
+        예시:
+        >>> # ✅ 권장: 일별 조회 (수수료 정확)
+        >>> result = api.inquire_daily_ccld("20251002", "20251002", pagination=True)
+        >>> fee = result['output2']['prsm_tlex_smtl']  # 정확한 수수료
+        >>>
+        >>> # ⚠️  비권장: 장기간 조회 (수수료 부정확)
+        >>> result = api.inquire_daily_ccld("20250901", "20251002", pagination=True)
+        >>> fee = result['output2']['prsm_tlex_smtl']  # 0 또는 부정확
 
         Examples
         --------
@@ -670,9 +688,20 @@ class AccountAPI(BaseAPI):
 
         # 기존 단일 조회
         try:
+            # 조회 기간에 따라 TR ID 선택
+            from datetime import datetime, timedelta
+            today = datetime.now()
+            three_months_ago = (today - timedelta(days=90)).strftime('%Y%m%d')
+
+            # start_date가 3개월 이전이면 CTSC9215R, 이내면 TTTC0081R
+            if start_date and start_date < three_months_ago:
+                tr_id = "CTSC9215R"  # 3개월 이전 데이터
+            else:
+                tr_id = "TTTC0081R"  # 3개월 이내 데이터
+
             res = self.client.make_request(
                 endpoint="/uapi/domestic-stock/v1/trading/inquire-daily-ccld",
-                tr_id="TTTC0081R",
+                tr_id=tr_id,
                 params={
                     "CANO": self.account["CANO"],
                     "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
@@ -748,12 +777,32 @@ class AccountAPI(BaseAPI):
         ctx_area_nk100 = ""
         page_count = 0
 
+        # 조회 기간에 따라 TR ID 선택
+        from datetime import datetime, timedelta
+        today = datetime.now()
+        three_months_ago = (today - timedelta(days=90)).strftime('%Y%m%d')
+
+        # start_date가 3개월 이전이면 CTSC09215R, 이내면 TTTC0081R
+        # 주의: 단일 조회와 동일한 TR ID 사용 (TTTC0081R)
+        if start_date and start_date < three_months_ago:
+            tr_id = "CTSC09215R"  # 3개월 이전 데이터
+        else:
+            tr_id = "TTTC0081R"  # 3개월 이내 데이터
+
         try:
             while page_count < max_pages:
+                # 연속조회 헤더 설정
+                # 첫 번째 조회: tr_cont = "" (빈 문자열)
+                # 이후 조회: tr_cont = "N"
+                req_headers = {}
+                if page_count > 0:
+                    req_headers["tr_cont"] = "N"
+
                 # API 요청
                 res = self.client.make_request(
                     endpoint="/uapi/domestic-stock/v1/trading/inquire-daily-ccld",
-                    tr_id="TTTC8001R",  # 실전계좌용 TR_ID
+                    tr_id=tr_id,
+                    headers=req_headers,
                     params={
                         "CANO": self.account["CANO"],
                         "ACNT_PRDT_CD": self.account.get("ACNT_PRDT_CD", "01"),
@@ -800,22 +849,33 @@ class AccountAPI(BaseAPI):
                 # 콜백 호출
                 if page_callback:
                     ctx_info = {
-                        "FK100": res.get("CTX_AREA_FK100", ""),
-                        "NK100": res.get("CTX_AREA_NK100", ""),
+                        "FK100": res.get("ctx_area_fk100", ""),
+                        "NK100": res.get("ctx_area_nk100", ""),
                         "total_rows": len(output1),
                     }
                     page_callback(page_count, output1, ctx_info)
 
-                # 연속조회 키 추출
-                ctx_area_fk100 = res.get("CTX_AREA_FK100", "")
-                ctx_area_nk100 = res.get("CTX_AREA_NK100", "")
+                # 연속조회 키 추출 (소문자 키 사용)
+                ctx_area_fk100 = res.get("ctx_area_fk100", "").strip()
+                ctx_area_nk100 = res.get("ctx_area_nk100", "").strip()
 
-                # 연속조회 키가 없으면 종료
-                if not ctx_area_fk100 and not ctx_area_nk100:
+                # 연속조회 종료 조건 확인
+                # 1. msg1이 "조회가 계속됩니다"가 아니면 마지막 페이지
+                # 2. 연속조회 키가 모두 비어있으면 마지막 페이지
+                # 3. 데이터가 100건 미만이면 마지막 페이지
+                msg1 = res.get("msg1", "").strip()
+                is_continue = "계속" in msg1 or "조회가 계속됩니다" in msg1
+
+                if not is_continue:
+                    logging.info(f"연속조회 종료: msg1='{msg1}'")
                     break
 
-                # 데이터가 100건 미만이면 마지막 페이지
+                if not ctx_area_fk100 and not ctx_area_nk100:
+                    logging.info("연속조회 종료: 연속조회키 없음")
+                    break
+
                 if len(output1) < 100:
+                    logging.info(f"연속조회 종료: 데이터 {len(output1)}건 (100건 미만)")
                     break
 
             # 전체 데이터를 딕셔너리로 반환
@@ -861,19 +921,33 @@ class AccountAPI(BaseAPI):
                     f"일별주문체결 조회 완료: 총 {page_count}페이지, {len(unique_data)}건"
                 )
 
+                # output2 요약 정보 생성
+                # 연속조회 시에는 prsm_tlex_smtl (추정제비용합계)와 pchs_avg_pric (매입평균가격)이
+                # 제공되지 않으므로, 마지막 응답(res)의 output2를 기반으로 생성
+                output2 = {
+                    "tot_ord_qty": str(tot_ord_qty),
+                    "tot_ccld_qty": str(tot_ccld_qty),
+                    "tot_ccld_amt": str(tot_ccld_amt),
+                    "page_count": page_count,
+                    "total_count": len(unique_data),
+                }
+
+                # 마지막 응답의 output2에서 추가 필드 복사
+                # (prsm_tlex_smtl, pchs_avg_pric 등)
+                if res and "output2" in res:
+                    last_output2 = res.get("output2", {})
+                    if "prsm_tlex_smtl" in last_output2:
+                        output2["prsm_tlex_smtl"] = last_output2["prsm_tlex_smtl"]
+                    if "pchs_avg_pric" in last_output2:
+                        output2["pchs_avg_pric"] = last_output2["pchs_avg_pric"]
+
                 # 최종 결과 반환
                 return {
                     "rt_cd": "0",
                     "msg_cd": "SUCCESSFUL",
                     "msg1": f"정상처리 완료 - 총 {len(unique_data)}건 조회",
                     "output1": unique_data,
-                    "output2": {
-                        "tot_ord_qty": str(tot_ord_qty),
-                        "tot_ccld_qty": str(tot_ccld_qty),
-                        "tot_ccld_amt": str(tot_ccld_amt),
-                        "page_count": page_count,
-                        "total_count": len(unique_data),
-                    },
+                    "output2": output2,
                 }
 
             # 빈 결과 반환
