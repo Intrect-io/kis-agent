@@ -782,10 +782,10 @@ class AccountAPI(BaseAPI):
         today = datetime.now()
         three_months_ago = (today - timedelta(days=90)).strftime('%Y%m%d')
 
-        # start_date가 3개월 이전이면 CTSC09215R, 이내면 TTTC0081R
-        # 주의: 단일 조회와 동일한 TR ID 사용 (TTTC0081R)
+        # start_date가 3개월 이전이면 CTSC9215R, 이내면 TTTC0081R
+        # 주의: 단일 조회와 동일한 TR ID 사용
         if start_date and start_date < three_months_ago:
-            tr_id = "CTSC09215R"  # 3개월 이전 데이터
+            tr_id = "CTSC9215R"  # 3개월 이전 데이터
         else:
             tr_id = "TTTC0081R"  # 3개월 이내 데이터
 
