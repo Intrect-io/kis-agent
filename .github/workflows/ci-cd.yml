@@ -14,6 +14,7 @@ concurrency:
 permissions:
   contents: read
   security-events: write
+  actions: read
 
 env:
   PYTHON_VERSION: '3.12'
@@ -49,6 +50,7 @@ jobs:
     - name: Run unit tests (exclude integration)
       env:
         RUN_LIVE_TESTS: '0'
+        KIS_BASE_URL: 'https://openapi.koreainvestment.com:9443'
       run: |
         pytest -v -m "not integration" --cov=pykis --cov-report=xml --cov-report=term-missing --durations=20
 
