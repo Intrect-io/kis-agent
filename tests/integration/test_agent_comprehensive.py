@@ -18,6 +18,8 @@ import pytest
 
 from pykis import Agent
 
+pytestmark = pytest.mark.requires_credentials
+
 
 @pytest.fixture(scope="session")
 def agent():

@@ -18,6 +18,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.requires_credentials
 def test_market_api():
     """
     국내주식 API 테스트를 실행합니다.

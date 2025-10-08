@@ -65,9 +65,9 @@ class KisWebSocket:
         self.aes_iv = None
 
         # 체결 데이터 및 trade history 초기화
-        self.latest_trade = {code: None for code in self.stock_codes}
+        self.latest_trade = dict.fromkeys(self.stock_codes)
         self.trade_history = {code: [] for code in self.stock_codes}
-        self.prev_indicators = {code: (None, None) for code in self.stock_codes}
+        self.prev_indicators = dict.fromkeys(self.stock_codes, (None, None))
 
         # 실시간 지수 데이터 저장소
         self.latest_index = {}  # {'KOSPI200': data, 'KOSPI': data, 'KOSDAQ': data}
@@ -418,9 +418,9 @@ class KisWebSocket:
         i = 0
         print("========== 실시간 프로그램매매 ==========")
         for cnt in range(data_cnt):
-            print("### [%d / %d]" % (cnt + 1, data_cnt))
+            print(f"### [{cnt + 1} / {data_cnt}]")
             for label in labels:
-                print("%-13s[%s]" % (label, pValue[i]))
+                print(f"{label:<13}[{pValue[i]}]")
                 i += 1
         print("=========================================")
 

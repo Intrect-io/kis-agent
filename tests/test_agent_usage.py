@@ -18,6 +18,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.requires_credentials
 def test_agent_usage():
     """KIS_Agent의 주요 기능을 테스트합니다."""
     try:

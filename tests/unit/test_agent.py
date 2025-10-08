@@ -30,7 +30,11 @@ class TestAgent(unittest.TestCase):
     이 클래스는 Agent의 각 메서드를 모킹하여 테스트합니다.
     """
 
-    def setUp(self):
+    @patch("pykis.core.agent.StockAPI")
+    @patch("pykis.core.agent.AccountAPI")
+    @patch("pykis.core.agent.ProgramTradeAPI")
+    @patch("pykis.core.agent.StockMarketAPI")
+    def setUp(self, mock_market_api, mock_program_api, mock_account_api, mock_stock_api):
         """테스트 설정"""
         # Mock 클라이언트 사용
         self.mock_client = Mock(spec=KISClient)
