@@ -21,11 +21,13 @@ import unittest
 from datetime import datetime
 
 import pandas as pd
+import pytest
 
 from pykis.core.client import KISClient
 from pykis.stock.api import StockAPI
 
 
+@pytest.mark.requires_credentials
 class TestStockAPI(unittest.TestCase):
     """
     StockAPI 클래스의 단위 테스트 클래스입니다.

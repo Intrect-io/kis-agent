@@ -12,10 +12,15 @@ if not os.getenv("RUN_LIVE_TESTS"):
     pytest.skip("실제 API 테스트 건너뜀", allow_module_level=True)
 
 
+@pytest.mark.requires_credentials
 def test_condition_stocks():
     """조건검색식 종목 조회 테스트"""
-    env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
-    agent = Agent(env_path=env_path)
+    agent = Agent(
+        app_key=os.getenv("KIS_APP_KEY", ""),
+        app_secret=os.getenv("KIS_APP_SECRET", ""),
+        account_no=os.getenv("KIS_ACCOUNT_NO", ""),
+        account_code=os.getenv("KIS_ACCOUNT_CODE", ""),
+    )
 
     # 조건검색식 목록 조회
     conditions = agent.get_condition_list()

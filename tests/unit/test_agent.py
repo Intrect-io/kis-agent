@@ -43,8 +43,12 @@ class TestAgent(unittest.TestCase):
         )
         self.test_stock_code = "005930"  # 삼성전자
 
-    def test_init_without_client(self):
+    @patch("pykis.core.agent.KISClient")
+    def test_init_without_client(self, mock_client_class):
         """클라이언트 없이 초기화 테스트"""
+        mock_client_instance = Mock(spec=KISClient)
+        mock_client_class.return_value = mock_client_instance
+
         agent = Agent(
             app_key="test_key",
             app_secret="test_secret",
@@ -53,6 +57,7 @@ class TestAgent(unittest.TestCase):
         )
         # 내부적으로 KISClient가 생성되었는지 확인
         self.assertIsInstance(agent.client, KISClient)
+        mock_client_class.assert_called_once()
 
     def test_get_account_balance(self):
         """계좌 잔고 조회 테스트 - Mock 사용"""

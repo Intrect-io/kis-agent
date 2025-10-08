@@ -47,12 +47,16 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[dev,all]"
 
-    - name: Run unit tests (exclude integration)
+    - name: Run unit tests (exclude integration and credential tests)
       env:
         RUN_LIVE_TESTS: '0'
         KIS_BASE_URL: 'https://openapi.koreainvestment.com:9443'
+        KIS_APP_KEY: 'test_key'
+        KIS_APP_SECRET: 'test_secret'
+        KIS_ACCOUNT_NO: '00000000'
+        KIS_ACCOUNT_CODE: '01'
       run: |
-        pytest -v -m "not integration" --cov=pykis --cov-report=xml --cov-report=term-missing --durations=20
+        pytest -v -m "not integration and not requires_credentials" --cov=pykis --cov-report=xml --cov-report=term-missing --durations=20
 
     - name: Upload coverage artifact
       if: always()

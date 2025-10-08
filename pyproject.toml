@@ -92,6 +92,7 @@ disallow_incomplete_defs = true
 testpaths = ["tests"]
 markers = [
     "integration: marks tests as integration tests",
+    "requires_credentials: marks tests that require real API credentials",
 ]
 python_files = ["test_*.py"]
 addopts = "-v --cov=pykis --ignore=tests/unit/test_auth.py --ignore=tests/unit/test_client.py"

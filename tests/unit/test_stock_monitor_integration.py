@@ -7,6 +7,7 @@ from pykis import Agent
 from pykis.core.client import KISClient
 
 
+@pytest.mark.requires_credentials
 class TestStockMonitorIntegration:
     """StockMonitor에서 사용하는 함수들의 통합 테스트"""
 
