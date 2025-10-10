@@ -71,7 +71,7 @@ class StockInvestorAPI(BaseAPI):
         )
 
     def get_foreign_broker_net_buy(
-        self, code: str, foreign_brokers=None, date: str = None
+        self, code: str, foreign_brokers: Optional[list] = None, date: Optional[str] = None
     ) -> Optional[tuple]:
         """
         거래원 정보를 활용해 외국계 증권사의 순매수(매수-매도) 합계를 집계합니다.

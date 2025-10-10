@@ -157,7 +157,31 @@ class StockAPI(BaseAPI):
         return None
 
     def get_stock_price(self, code: str) -> Optional[Dict]:
-        """주식 현재가 조회 (rt_cd 메타데이터 포함)"""
+        """주식 현재가 조회 (Get current stock price)
+
+        실시간 주식 현재가 및 시세 정보를 조회합니다. Agent.get_stock_price()의 구현 메서드입니다.
+        Retrieves real-time stock price and market data. Implementation method for Agent.get_stock_price().
+
+        Args:
+            code: 종목코드 6자리 (Stock code, 6 digits)
+                  예: "005930" (삼성전자)
+
+        Returns:
+            Optional[Dict]: 현재가 정보 딕셔너리 (Price info dict with metadata)
+                - rt_cd: 응답코드 (Response code, "0" = success)
+                - msg1: 응답메시지 (Response message)
+                - output: 시세 데이터
+                    - stck_prpr: 현재가 (Current price)
+                    - prdy_vrss: 전일대비 (Change from previous day)
+                    - prdy_ctrt: 전일대비율 (Change rate %)
+                    - acml_vol: 누적거래량 (Accumulated volume)
+                - 실패 시 None 반환 (Returns None on failure)
+
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 캐시 TTL: BaseAPI 설정에 따름 (Cache TTL: per BaseAPI config)
+            - KOSPI/KOSDAQ/NXT 시장 지원 (Supports all KRX markets)
+        """
         return self._make_request_dict(
             endpoint=API_ENDPOINTS["INQUIRE_PRICE"],
             tr_id="FHKST01010100",
@@ -167,13 +191,36 @@ class StockAPI(BaseAPI):
     def get_daily_price(
         self, code: str, period: str = "D", org_adj_prc: str = "1"
     ) -> Optional[Dict[str, Any]]:
-        """
-        일별 시세 조회 (숫자형 자동 변환)
+        """일별/주별/월별 시세 조회 (Get daily/weekly/monthly price data)
+
+        기간별 OHLCV 데이터를 조회합니다. Agent.get_daily_price()의 구현 메서드입니다.
+        Retrieves OHLCV data by period. Implementation method for Agent.get_daily_price().
 
         Args:
-            code: 종목코드 (6자리)
-            period: 기간구분 (D: 일, W: 주, M: 월, Y: 년)
-            org_adj_prc: 수정주가구분 (0: 수정주가 미사용, 1: 수정주가 사용)
+            code: 종목코드 6자리 (Stock code, 6 digits)
+            period: 기간구분 (Period type)
+                    - "D": 일봉 (Daily)
+                    - "W": 주봉 (Weekly)
+                    - "M": 월봉 (Monthly)
+                    - "Y": 연봉 (Yearly)
+            org_adj_prc: 수정주가 적용 (Adjusted price flag)
+                         - "0": 미사용 (Unadjusted)
+                         - "1": 사용 (Adjusted, 권리락/배당락 반영)
+
+        Returns:
+            Optional[Dict[str, Any]]: OHLCV 데이터 (Price data with metadata)
+                - rt_cd: 응답코드 (Response code)
+                - output1: 일봉 데이터 리스트 (Candlestick data list, max 100)
+                    - stck_bsop_date: 영업일자 (Business date)
+                    - stck_oprc: 시가 (Open)
+                    - stck_hgpr: 고가 (High)
+                    - stck_lwpr: 저가 (Low)
+                    - stck_clpr: 종가 (Close)
+                    - acml_vol: 거래량 (Volume)
+
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 최대 100건 조회 (Max 100 records per request)
         """
         # [변경 이유] API 요청 메서드는 원시 dict를 반환하도록 일관화
         return self._make_request_dict(
@@ -775,12 +822,30 @@ class StockAPI(BaseAPI):
         )
 
     def get_minute_price(self, code: str, hour: str = "153000") -> Optional[Dict]:
-        """
-        분봉 데이터 조회 (주식당일분봉조회) (rt_cd 메타데이터가 포함된)
+        """당일 분봉 데이터 조회 (Get intraday minute candlestick data)
+
+        당일 1분봉 데이터를 조회합니다. Agent.get_minute_price()의 구현 메서드입니다.
+        Retrieves intraday 1-minute candlestick data. Implementation method for Agent.get_minute_price().
 
         Args:
-            code: 종목코드
-            hour: 시간 (HHMMSS 형식, 기본값: 153000)
+            code: 종목코드 6자리 (Stock code, 6 digits)
+            hour: 조회 종료 시각 (End time, HHMMSS format)
+                  기본값: "153000" (Default: "153000", market close)
+
+        Returns:
+            Optional[Dict]: 분봉 데이터 (Minute candlestick data)
+                - output2: 1분봉 리스트 (Minute data list, max 120)
+                    - stck_bsop_date: 영업일자 (Business date)
+                    - stck_cntg_hour: 체결시각 (Execution time)
+                    - stck_prpr: 현재가 (Current price)
+                    - stck_oprc: 시가 (Open)
+                    - stck_hgpr: 고가 (High)
+                    - stck_lwpr: 저가 (Low)
+                    - cntg_vol: 체결량 (Volume)
+
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 최대 120건 (Max 120 records)
         """
         return self._make_request_dict(
             endpoint=API_ENDPOINTS["INQUIRE_TIME_ITEMCHARTPRICE"],

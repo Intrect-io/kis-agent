@@ -216,7 +216,7 @@ class Agent(BaseExceptionHandler):
         # API 모듈 초기화
         self._init_apis()
 
-    def _ensure_valid_token(self, config):
+    def _ensure_valid_token(self, config: Optional[KISConfig]) -> None:
         """토큰 유효성 검증 및 자동 재발급"""
         try:
             # 기존 토큰 확인
@@ -242,7 +242,7 @@ class Agent(BaseExceptionHandler):
             # 토큰 발급 실패는 중요한 문제이므로 예외 재발생
             raise RuntimeError(f"토큰 자동 발급 실패: {e}")
 
-    def _init_apis(self):
+    def _init_apis(self) -> None:
         """API 모듈들을 초기화합니다."""
         self.account_api = AccountAPI(self.client, self.account_info)
         self.stock_api = StockAPI(self.client, self.account_info)
@@ -287,38 +287,98 @@ class Agent(BaseExceptionHandler):
     # ============================================================================
 
     def get_stock_price(self, code: str) -> Optional[Dict[str, Any]]:
-        """
-        주식 현재가 조회
+        """주식 현재가 조회 (Get current stock price)
 
-        지정된 종목의 실시간 현재가와 시세 정보를 조회합니다.
+        한국투자증권 API를 통해 실시간 주식 현재가 정보를 조회합니다.
+        Retrieves real-time stock price information via Korea Investment API.
 
         Args:
-            code (str): 종목코드 (6자리, 예: "005930")
+            code: 종목코드 6자리 (Stock code, 6 digits)
+                  예: "005930" (삼성전자), "035720" (카카오)
 
         Returns:
-            Optional[Dict[str, Any]]: 현재가 시세 데이터
-                - 성공 시: rt_cd와 함께 시세 정보 딕셔너리
-                - 실패 시: None
+            Optional[Dict[str, Any]]: 현재가 정보를 포함한 응답 객체
+                (Response object containing current price information)
+                - output.stck_prpr: 현재가 (Current price)
+                - output.prdy_vrss: 전일대비 (Change from previous day)
+                - output.prdy_ctrt: 전일대비율 (Change rate %)
+                - output.acml_vol: 누적거래량 (Accumulated volume)
+                - 실패 시 None 반환 (Returns None on failure)
 
-        Example:
-            >>> agent = Agent(env_path=".env")
-            >>> result = agent.get_stock_price("005930")  # 삼성전자
-            >>> if result and result.get('rt_cd') == '0':
-            ...     price = result['output']['stck_prpr']
-            ...     print(f"현재가: {price:,}원")
+        Examples:
+            >>> agent = Agent(app_key="...", app_secret="...", account_no="...", account_code="...")
+            >>> price = agent.get_stock_price("005930")  # 삼성전자 (Samsung Electronics)
+            >>> if price and price['rt_cd'] == '0':
+            ...     current = price['output']['stck_prpr']
+            ...     change = price['output']['prdy_vrss']
+            ...     print(f"현재가: {current:,}원 (전일대비: {change}원)")
+            현재가: 70,000원 (전일대비: +1,000원)
+
+        Note:
+            - KOSPI/KOSDAQ/NXT 시장 모두 지원 (Supports all KRX markets)
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 캐시 TTL: 1초 (실시간성 유지) (Cache TTL: 1 second for real-time accuracy)
         """
         return self.stock_api.get_stock_price(code)
 
     def get_daily_price(
         self, code: str, period: str = "D", org_adj_prc: str = "1"
     ) -> Optional[Dict[str, Any]]:
-        """
-        일별 시세 조회 (Postman 검증된 방식)
+        """일별/주별/월별/연별 시세 조회 (Get daily/weekly/monthly/yearly price data)
+
+        지정된 기간 단위로 과거 주가 데이터를 조회합니다. OHLCV(시가/고가/저가/종가/거래량) 데이터를 제공합니다.
+        Retrieves historical price data by specified period. Provides OHLCV (Open/High/Low/Close/Volume) data.
 
         Args:
-            code: 종목코드 (6자리)
-            period: 기간구분 (D: 일, W: 주, M: 월, Y: 년)
-            org_adj_prc: 수정주가구분 (0: 수정주가 미사용, 1: 수정주가 사용)
+            code: 종목코드 6자리 (Stock code, 6 digits)
+                  예: "005930" (삼성전자), "035720" (카카오)
+            period: 기간구분 (Period type)
+                    - "D": 일봉 (Daily)
+                    - "W": 주봉 (Weekly)
+                    - "M": 월봉 (Monthly)
+                    - "Y": 연봉 (Yearly)
+                    기본값: "D" (Default: "D")
+            org_adj_prc: 수정주가 적용 여부 (Adjusted price flag)
+                         - "0": 수정주가 미사용 (Unadjusted price)
+                         - "1": 수정주가 사용 (Adjusted price, 권리락/배당락 반영)
+                         기본값: "1" (Default: "1")
+
+        Returns:
+            Optional[Dict[str, Any]]: 일별 시세 데이터 (Daily price data)
+                - output1: OHLCV 데이터 리스트 (최대 100건)
+                    - stck_bsop_date: 영업일자 (Business date, YYYYMMDD)
+                    - stck_oprc: 시가 (Open price)
+                    - stck_hgpr: 고가 (High price)
+                    - stck_lwpr: 저가 (Low price)
+                    - stck_clpr: 종가 (Close price)
+                    - acml_vol: 누적거래량 (Accumulated volume)
+                    - acml_tr_pbmn: 누적거래대금 (Accumulated trading value)
+                - output2: 요약 정보 (Summary)
+                - 실패 시 None 반환 (Returns None on failure)
+
+        Examples:
+            >>> agent = Agent(app_key="...", app_secret="...", account_no="...", account_code="...")
+            >>>
+            >>> # 예시 1: 삼성전자 일봉 데이터 조회 (최근 100일)
+            >>> daily = agent.get_daily_price("005930", "D", "1")
+            >>> if daily and daily['rt_cd'] == '0':
+            ...     for candle in daily['output1'][:5]:
+            ...         print(f"{candle['stck_bsop_date']}: {candle['stck_clpr']}원")
+            20250110: 70000원
+            20250109: 69500원
+            >>>
+            >>> # 예시 2: 주봉 데이터 조회
+            >>> weekly = agent.get_daily_price("005930", "W", "1")
+            >>>
+            >>> # 예시 3: 수정주가 미적용 (주식분할/배당 이벤트 분석용)
+            >>> raw = agent.get_daily_price("005930", "D", "0")
+
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 캐시 TTL: 60초 (Cache TTL: 60 seconds)
+            - 최대 조회 건수: 100건 (Max 100 records per request)
+            - 과거 데이터 범위: 최대 10년 (Up to 10 years of historical data)
+            - 수정주가 권장: 장기 차트 분석 시 "1" 사용 (Recommended "1" for long-term analysis)
         """
         return self.stock_api.get_daily_price(code, period, org_adj_prc)
 
@@ -340,12 +400,58 @@ class Agent(BaseExceptionHandler):
     def get_minute_price(
         self, code: str, hour: str = "153000"
     ) -> Optional[Dict[str, Any]]:
-        """
-        주식당일분봉조회 (Postman 검증된 방식)
+        """당일 분봉 데이터 조회 (Get intraday minute candlestick data)
+
+        당일 개장 시간부터 지정된 시각까지의 1분봉 데이터를 조회합니다. 단타 매매 및 데이트레이딩에 필수적입니다.
+        Retrieves 1-minute candlestick data from market open to specified time. Essential for day trading and scalping.
 
         Args:
-            code: 종목코드 (6자리)
-            hour: 시간 (HHMMSS 형식, 기본값: 153000)
+            code: 종목코드 6자리 (Stock code, 6 digits)
+                  예: "005930" (삼성전자), "035720" (카카오)
+            hour: 조회 종료 시각 (End time for query, HHMMSS format)
+                  예: "153000" (오후 3시 30분까지)
+                  기본값: "153000" (장 마감 시각, Default: market close time)
+
+        Returns:
+            Optional[Dict[str, Any]]: 분봉 데이터 (Minute candlestick data)
+                - output1: 요약 정보 (Summary)
+                - output2: 1분봉 데이터 리스트 (최대 120건, Max 120 records)
+                    - stck_bsop_date: 영업일자 (Business date, YYYYMMDD)
+                    - stck_cntg_hour: 체결시각 (Execution time, HHMMSS)
+                    - stck_prpr: 현재가 (Current price)
+                    - stck_oprc: 시가 (Open price)
+                    - stck_hgpr: 고가 (High price)
+                    - stck_lwpr: 저가 (Low price)
+                    - cntg_vol: 체결거래량 (Execution volume)
+                    - acml_tr_pbmn: 누적거래대금 (Accumulated trading value)
+                - 실패 시 None 반환 (Returns None on failure)
+
+        Examples:
+            >>> agent = Agent(app_key="...", app_secret="...", account_no="...", account_code="...")
+            >>>
+            >>> # 예시 1: 오늘 삼성전자 분봉 데이터 (09:00 ~ 15:30)
+            >>> minute = agent.get_minute_price("005930", "153000")
+            >>> if minute and minute['rt_cd'] == '0':
+            ...     for candle in minute['output2'][:5]:
+            ...         print(f"{candle['stck_cntg_hour']}: {candle['stck_prpr']}원")
+            093000: 70000원
+            093100: 70100원
+            >>>
+            >>> # 예시 2: 오전 데이터만 조회 (09:00 ~ 12:00)
+            >>> morning = agent.get_minute_price("005930", "120000")
+            >>>
+            >>> # 예시 3: 최근 10분 데이터 분석
+            >>> recent = agent.get_minute_price("005930")
+            >>> if recent and recent['rt_cd'] == '0':
+            ...     last_10 = recent['output2'][-10:]
+            ...     avg_price = sum(int(c['stck_prpr']) for c in last_10) / 10
+
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 캐시 TTL: 1초 (실시간성 유지, Cache TTL: 1 second for real-time)
+            - 최대 조회 건수: 120건 (Max 120 records)
+            - 조회 가능 시간: 당일 09:00 ~ 15:30 (Market hours only: 09:00 ~ 15:30)
+            - 과거 데이터는 get_daily_minute_price() 사용 (Use get_daily_minute_price() for historical data)
         """
         return self.stock_api.get_minute_price(code, hour)
 
@@ -850,7 +956,7 @@ class Agent(BaseExceptionHandler):
         return self.stock_api.get_member(code)
 
     def get_foreign_broker_net_buy(
-        self, code: str, foreign_brokers=None, date: str = None
+        self, code: str, foreign_brokers: Optional[List[str]] = None, date: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
         """
         외국계 증권사 순매수 현황 조회
@@ -963,14 +1069,61 @@ class Agent(BaseExceptionHandler):
         return self.stock_api.get_index_daily_price(index_code, end_date, period)
 
     def get_orderbook_raw(self, code: str) -> Optional[Dict[str, Any]]:
-        """
-        주식 호가 조회 (원시 데이터)
+        """실시간 호가 정보 조회 (Get real-time order book)
+
+        주식의 현재 매수/매도 호가 정보를 10단계로 조회합니다. 시장 심도 분석 및 진입/청산 타이밍 판단에 활용됩니다.
+        Retrieves 10-level bid/ask price information for real-time market depth analysis and order timing decisions.
 
         Args:
-            code (str): 종목코드 (6자리)
+            code: 종목코드 6자리 (Stock code, 6 digits)
+                  예: "005930" (삼성전자), "035720" (카카오)
 
         Returns:
-            Dict: 호가 원시 데이터
+            Optional[Dict[str, Any]]: 호가 정보 (Order book data)
+                - output1: 매수/매도 호가 데이터 (Bid/Ask data)
+                    - askp1~askp10: 매도호가 1~10단계 (Ask price level 1-10)
+                    - bidp1~bidp10: 매수호가 1~10단계 (Bid price level 1-10)
+                    - askp_rsqn1~askp_rsqn10: 매도호가 잔량 (Ask quantity)
+                    - bidp_rsqn1~bidp_rsqn10: 매수호가 잔량 (Bid quantity)
+                    - total_askp_rsqn: 매도호가 총 잔량 (Total ask quantity)
+                    - total_bidp_rsqn: 매수호가 총 잔량 (Total bid quantity)
+                - output2: 추가 정보 (Additional info)
+                    - antc_cnpr: 예상체결가 (Expected execution price)
+                    - antc_cnqn: 예상체결량 (Expected execution quantity)
+                - 실패 시 None 반환 (Returns None on failure)
+
+        Examples:
+            >>> agent = Agent(app_key="...", app_secret="...", account_no="...", account_code="...")
+            >>>
+            >>> # 예시 1: 삼성전자 호가창 조회
+            >>> orderbook = agent.get_orderbook_raw("005930")
+            >>> if orderbook and orderbook['rt_cd'] == '0':
+            ...     data = orderbook['output1']
+            ...     print(f"최우선 매도호가: {data['askp1']}원 ({data['askp_rsqn1']}주)")
+            ...     print(f"최우선 매수호가: {data['bidp1']}원 ({data['bidp_rsqn1']}주)")
+            최우선 매도호가: 70100원 (500주)
+            최우선 매수호가: 70000원 (1200주)
+            >>>
+            >>> # 예시 2: 매수/매도 세력 분석
+            >>> if orderbook and orderbook['rt_cd'] == '0':
+            ...     data = orderbook['output1']
+            ...     total_ask = int(data['total_askp_rsqn'])
+            ...     total_bid = int(data['total_bidp_rsqn'])
+            ...     ratio = total_bid / total_ask
+            ...     print(f"매수/매도 호가비율: {ratio:.2f}")
+            매수/매도 호가비율: 1.35
+            >>>
+            >>> # 예시 3: 시장가 슬리피지 예측 (10단계 호가 누적)
+            >>> data = orderbook['output1']
+            >>> avg_ask_price = sum(int(data[f'askp{i}']) * int(data[f'askp_rsqn{i}'])
+            ...                      for i in range(1, 11)) / total_ask
+
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 캐시 TTL: 0.5초 (실시간성 최우선, Cache TTL: 0.5 second for ultra-low latency)
+            - 조회 가능 시간: 08:30 ~ 15:30 (장전/정규장/장후시간외 포함)
+            - 동시호가 시간대: 예상체결가/예상체결량 활용 가능 (Expected price/quantity available during auction)
+            - 시장가 주문 전 필수 확인 권장 (Recommended check before market orders)
         """
         return self.stock_api.get_orderbook_raw(code)
 
@@ -987,14 +1140,63 @@ class Agent(BaseExceptionHandler):
         return self.stock_api.get_stock_member(code)
 
     def get_stock_investor(self, code: str) -> Optional[Dict[str, Any]]:
-        """
-        주식 투자자별 매매동향 조회 (원시 데이터)
+        """투자자별 매매동향 조회 (Get trading activity by investor type)
+
+        개인/외국인/기관 등 투자자 유형별 매수/매도 동향을 조회합니다. 세력 분석 및 수급 판단에 핵심적인 지표입니다.
+        Retrieves buy/sell activity by investor type (retail/foreign/institutional). Key indicator for analyzing market forces and supply-demand.
 
         Args:
-            code (str): 종목코드 (6자리)
+            code: 종목코드 6자리 (Stock code, 6 digits)
+                  예: "005930" (삼성전자), "035720" (카카오)
 
         Returns:
-            Dict: 투자자별 매매 원시 데이터
+            Optional[Dict[str, Any]]: 투자자별 매매 동향 (Trading activity by investor type)
+                - output: 투자자 유형별 데이터 리스트
+                    - stck_prdy_clpr: 전일종가 (Previous day's close)
+                    - acml_vol: 누적거래량 (Accumulated volume)
+                    - prsn_ntby_qty: 개인순매수 (Retail net buy quantity)
+                    - frgn_ntby_qty: 외국인순매수 (Foreign net buy quantity)
+                    - orgn_ntby_qty: 기관순매수 (Institutional net buy quantity)
+                    - prsn_ntby_tr_pbmn: 개인순매수금액 (Retail net buy value)
+                    - frgn_ntby_tr_pbmn: 외국인순매수금액 (Foreign net buy value)
+                    - orgn_ntby_tr_pbmn: 기관순매수금액 (Institutional net buy value)
+                - 실패 시 None 반환 (Returns None on failure)
+
+        Examples:
+            >>> agent = Agent(app_key="...", app_secret="...", account_no="...", account_code="...")
+            >>>
+            >>> # 예시 1: 삼성전자 투자자별 매매동향
+            >>> investor = agent.get_stock_investor("005930")
+            >>> if investor and investor['rt_cd'] == '0':
+            ...     data = investor['output'][0]
+            ...     print(f"개인: {data['prsn_ntby_qty']:>10}주")
+            ...     print(f"외국인: {data['frgn_ntby_qty']:>10}주")
+            ...     print(f"기관: {data['orgn_ntby_qty']:>10}주")
+            개인:    -50000주
+            외국인:    +30000주
+            기관:    +20000주
+            >>>
+            >>> # 예시 2: 외국인/기관 순매수 동조 확인
+            >>> if investor and investor['rt_cd'] == '0':
+            ...     data = investor['output'][0]
+            ...     foreign_buy = int(data['frgn_ntby_qty'])
+            ...     inst_buy = int(data['orgn_ntby_qty'])
+            ...     if foreign_buy > 0 and inst_buy > 0:
+            ...         print("외국인+기관 동반 매수 (강세 신호)")
+            외국인+기관 동반 매수 (강세 신호)
+            >>>
+            >>> # 예시 3: 순매수 금액 기준 분석
+            >>> data = investor['output'][0]
+            >>> total_buy_value = (int(data['prsn_ntby_tr_pbmn']) +
+            ...                    int(data['frgn_ntby_tr_pbmn']) +
+            ...                    int(data['orgn_ntby_tr_pbmn']))
+
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 캐시 TTL: 10초 (Cache TTL: 10 seconds)
+            - 데이터 제공: 당일 누적 데이터 (Cumulative data for current day)
+            - 갱신 주기: 실시간 (약 10초 지연, Real-time with ~10 sec delay)
+            - 분석 활용: 외국인+기관 동반 매수 시 강세 신호로 해석 (Combined foreign+institutional buying indicates bullish signal)
         """
         return self.stock_api.get_stock_investor(code)
 
@@ -1250,22 +1452,43 @@ class Agent(BaseExceptionHandler):
     # ============================================================================
 
     def get_account_balance(self) -> Optional[Dict[str, Any]]:
-        """
-        계좌 잔고 조회
+        """계좌 잔고 조회 (Get account balance)
 
         현재 계좌의 보유 종목, 평가손익, 총 자산 등의 잔고 정보를 조회합니다.
+        Retrieves account holdings, profit/loss, and total asset information.
 
         Returns:
-            Optional[Dict[str, Any]]: 계좌 잔고 정보 데이터
-                - 성공 시: rt_cd와 함께 잔고 정보 딕셔너리
-                - 실패 시: None
+            Optional[Dict[str, Any]]: 계좌 잔고 정보 (Account balance information)
+                - output1: 보유 종목 리스트 (List of holdings)
+                    - pdno: 종목코드 (Stock code)
+                    - prdt_name: 종목명 (Stock name)
+                    - hldg_qty: 보유수량 (Holding quantity)
+                    - pchs_avg_pric: 매입평균가 (Average purchase price)
+                    - evlu_pfls_rt: 평가손익율 (Profit/loss rate %)
+                - output2: 계좌 총평가 (Account summary)
+                    - tot_evlu_amt: 총평가금액 (Total evaluation amount)
+                    - nass_amt: 순자산금액 (Net asset value)
+                    - scts_evlu_amt: 유가증권평가금액 (Securities evaluation amount)
+                - 실패 시 None 반환 (Returns None on failure)
 
-        Example:
-            >>> agent = Agent(env_path=".env")
-            >>> result = agent.get_account_balance()
-            >>> if result and result.get('rt_cd') == '0':
-            ...     total_asset = result['output2'][0]['tot_evlu_amt']
-            ...     print(f"총 평가금액: {total_asset:,}원")
+        Examples:
+            >>> agent = Agent(app_key="...", app_secret="...", account_no="...", account_code="...")
+            >>> balance = agent.get_account_balance()
+            >>> if balance and balance['rt_cd'] == '0':
+            ...     # 보유 종목 출력
+            ...     for stock in balance['output1']:
+            ...         print(f"{stock['prdt_name']}: {stock['hldg_qty']}주")
+            ...     # 총 자산 출력
+            ...     total = balance['output2'][0]['tot_evlu_amt']
+            ...     print(f"총 평가금액: {total:,}원")
+            삼성전자: 10주
+            카카오: 5주
+            총 평가금액: 1,250,000원
+
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 캐시 TTL: 5초 (Cache TTL: 5 seconds)
+            - 전일 매도 종목도 포함됨 (Includes stocks sold on previous day)
         """
         return self.account_api.get_account_balance()
 
@@ -2045,7 +2268,7 @@ class Agent(BaseExceptionHandler):
 
         return None
 
-    def _save_to_db(self, df: "pd.DataFrame", code: str, date: str):
+    def _save_to_db(self, df: "pd.DataFrame", code: str, date: str) -> None:
         """
         DB에 분봉 데이터 저장
 
@@ -2382,27 +2605,104 @@ class Agent(BaseExceptionHandler):
             Callable[[int, List[Dict[str, Any]], Dict[str, Any]], None]
         ] = None,
     ) -> Optional[Dict[str, Any]]:
-        """주식일별주문체결조회
+        """일별 주문체결 내역 조회 (Get daily order execution history)
 
-        특정 기간 동안의 주문 및 체결 내역을 조회합니다.
+        지정된 기간의 주문 및 체결 내역을 조회합니다. 매매 이력 분석 및 세금 신고 자료로 활용됩니다.
+        Retrieves order and execution history for specified period. Used for trade analysis and tax reporting.
 
         Args:
-            start_date: 조회시작일자 (YYYYMMDD). 기본값: 최근 30일
-            end_date: 조회종료일자 (YYYYMMDD). 기본값: 오늘
-            pdno: 종목코드 (6자리). 기본값: 전체
-            ord_dvsn_cd: 주문구분코드. 기본값: "00"(전체)
-            pagination: 연속조회 사용 여부. 기본값: False
-            ccld_dvsn: 체결구분 ("00":전체, "01":체결, "02":미체결)
-            inqr_dvsn: 조회구분/정렬 ("00":역순, "01":정순)
-            inqr_dvsn_3: 조회구분3 ("00":전체, "01":현금, "02":신용)
-            max_pages: 최대 페이지 수 (pagination=True일 때)
-            page_callback: 페이지 콜백 함수 (pagination=True일 때)
+            start_date: 조회 시작일자 (Start date, YYYYMMDD format)
+                        예: "20250101"
+                        기본값: 최근 30일 (Default: last 30 days)
+            end_date: 조회 종료일자 (End date, YYYYMMDD format)
+                      예: "20250110"
+                      기본값: 오늘 (Default: today)
+            pdno: 종목코드 (Stock code)
+                  예: "005930" (삼성전자)
+                  기본값: "" (전체 종목, Default: all stocks)
+            ord_dvsn_cd: 주문구분코드 (Order type code)
+                         - "00": 전체 (All, default)
+                         - "01": 매도 (Sell only)
+                         - "02": 매수 (Buy only)
+                         기본값: "00" (Default: "00")
+            pagination: 연속조회 사용 여부 (Enable pagination)
+                        - False: DataFrame 반환 (Return as DataFrame, default)
+                        - True: 원시 데이터 반환 (Return raw data)
+                        기본값: False (Default: False)
+            ccld_dvsn: 체결구분 (Execution status)
+                       - "00": 전체 (All, default)
+                       - "01": 체결 (Executed only)
+                       - "02": 미체결 (Pending only)
+                       기본값: "00" (Default: "00")
+            inqr_dvsn: 조회구분/정렬 (Query sorting)
+                       - "00": 역순 (Descending, newest first)
+                       - "01": 정순 (Ascending, oldest first, default)
+                       기본값: "01" (Default: "01")
+            inqr_dvsn_3: 조회구분3 (Query type 3)
+                         - "00": 전체 (All, default)
+                         - "01": 현금 (Cash only)
+                         - "02": 신용 (Credit only)
+                         기본값: "00" (Default: "00")
+            max_pages: 최대 페이지 수 (Maximum pages, when pagination=True)
+                       기본값: 100 (Default: 100)
+            page_callback: 페이지 콜백 함수 (Page callback function, when pagination=True)
+                           기본값: None (Default: None)
 
         Returns:
-            Optional[Dict[str, Any]]: 주문체결내역 (pagination=True) 또는 DataFrame (pagination=False)
+            Optional[Dict[str, Any]]: 주문체결 내역 (Order execution history)
+                - pagination=False: pandas.DataFrame 형태
+                    - ord_dt: 주문일자 (Order date)
+                    - ord_gno_brno: 주문채번지점번호 (Branch number)
+                    - odno: 주문번호 (Order number)
+                    - orgn_odno: 원주문번호 (Original order number)
+                    - pdno: 종목코드 (Stock code)
+                    - prdt_name: 종목명 (Stock name)
+                    - ord_qty: 주문수량 (Order quantity)
+                    - ord_unpr: 주문단가 (Order price)
+                    - tot_ccld_qty: 총체결수량 (Total executed quantity)
+                    - avg_prvs: 평균체결가 (Average execution price)
+                    - tot_ccld_amt: 총체결금액 (Total execution amount)
+                - pagination=True: Dict 형태 (원시 API 응답)
+                - 실패 시 None 반환 (Returns None on failure)
+
+        Examples:
+            >>> agent = Agent(app_key="...", app_secret="...", account_no="...", account_code="...")
+            >>>
+            >>> # 예시 1: 최근 1주일 전체 체결 내역 (DataFrame)
+            >>> df = agent.inquire_daily_ccld(
+            ...     start_date="20250104",
+            ...     end_date="20250110",
+            ...     pagination=False
+            ... )
+            >>> if df is not None:
+            ...     print(f"총 {len(df)}건 조회")
+            ...     print(df[['ord_dt', 'prdt_name', 'ord_qty', 'avg_prvs']])
+            총 5건 조회
+              ord_dt prdt_name  ord_qty  avg_prvs
+            0 20250110 삼성전자     10    70000
+            >>>
+            >>> # 예시 2: 삼성전자만 조회
+            >>> df = agent.inquire_daily_ccld(
+            ...     start_date="20250101",
+            ...     pdno="005930",
+            ...     pagination=False
+            ... )
+            >>>
+            >>> # 예시 3: 미체결 주문만 조회 (취소 대상 확인)
+            >>> df = agent.inquire_daily_ccld(
+            ...     ccld_dvsn="02",  # 미체결만
+            ...     pagination=False
+            ... )
+
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 캐싱 없음 (No caching for accurate history)
+            - 조회 기간: 최대 1개월 권장 (Recommended max 1 month period)
+            - pagination=False 시 자동으로 모든 페이지 수집 후 DataFrame 반환
+            - 세금 신고 자료: 연초 전년도 매매 이력 조회에 활용
 
         See Also:
-            AccountAPI.inquire_daily_ccld: 상세 구현
+            AccountAPI.inquire_daily_ccld: 상세 구현 참조
         """
         return self.account_api.inquire_daily_ccld(
             start_date,
@@ -2527,22 +2827,96 @@ class Agent(BaseExceptionHandler):
     def order_rvsecncl(
         self, org_order_no: str, qty: int, price: int, order_type: str, cncl_type: str
     ) -> Optional[Dict[str, Any]]:
-        """주식주문(정정취소)
+        """주문 정정/취소 (Modify or cancel order)
 
-        미체결 주문을 정정하거나 취소합니다.
+        미체결 또는 부분체결된 주문의 수량이나 가격을 변경하거나 완전히 취소합니다.
+        Modifies quantity/price of pending or partially filled orders, or cancels them completely.
 
         Args:
-            org_order_no: 원주문번호
-            qty: 주문수량 (정정 시 새로운 수량, 취소 시 기존 수량)
-            price: 주문단가 (정정 시 새로운 가격)
-            order_type: 주문구분
-            cncl_type: 정정취소구분 ("01": 정정, "02": 취소)
+            org_order_no: 원주문번호 (Original order number)
+                          예: "0000123456" (10자리)
+                          inquire_daily_ccld() 또는 inquire_psbl_rvsecncl()로 확인
+            qty: 주문수량 (Order quantity)
+                 - 정정 시: 새로운 수량 (When modifying: new quantity)
+                 - 취소 시: 취소할 수량 (When canceling: quantity to cancel)
+                 전량 취소 시 미체결 수량 전체 입력
+            price: 주문단가 (Order price)
+                   - 정정 시: 새로운 가격 (When modifying: new price)
+                   - 취소 시: 기존 가격 (When canceling: original price)
+            order_type: 주문구분 (Order type)
+                        - "00": 지정가 (Limit order)
+                        - "01": 시장가 (Market order)
+                        - "03": 최유리지정가 (Best limit)
+            cncl_type: 정정취소구분 (Action type)
+                       - "01": 정정 (Modify order)
+                       - "02": 취소 (Cancel order)
 
         Returns:
-            Optional[Dict[str, Any]]: 정정취소 응답
+            Optional[Dict[str, Any]]: 정정/취소 결과 (Modify/Cancel result)
+                - rt_cd: 응답코드 (Response code, "0" = success)
+                - msg1: 응답메시지 (Response message)
+                - output: 정정/취소 상세 정보
+                    - KRX_FWDG_ORD_ORGNO: 주문조직번호 (Order org number)
+                    - ODNO: 주문번호 (New order number for modification)
+                    - ORD_TMD: 주문시각 (Order time)
+                - 실패 시 None 반환 (Returns None on failure)
+
+        Examples:
+            >>> agent = Agent(app_key="...", app_secret="...", account_no="...", account_code="...")
+            >>>
+            >>> # 예시 1: 미체결 주문 가격 정정 (70,000원 → 69,000원)
+            >>> result = agent.order_rvsecncl(
+            ...     org_order_no="0000123456",
+            ...     qty=10,           # 기존 수량 유지
+            ...     price=69000,      # 새로운 가격
+            ...     order_type="00",  # 지정가
+            ...     cncl_type="01"    # 정정
+            ... )
+            >>> if result and result['rt_cd'] == '0':
+            ...     print(f"주문 정정 완료: {result['output']['ODNO']}")
+            주문 정정 완료: 0000123457
+            >>>
+            >>> # 예시 2: 미체결 주문 수량 정정 (10주 → 5주)
+            >>> result = agent.order_rvsecncl(
+            ...     org_order_no="0000123456",
+            ...     qty=5,            # 새로운 수량
+            ...     price=70000,      # 기존 가격 유지
+            ...     order_type="00",
+            ...     cncl_type="01"
+            ... )
+            >>>
+            >>> # 예시 3: 미체결 주문 전량 취소
+            >>> result = agent.order_rvsecncl(
+            ...     org_order_no="0000123456",
+            ...     qty=10,           # 취소할 수량 (미체결 수량 전부)
+            ...     price=70000,      # 기존 가격
+            ...     order_type="00",
+            ...     cncl_type="02"    # 취소
+            ... )
+            >>>
+            >>> # 예시 4: 미체결 주문 조회 후 일괄 취소
+            >>> pending = agent.inquire_daily_ccld(ccld_dvsn="02", pagination=False)
+            >>> for _, order in pending.iterrows():
+            ...     agent.order_rvsecncl(
+            ...         org_order_no=order['odno'],
+            ...         qty=int(order['ord_qty']) - int(order['tot_ccld_qty']),
+            ...         price=int(order['ord_unpr']),
+            ...         order_type=order['ord_dvsn'],
+            ...         cncl_type="02"
+            ...     )
+
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 캐싱 없음 (No caching for real-time order management)
+            - 체결 완료 주문은 정정/취소 불가 (Cannot modify/cancel fully executed orders)
+            - 부분체결 주문은 미체결 수량만 정정/취소 가능 (Only unfilled portion can be modified/canceled)
+            - 정정 = 기존 주문 취소 + 신규 주문 생성 (Modify = Cancel old + Create new)
+            - 시장가 주문은 빠른 체결로 인해 정정/취소 실패 가능성 높음
+            - 장 마감 임박 시 정정/취소 지연 가능 (May be delayed near market close)
 
         See Also:
-            AccountAPI.order_rvsecncl: 상세 구현
+            AccountAPI.order_rvsecncl: 상세 구현 참조
+            inquire_psbl_rvsecncl: 정정/취소 가능한 주문 조회
         """
         return self.account_api.order_rvsecncl(
             org_order_no, qty, price, order_type, cncl_type
@@ -2691,42 +3065,71 @@ class Agent(BaseExceptionHandler):
         sll_type: str = "",  # 매도유형
         cndt_pric: str = "",  # 조건가격
     ) -> Optional[Dict[str, Any]]:
-        """
-        국내주식주문(현금) API - StockAPI 기반
+        """국내주식 현금 주문 (Cash order for domestic stocks)
 
-        StockAPI의 order_cash 메서드를 사용하여 현금매수/매도 주문을 실행합니다.
+        현금으로 국내 주식을 매수/매도합니다. 지정가, 시장가, 조건부지정가 등 다양한 주문 유형을 지원합니다.
+        Places buy/sell orders for domestic stocks with cash. Supports various order types including limit, market, and conditional orders.
 
         Args:
-            ord_dv (str): 매수매도구분 (buy:매수, sell:매도)
-            pdno (str): 종목코드 (6자리)
-            ord_dvsn (str): 주문구분
-                - 00:지정가, 01:시장가, 02:조건부지정가, 03:최유리지정가
-                - 04:최우선지정가, 05:장전시간외, 06:장후시간외
-                - 07:시간외단일가, 08:자기주식, 09:자기주식S-Option
-                - 10:자기주식금전신탁, 11:IOC지정가, 12:FOK지정가
-                - 13:IOC시장가, 14:FOK시장가, 15:IOC최유리, 16:FOK최유리
-            ord_qty (str): 주문수량
-            ord_unpr (str): 주문단가 (시장가는 "0")
-            excg_id_dvsn_cd (str): 거래소ID구분코드 (KRX:한국거래소)
-            sll_type (str): 매도유형 (01:일반매도, 02:임의매매, 05:대차매도)
-            cndt_pric (str): 조건가격 (스탑지정가 주문 시 사용)
+            ord_dv: 매수매도구분 (Order type)
+                    "buy": 매수 (Buy), "sell": 매도 (Sell)
+            pdno: 종목코드 6자리 (Stock code, 6 digits)
+                  예: "005930" (삼성전자), "035720" (카카오)
+            ord_dvsn: 주문구분 (Order division)
+                      - "00": 지정가 (Limit order)
+                      - "01": 시장가 (Market order)
+                      - "02": 조건부지정가 (Conditional limit)
+                      - "03": 최유리지정가 (Best limit)
+                      - "05": 장전시간외 (Pre-market)
+                      - "06": 장후시간외 (After-hours)
+                      - "11": IOC지정가 (IOC limit)
+                      - "12": FOK지정가 (FOK limit)
+            ord_qty: 주문수량 (Order quantity)
+                     문자열 형식, 예: "1", "10"
+            ord_unpr: 주문단가 (Order price)
+                      시장가 주문 시 "0" (Use "0" for market orders)
+            excg_id_dvsn_cd: 거래소ID구분코드 (Exchange ID)
+                             기본값: "KRX" (한국거래소)
+            sll_type: 매도유형 (Sell type, optional)
+                      - "01": 일반매도 (Normal sell)
+                      - "02": 임의매매 (Discretionary)
+                      - "05": 대차매도 (Short sell)
+            cndt_pric: 조건가격 (Conditional price, optional)
+                       스탑주문 시 사용 (Used for stop orders)
 
         Returns:
-            Optional[Dict[str, Any]]: 주문 결과 데이터
-                - rt_cd: 응답코드 ("0": 성공)
-                - msg1: 응답메시지
-                - output: 주문 상세 정보
+            Optional[Dict[str, Any]]: 주문 결과 (Order result)
+                - rt_cd: 응답코드 (Response code, "0" = success)
+                - msg1: 응답메시지 (Response message)
+                - output.KRX_FWDG_ORD_ORGNO: 주문조직번호 (Order org number)
+                - output.ODNO: 주문번호 (Order number)
+                - output.ORD_TMD: 주문시각 (Order time)
+                - 실패 시 None 반환 (Returns None on failure)
 
-        Example:
-            >>> # 삼성전자 1주 70000원 지정가 매수
+        Raises:
+            ValueError: 잘못된 주문 파라미터 입력 시
+                       (If invalid order parameters provided)
+
+        Examples:
+            >>> agent = Agent(app_key="...", app_secret="...", account_no="...", account_code="...")
+            >>>
+            >>> # 예시 1: 삼성전자 1주 70,000원 지정가 매수
             >>> result = agent.order_stock_cash("buy", "005930", "00", "1", "70000")
-            >>> print(result['msg1'])
+            >>> if result and result['rt_cd'] == '0':
+            ...     print(f"주문번호: {result['output']['ODNO']}")
+            주문번호: 0000123456
+            >>>
+            >>> # 예시 2: 카카오 1주 시장가 매도
+            >>> result = agent.order_stock_cash("sell", "035720", "01", "1", "0")
+            >>>
+            >>> # 예시 3: 최유리지정가로 빠른 매수 (추천)
+            >>> result = agent.order_stock_cash("buy", "005930", "03", "1", "0")
 
-            >>> # 삼성전자 1주 시장가 매도
-            >>> result = agent.order_stock_cash("sell", "005930", "01", "1", "0")
-
-            >>> # 최유리지정가로 빠른 매수 (추천)
-            >>> result = agent.order_stock_cash("buy", "009470", "03", "1", "0")
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 캐싱 없음 (주문은 매번 새로 실행) (No caching for orders)
+            - 주문 가능 시간: 08:00 ~ 15:30 (정규장) (Regular market hours)
+            - 시간외 거래: 08:30 ~ 08:40, 15:40 ~ 16:00 (Extended hours)
         """
         return self.stock_api.order_cash(
             ord_dv=ord_dv,
@@ -2825,36 +3228,78 @@ class Agent(BaseExceptionHandler):
         cma_evlu_amt_icld_yn: str = "Y",  # CMA평가금액포함여부
         ovrs_icld_yn: str = "Y",  # 해외포함여부
     ) -> Optional[Dict[str, Any]]:
-        """
-        매수가능조회 - StockAPI 기반
+        """매수가능 수량 조회 (Get available buying power)
 
-        StockAPI의 inquire_psbl_order 메서드를 사용하여 특정 종목의 매수 가능 수량과 금액을 조회합니다.
+        특정 종목을 특정 가격으로 매수할 수 있는 최대 수량과 가용 현금을 조회합니다. 주문 전 필수 확인 절차입니다.
+        Retrieves maximum buyable quantity and available cash for a specific stock at a specific price. Essential pre-order verification.
 
         Args:
-            pdno (str): 종목코드 (6자리)
-            ord_unpr (str): 주문단가
-            ord_dvsn (str): 주문구분 (기본값: "00")
-                - 00:지정가, 01:시장가, 02:조건부지정가, 03:최유리지정가
-                - 04:최우선지정가, 05:장전시간외, 06:장후시간외
-                - 07:시간외단일가, 08:자기주식, 09:자기주식S-Option
-                - 10:자기주식금전신탁, 11:IOC지정가, 12:FOK지정가
-                - 13:IOC시장가, 14:FOK시장가, 15:IOC최유리, 16:FOK최유리
-            cma_evlu_amt_icld_yn (str): CMA평가금액포함여부 (Y:포함, N:미포함)
-            ovrs_icld_yn (str): 해외포함여부 (Y:포함, N:미포함)
+            pdno: 종목코드 6자리 (Stock code, 6 digits)
+                  예: "005930" (삼성전자), "035720" (카카오)
+            ord_unpr: 주문단가 (Order price per share)
+                      예: "70000" (70,000원)
+                      시장가 주문 시 "0" 입력 (Use "0" for market orders)
+            ord_dvsn: 주문구분 (Order type)
+                      - "00": 지정가 (Limit order, default)
+                      - "01": 시장가 (Market order)
+                      - "02": 조건부지정가 (Conditional limit)
+                      - "03": 최유리지정가 (Best limit, 빠른 체결)
+                      - "05": 장전시간외 (Pre-market)
+                      - "06": 장후시간외 (After-hours)
+                      - "11": IOC지정가 (Immediate-Or-Cancel limit)
+                      - "12": FOK지정가 (Fill-Or-Kill limit)
+                      기본값: "00" (Default: "00")
+            cma_evlu_amt_icld_yn: CMA평가금액 포함여부 (Include CMA evaluation)
+                                  - "Y": 포함 (Include, default)
+                                  - "N": 미포함 (Exclude)
+                                  기본값: "Y" (Default: "Y")
+            ovrs_icld_yn: 해외주식 포함여부 (Include overseas stocks)
+                          - "Y": 포함 (Include, default)
+                          - "N": 미포함 (Exclude)
+                          기본값: "Y" (Default: "Y")
 
         Returns:
-            Optional[Dict[str, Any]]: 매수가능 정보
-                - rt_cd: 응답코드 ("0": 성공)
-                - msg1: 응답메시지
+            Optional[Dict[str, Any]]: 매수가능 정보 (Available buying power info)
                 - output: 매수가능 상세 정보
-                    - ord_psbl_cash: 주문가능현금
-                    - max_buy_qty: 최대매수수량
-                    - ord_psbl_qty: 주문가능수량
+                    - ord_psbl_cash: 주문가능현금 (Available cash for orders)
+                    - max_buy_qty: 최대매수수량 (Maximum buyable quantity)
+                    - ord_psbl_qty: 주문가능수량 (Available order quantity)
+                    - max_buy_amt: 최대매수금액 (Maximum buyable amount)
+                - rt_cd: 응답코드 (Response code, "0" = success)
+                - msg1: 응답메시지 (Response message)
+                - 실패 시 None 반환 (Returns None on failure)
 
-        Example:
-            >>> # 삼성전자 70000원 지정가 매수가능 조회
+        Examples:
+            >>> agent = Agent(app_key="...", app_secret="...", account_no="...", account_code="...")
+            >>>
+            >>> # 예시 1: 삼성전자 70,000원 지정가 매수가능 수량 조회
+            >>> result = agent.inquire_order_psbl("005930", "70000", "00")
+            >>> if result and result['rt_cd'] == '0':
+            ...     max_qty = result['output']['max_buy_qty']
+            ...     cash = result['output']['ord_psbl_cash']
+            ...     print(f"매수가능: {max_qty}주 (가용현금: {cash:,}원)")
+            매수가능: 14주 (가용현금: 1,000,000원)
+            >>>
+            >>> # 예시 2: 시장가 매수가능 수량 조회
+            >>> result = agent.inquire_order_psbl("005930", "0", "01")
+            >>>
+            >>> # 예시 3: 매수 전 수량 검증
+            >>> desired_qty = 10
             >>> result = agent.inquire_order_psbl("005930", "70000")
-            >>> print(f"매수가능수량: {result['output']['max_buy_qty']}")
+            >>> if result and result['rt_cd'] == '0':
+            ...     max_qty = int(result['output']['max_buy_qty'])
+            ...     if desired_qty <= max_qty:
+            ...         # 주문 실행
+            ...         agent.order_stock_cash("buy", "005930", "00", str(desired_qty), "70000")
+            ...     else:
+            ...         print(f"잔고 부족: 최대 {max_qty}주 매수 가능")
+
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 캐싱 없음 (실시간 잔고 반영 필수, No caching for real-time balance)
+            - 수수료/세금 고려: 실제 매수가능 수량은 수수료 차감 후 계산됨 (Considers fees/taxes)
+            - 주문 전 필수 호출 권장 (Recommended to call before placing orders)
+            - 보유현금 부족 시 max_buy_qty=0 반환 (Returns 0 if insufficient funds)
         """
         return self.stock_api.inquire_psbl_order(
             pdno=pdno,
@@ -2949,15 +3394,82 @@ class Agent(BaseExceptionHandler):
         return self.account_api.inquire_period_rights(start_date, end_date)
 
     def inquire_psbl_rvsecncl(self) -> Optional[Dict[str, Any]]:
-        """주식정정취소가능주문조회
+        """정정/취소 가능 주문 조회 (Get modifiable/cancelable orders)
 
-        현재 정정하거나 취소할 수 있는 미체결 주문을 조회합니다.
+        현재 미체결 상태이거나 부분체결된 주문 중 정정 또는 취소가 가능한 주문 목록을 조회합니다.
+        Retrieves list of pending or partially filled orders that can be modified or canceled.
 
         Returns:
-            Optional[Dict[str, Any]]: 정정취소가능 주문 목록
+            Optional[Dict[str, Any]]: 정정/취소 가능 주문 목록 (List of modifiable/cancelable orders)
+                - output1: 주문 목록 리스트 (Order list)
+                    - ord_dt: 주문일자 (Order date, YYYYMMDD)
+                    - ord_gno_brno: 주문채번지점번호 (Branch number)
+                    - odno: 주문번호 (Order number)
+                    - orgn_odno: 원주문번호 (Original order number)
+                    - sll_buy_dvsn_cd: 매도매수구분 ("01"=매도, "02"=매수)
+                    - pdno: 종목코드 (Stock code)
+                    - prdt_name: 종목명 (Stock name)
+                    - ord_qty: 주문수량 (Order quantity)
+                    - ord_unpr: 주문단가 (Order price)
+                    - ord_tmd: 주문시각 (Order time)
+                    - tot_ccld_qty: 총체결수량 (Total executed quantity)
+                    - rmn_qty: 잔여수량 (Remaining quantity = 주문수량 - 체결수량)
+                    - ord_dvsn_name: 주문구분명 (Order type name)
+                - output2: 요약 정보 (Summary)
+                - 실패 시 None 반환 (Returns None on failure)
+
+        Examples:
+            >>> agent = Agent(app_key="...", app_secret="...", account_no="...", account_code="...")
+            >>>
+            >>> # 예시 1: 정정/취소 가능 주문 조회
+            >>> result = agent.inquire_psbl_rvsecncl()
+            >>> if result and result['rt_cd'] == '0':
+            ...     for order in result['output1']:
+            ...         print(f"{order['prdt_name']}: {order['rmn_qty']}주 미체결")
+            ...         print(f"  주문번호: {order['odno']}")
+            ...         print(f"  주문가격: {order['ord_unpr']}원")
+            삼성전자: 5주 미체결
+              주문번호: 0000123456
+              주문가격: 70000원
+            >>>
+            >>> # 예시 2: 미체결 주문 일괄 취소
+            >>> result = agent.inquire_psbl_rvsecncl()
+            >>> if result and result['rt_cd'] == '0':
+            ...     for order in result['output1']:
+            ...         agent.order_rvsecncl(
+            ...             org_order_no=order['odno'],
+            ...             qty=int(order['rmn_qty']),
+            ...             price=int(order['ord_unpr']),
+            ...             order_type=order['ord_dvsn_cd'],
+            ...             cncl_type="02"  # 취소
+            ...         )
+            ...         print(f"{order['prdt_name']} 주문 취소 완료")
+            >>>
+            >>> # 예시 3: 특정 종목만 필터링하여 취소
+            >>> result = agent.inquire_psbl_rvsecncl()
+            >>> if result and result['rt_cd'] == '0':
+            ...     samsung_orders = [o for o in result['output1'] if o['pdno'] == '005930']
+            ...     for order in samsung_orders:
+            ...         agent.order_rvsecncl(
+            ...             org_order_no=order['odno'],
+            ...             qty=int(order['rmn_qty']),
+            ...             price=int(order['ord_unpr']),
+            ...             order_type=order['ord_dvsn_cd'],
+            ...             cncl_type="02"
+            ...         )
+
+        Note:
+            - Rate Limiting: 18 RPS / 900 RPM
+            - 캐싱 없음 (실시간 미체결 상태 확인, No caching for real-time pending status)
+            - 당일 주문만 조회 (Only today's orders)
+            - 전량 체결된 주문은 조회되지 않음 (Fully executed orders not included)
+            - 장 마감 후 미체결 주문은 자동 취소됨 (Pending orders auto-canceled after market close)
+            - order_rvsecncl() 실행 전 필수 확인 권장 (Recommended to check before calling order_rvsecncl())
 
         See Also:
-            AccountAPI.inquire_psbl_rvsecncl: 상세 구현
+            AccountAPI.inquire_psbl_rvsecncl: 상세 구현 참조
+            order_rvsecncl: 주문 정정/취소 실행
+            inquire_daily_ccld: 전체 주문 내역 조회 (체결 포함)
         """
         return self.account_api.inquire_psbl_rvsecncl()
 
@@ -2996,7 +3508,7 @@ class Agent(BaseExceptionHandler):
         requests_per_second: Optional[int] = None,
         requests_per_minute: Optional[int] = None,
         min_interval_ms: Optional[int] = None,
-    ):
+    ) -> None:
         """
         Rate Limiter 제한 값 동적 변경
 
@@ -3026,7 +3538,7 @@ class Agent(BaseExceptionHandler):
         else:
             logging.warning("Rate Limiter가 비활성화 상태입니다")
 
-    def reset_rate_limiter(self):
+    def reset_rate_limiter(self) -> None:
         """
         Rate Limiter 상태 초기화
 
@@ -3043,7 +3555,7 @@ class Agent(BaseExceptionHandler):
         else:
             logging.warning("Rate Limiter가 비활성화 상태입니다")
 
-    def enable_adaptive_rate_limiting(self, enable: bool = True):
+    def enable_adaptive_rate_limiting(self, enable: bool = True) -> None:
         """
         적응형 속도 조절 활성화/비활성화
 
