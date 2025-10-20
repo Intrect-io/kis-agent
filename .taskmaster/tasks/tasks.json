@@ -207,12 +207,26 @@
         "status": "done",
         "subtasks": [],
         "updatedAt": "2025-10-20T06:39:17.327Z"
+      },
+      {
+        "id": "11",
+        "title": "PyKIS 만료된 토큰 재생성 버그 분석 및 수정",
+        "description": "토큰 만료 시 자동 재생성 실패 문제를 분석하고 race condition을 포함한 토큰 관리 버그를 수정합니다.",
+        "details": "현재 `pykis/core/client.py`의 토큰 관리 시스템에서 발견된 문제점들을 종합적으로 분석하고 수정: 1) `_initialize_token()` 메서드에 thread-safe 락 구현 - 현재 `rate_limit_lock`은 있지만 토큰 재생성용 락이 없어 race condition 발생 가능, 2) `_check_and_refresh_token()`과 `make_request()` 내 토큰 재생성 로직 간 경쟁 상태 해결 - 두 곳에서 동시에 `_initialize_token()` 호출 시 중복 재생성 발생, 3) 토큰 만료 체크 로직 개선 - `token_expired` 파싱 실패 시 fallback 메커니즘 추가, 4) 에러 코드 EGW00123, EGW00124 외 추가 토큰 만료 시나리오 감지 강화, 5) `refresh_token()` 메서드에서 `token_expired` 업데이트 누락 수정, 6) 재시도 로직에서 토큰 갱신 후 헤더 업데이트 검증 추가, 7) `AuthenticationException` 활용한 토큰 관련 예외 처리 표준화. threading.Lock을 사용한 토큰 재생성 동기화, 토큰 상태 검증 로직 강화, 실패 시나리오별 세분화된 재시도 전략 구현.",
+        "testStrategy": "1) 멀티스레드 환경에서 동시 토큰 재생성 시도 테스트 - ThreadPoolExecutor로 동시 API 호출하여 race condition 검증, 2) 토큰 만료 시간 파싱 실패 시나리오 테스트 - 잘못된 형식의 token_expired 값으로 테스트, 3) 다양한 토큰 만료 에러 코드 시나리오 테스트 - EGW00123, EGW00124 외 추가 에러 코드 검증, 4) 네트워크 오류 중 토큰 재생성 실패 시나리오 테스트, 5) refresh_token() 호출 후 token_expired 업데이트 검증, 6) API 요청 중 토큰 만료 감지 시 자동 재생성 및 재시도 동작 검증, 7) 로그 분석을 통한 토큰 관리 이벤트 추적 테스트. 기존 test_refresh_token, test_client.py의 토큰 관련 테스트 확장.",
+        "status": "in-progress",
+        "dependencies": [
+          "9"
+        ],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2025-10-20T06:57:49.181Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-10-20T06:39:17.328Z",
-      "taskCount": 10,
+      "lastModified": "2025-10-20T06:57:49.181Z",
+      "taskCount": 11,
       "completedCount": 10,
       "tags": [
         "master"

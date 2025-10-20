@@ -201,6 +201,7 @@ class KISClient:
         self.last_request_time = 0.0
         self.min_interval = 0.05  # 50ms
         self.rate_limit_lock = threading.Lock()  # 인스턴스별 rate limit lock
+        self.token_refresh_lock = threading.Lock()  # 토큰 재생성 동기화용 락
 
         # Rate Limiter 설정
         self.enable_rate_limiter = enable_rate_limiter
@@ -219,27 +220,47 @@ class KISClient:
         self._initialize_token()
 
     def _initialize_token(self) -> None:
-        """초기 토큰 발급 또는 기존 토큰 재사용"""
-        try:
-            if self.config is None:
-                # config가 없으면 환경 변수로 토큰 발급
-                token_data = auth(svr=self.svr)
-                if token_data:
-                    self.token = token_data.get("access_token")
-                    self.token_expired = token_data.get("access_token_token_expired")
-                self.base_url = os.getenv(
-                    "KIS_BASE_URL", "https://openapi.koreainvestment.com:9443"
-                )
-            else:
-                # config가 있으면 config로 토큰 발급
-                token_data = auth(config=self.config, svr=self.svr)
-                if token_data:
-                    self.token = token_data.get("access_token")
-                    self.token_expired = token_data.get("access_token_token_expired")
-                self.base_url = self.config.BASE_URL
-        except Exception as e:
-            logger.error(f"인증 실패: {e}", exc_info=True)
-            raise
+        """초기 토큰 발급 또는 기존 토큰 재사용 (Thread-Safe)"""
+        with self.token_refresh_lock:
+            try:
+                # 토큰이 이미 유효한 경우 재발급하지 않음 (중복 방지)
+                if self.token and self.token_expired:
+                    try:
+                        exp_dt = (
+                            datetime.strptime(self.token_expired, "%Y-%m-%d %H:%M:%S")
+                            if isinstance(self.token_expired, str)
+                            else self.token_expired
+                        )
+                        now_dt = datetime.now()
+                        # 5분 이상 남았으면 재발급하지 않음
+                        if exp_dt > now_dt + timedelta(minutes=5):
+                            logger.debug("토큰이 아직 유효합니다. 재발급하지 않습니다.")
+                            return
+                    except Exception as e:
+                        logger.warning(f"토큰 만료 시간 파싱 실패, 재발급 진행: {e}")
+
+                logger.info("토큰 발급을 시작합니다...")
+                if self.config is None:
+                    # config가 없으면 환경 변수로 토큰 발급
+                    token_data = auth(svr=self.svr)
+                    if token_data:
+                        self.token = token_data.get("access_token")
+                        self.token_expired = token_data.get("access_token_token_expired")
+                        logger.info(f"토큰 발급 완료 (만료: {self.token_expired})")
+                    self.base_url = os.getenv(
+                        "KIS_BASE_URL", "https://openapi.koreainvestment.com:9443"
+                    )
+                else:
+                    # config가 있으면 config로 토큰 발급
+                    token_data = auth(config=self.config, svr=self.svr)
+                    if token_data:
+                        self.token = token_data.get("access_token")
+                        self.token_expired = token_data.get("access_token_token_expired")
+                        logger.info(f"토큰 발급 완료 (만료: {self.token_expired})")
+                    self.base_url = self.config.BASE_URL
+            except Exception as e:
+                logger.error(f"인증 실패: {e}", exc_info=True)
+                raise
 
     def _check_and_refresh_token(self) -> None:
         """토큰 만료 체크 및 자동 갱신"""
@@ -535,31 +556,38 @@ class KISClient:
 
     def refresh_token(self) -> None:
         """
-        API 토큰을 갱신합니다.
+        API 토큰을 갱신합니다. (Thread-Safe)
 
         Raises:
             Exception: 토큰 갱신 실패 시 발생
         """
-        try:
-            response = requests.post(
-                f"{self.base_url}/oauth2/tokenP",
-                json={
-                    "grant_type": "client_credentials",
-                    "appkey": self.config.APP_KEY,
-                    "appsecret": self.config.APP_SECRET,
-                },
-                headers={"content-type": "application/json"},
-            )
-            if response.status_code == 200:
-                data = response.json()
-                self.token = data.get("access_token")
-                if not self.token:
-                    raise Exception("토큰 갱신 실패: access_token이 없습니다.")
-            else:
-                raise Exception(f"토큰 갱신 실패: HTTP {response.status_code}")
-        except Exception as e:
-            logger.error(f"토큰 갱신 실패: {e}")
-            raise
+        with self.token_refresh_lock:
+            try:
+                logger.info("토큰 갱신을 시작합니다...")
+                response = requests.post(
+                    f"{self.base_url}/oauth2/tokenP",
+                    json={
+                        "grant_type": "client_credentials",
+                        "appkey": self.config.APP_KEY,
+                        "appsecret": self.config.APP_SECRET,
+                    },
+                    headers={"content-type": "application/json"},
+                    timeout=10,
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    self.token = data.get("access_token")
+                    self.token_expired = data.get("access_token_token_expired")
+
+                    if not self.token:
+                        raise Exception("토큰 갱신 실패: access_token이 없습니다.")
+
+                    logger.info(f"토큰 갱신 완료 (만료: {self.token_expired})")
+                else:
+                    raise Exception(f"토큰 갱신 실패: HTTP {response.status_code}")
+            except Exception as e:
+                logger.error(f"토큰 갱신 실패: {e}")
+                raise
 
     def get_kospi200_index(
         self, futures_month: str = "202409"
