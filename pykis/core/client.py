@@ -13,9 +13,7 @@ from .config import KISConfig
 from .rate_limiter import RateLimiter
 
 # 로깅 설정
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 API_ENDPOINTS = {
@@ -143,6 +141,9 @@ API_ENDPOINTS = {
     "BOND_INQUIRE_BALANCE": "/uapi/domestic-bond/v1/trading/inquire-balance",  # 장내채권 잔고조회 (TR: CTSC8407R)
     # === 조건검색 ===
     "CONDITIONED_STOCK": "/uapi/domestic-stock/v1/quotations/psearch-result",
+    # === 관심종목 ===
+    "INTEREST_GROUP_LIST": "/uapi/domestic-stock/v1/quotations/intstock-grouplist",  # 관심종목 그룹 조회
+    "INTEREST_STOCK_LIST": "/uapi/domestic-stock/v1/quotations/intstock-stocklist-by-group",  # 관심종목 그룹별 종목 조회
 }
 
 
@@ -226,11 +227,7 @@ class KISClient:
                 # 토큰이 이미 유효한 경우 재발급하지 않음 (중복 방지)
                 if self.token and self.token_expired:
                     try:
-                        exp_dt = (
-                            datetime.strptime(self.token_expired, "%Y-%m-%d %H:%M:%S")
-                            if isinstance(self.token_expired, str)
-                            else self.token_expired
-                        )
+                        exp_dt = datetime.strptime(self.token_expired, "%Y-%m-%d %H:%M:%S") if isinstance(self.token_expired, str) else self.token_expired
                         now_dt = datetime.now()
                         # 5분 이상 남았으면 재발급하지 않음
                         if exp_dt > now_dt + timedelta(minutes=5):
@@ -247,9 +244,7 @@ class KISClient:
                         self.token = token_data.get("access_token")
                         self.token_expired = token_data.get("access_token_token_expired")
                         logger.info(f"토큰 발급 완료 (만료: {self.token_expired})")
-                    self.base_url = os.getenv(
-                        "KIS_BASE_URL", "https://openapi.koreainvestment.com:9443"
-                    )
+                    self.base_url = os.getenv("KIS_BASE_URL", "https://openapi.koreainvestment.com:9443")
                 else:
                     # config가 있으면 config로 토큰 발급
                     token_data = auth(config=self.config, svr=self.svr)
@@ -267,11 +262,7 @@ class KISClient:
         if self.token_expired:
             try:
                 # 토큰 만료 시간 파싱
-                exp_dt = (
-                    datetime.strptime(self.token_expired, "%Y-%m-%d %H:%M:%S")
-                    if isinstance(self.token_expired, str)
-                    else self.token_expired
-                )
+                exp_dt = datetime.strptime(self.token_expired, "%Y-%m-%d %H:%M:%S") if isinstance(self.token_expired, str) else self.token_expired
 
                 # 현재 시간
                 now_dt = datetime.now()
@@ -393,12 +384,8 @@ class KISClient:
                 try:
                     data = response.json()
                 except json.JSONDecodeError:
-                    logger.error(
-                        f"[{tr_id}] JSON 디코드 실패 (시도 {attempt+1}/{retries})"
-                    )
-                    logger.error(
-                        f"[{tr_id}] 원시 응답 텍스트: {response.text[:500]}..."
-                    )
+                    logger.error(f"[{tr_id}] JSON 디코드 실패 (시도 {attempt+1}/{retries})")
+                    logger.error(f"[{tr_id}] 원시 응답 텍스트: {response.text[:500]}...")
                     logger.error(f"[{tr_id}] 응답 상태 코드: {response.status_code}")
                     logger.error(f"[{tr_id}] 응답 헤더: {dict(response.headers)}")
                     return {
@@ -431,20 +418,13 @@ class KISClient:
                     if response.status_code == 200 and rt_cd != "0":
                         api_msg = data.get("msg1", "")
                         api_code = data.get("rt_cd")
-                        logger.warning(
-                            f"[{tr_id}] API 오류 응답 (시도 {attempt+1}/{retries}): {api_msg} (code: {api_code})"
-                        )
+                        logger.warning(f"[{tr_id}] API 오류 응답 (시도 {attempt+1}/{retries}): {api_msg} (code: {api_code})")
 
                         # 유량 제한 에러 체크
                         # 토큰 만료 에러 체크
                         is_token_expired = (
-                            isinstance(api_code, str)
-                            and api_code
-                            in ["EGW00123", "EGW00124"]  # 토큰 만료 에러 코드
-                        ) or (
-                            isinstance(api_msg, str)
-                            and ("토큰" in api_msg and "만료" in api_msg)
-                        )
+                            isinstance(api_code, str) and api_code in ["EGW00123", "EGW00124"]  # 토큰 만료 에러 코드
+                        ) or (isinstance(api_msg, str) and ("토큰" in api_msg and "만료" in api_msg))
 
                         if is_token_expired:
                             logger.warning(f"[{tr_id}] 토큰 만료 감지. 재발급 시도...")
@@ -457,15 +437,9 @@ class KISClient:
 
                         is_rate_limit_error = (
                             isinstance(api_code, str)
-                            and (
-                                api_code == "1"
-                                or api_code in ["EGW00201", "EGW00202", "EGW00203"]
-                            )
+                            and (api_code == "1" or api_code in ["EGW00201", "EGW00202", "EGW00203"])
                             and isinstance(api_msg, str)
-                            and (
-                                "초당 거래건수를 초과" in api_msg
-                                or "유량 제한" in api_msg
-                            )
+                            and ("초당 거래건수를 초과" in api_msg or "유량 제한" in api_msg)
                         )
 
                         if is_rate_limit_error:
@@ -474,16 +448,10 @@ class KISClient:
                                 self.rate_limiter.report_error(api_code)
 
                             if attempt < retries - 1:
-                                logger.warning(
-                                    f"[{tr_id}] API 유량 제한 감지 (code: {api_code}). 0.5초 대기 후 재시도... ({attempt+1}/{retries})"
-                                )
-                                time.sleep(
-                                    0.5
-                                )  # [변경 이유] 테스트 속도 향상을 위해 대기 시간을 1초 → 0.5초로 단축
+                                logger.warning(f"[{tr_id}] API 유량 제한 감지 (code: {api_code}). 0.5초 대기 후 재시도... ({attempt+1}/{retries})")
+                                time.sleep(0.5)  # [변경 이유] 테스트 속도 향상을 위해 대기 시간을 1초 → 0.5초로 단축
                             else:
-                                logger.error(
-                                    f"[{tr_id}] API 유량 제한 최종 실패 (재시도 소진)."
-                                )
+                                logger.error(f"[{tr_id}] API 유량 제한 최종 실패 (재시도 소진).")
                                 return data
                         else:
                             return {
@@ -494,31 +462,17 @@ class KISClient:
                                 "error_type": "ApiError",
                             }
                     elif response.status_code != 200:
-                        http_error_msg = (
-                            data.get("msg1", response.text)
-                            if data and isinstance(data, dict)
-                            else response.text
-                        )
-                        http_error_code_from_json = (
-                            data.get("rt_cd")
-                            if data and isinstance(data, dict)
-                            else None
-                        )
+                        http_error_msg = data.get("msg1", response.text) if data and isinstance(data, dict) else response.text
+                        http_error_code_from_json = data.get("rt_cd") if data and isinstance(data, dict) else None
                         log_entry = f"[{tr_id}] HTTP 오류 응답 (시도 {attempt+1}/{retries}): Status {response.status_code}, Message: {http_error_msg}"
                         if http_error_code_from_json:
-                            log_entry += (
-                                f" (API Code in JSON: {http_error_code_from_json})"
-                            )
+                            log_entry += f" (API Code in JSON: {http_error_code_from_json})"
                         logger.warning(log_entry)
                         if attempt < retries - 1:
-                            time.sleep(
-                                0.2
-                            )  # [변경 이유] 테스트 속도 향상을 위해 HTTP 오류 시 대기 시간을 단축
+                            time.sleep(0.2)  # [변경 이유] 테스트 속도 향상을 위해 HTTP 오류 시 대기 시간을 단축
                             continue
                         else:
-                            logger.error(
-                                f"[{tr_id}] HTTP 오류 최종 실패 (재시도 소진)."
-                            )
+                            logger.error(f"[{tr_id}] HTTP 오류 최종 실패 (재시도 소진).")
                             return (
                                 data
                                 if data
@@ -529,27 +483,19 @@ class KISClient:
                                 }
                             )
                     else:
-                        logger.error(
-                            f"[{tr_id}] 로직 오류: 예상치 못한 HTTP/API 상태 (시도 {attempt+1}/{retries}). 응답: {data}. HTTP Status: {response.status_code if response else 'N/A'}"
-                        )
+                        logger.error(f"[{tr_id}] 로직 오류: 예상치 못한 HTTP/API 상태 (시도 {attempt+1}/{retries}). 응답: {data}. HTTP Status: {response.status_code if response else 'N/A'}")
                         return data
             except requests.exceptions.RequestException as e:
                 logger.error(f"[{tr_id}] 요청 실패 (시도 {attempt+1}/{retries}): {e}")
                 last_exception = e
                 if attempt < retries - 1:
-                    time.sleep(
-                        0.2
-                    )  # [변경 이유] 테스트 속도 향상을 위해 요청 실패 시 대기 시간을 단축
+                    time.sleep(0.2)  # [변경 이유] 테스트 속도 향상을 위해 요청 실패 시 대기 시간을 단축
                     continue
                 else:
-                    logger.error(
-                        f"[{tr_id}] 요청 최종 실패 (재시도 소진): {last_exception}"
-                    )
+                    logger.error(f"[{tr_id}] 요청 최종 실패 (재시도 소진): {last_exception}")
                     raise last_exception
 
-        logger.error(
-            f"[{tr_id}] 최종 실패 후 루프 외부 도달: {last_exception if last_exception else '알 수 없는 오류'}"
-        )
+        logger.error(f"[{tr_id}] 최종 실패 후 루프 외부 도달: {last_exception if last_exception else '알 수 없는 오류'}")
         if last_exception:
             raise last_exception
         raise Exception("Unknown error after retries")
@@ -589,9 +535,7 @@ class KISClient:
                 logger.error(f"토큰 갱신 실패: {e}")
                 raise
 
-    def get_kospi200_index(
-        self, futures_month: str = "202409"
-    ) -> Optional[Dict[str, Any]]:
+    def get_kospi200_index(self, futures_month: str = "202409") -> Optional[Dict[str, Any]]:
         """
         KOSPI200 지수 조회
 
@@ -620,9 +564,7 @@ class KISClient:
         payload = {
             "grant_type": "client_credentials",
             "appkey": self.config.app_key if self.config else os.getenv("KIS_APP_KEY"),
-            "secretkey": (
-                self.config.app_secret if self.config else os.getenv("KIS_APP_SECRET")
-            ),
+            "secretkey": (self.config.app_secret if self.config else os.getenv("KIS_APP_SECRET")),
         }
 
         headers = {"content-type": "application/json"}
@@ -637,9 +579,7 @@ class KISClient:
                 logger.info(f"웹소켓 승인키 발급 완료: {approval_key[:10]}...")
                 return approval_key
             else:
-                logger.error(
-                    f"웹소켓 승인키 요청 실패: {response.status_code} - {response.text}"
-                )
+                logger.error(f"웹소켓 승인키 요청 실패: {response.status_code} - {response.text}")
                 return None
         except Exception as e:
             logger.error(f"웹소켓 승인키 요청 중 오류 발생: {e}")

@@ -1,8 +1,10 @@
 """Utility and helper MCP tools"""
+
 import inspect
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
+
+from ..errors import InvalidParameterError, validate_api_response
 from ..server import get_agent, server
-from ..errors import validate_api_response, InvalidParameterError
 
 
 @server.tool()
@@ -83,15 +85,82 @@ async def get_condition_stocks(
     agent = get_agent()
 
     # Check if method exists
-    if not hasattr(agent, 'get_condition_stocks'):
+    if not hasattr(agent, "get_condition_stocks"):
         return {
             "success": False,
             "message": "조건검색식 기능은 아직 구현되지 않았습니다",
-            "error_code": "NOT_IMPLEMENTED"
+            "error_code": "NOT_IMPLEMENTED",
         }
 
     result = agent.get_condition_stocks(user_id, seq, div_code)
     return validate_api_response(result, "조건검색식 종목 조회")
+
+
+@server.tool()
+async def get_interest_group_list(
+    user_id: str, type_code: str = "1", fid_etc_cls_code: str = "00"
+) -> Dict[str, Any]:
+    """관심종목 그룹 목록 조회
+
+    Args:
+        user_id: 사용자 ID
+        type_code: 타입 코드 (기본값: "1")
+        fid_etc_cls_code: 기타 구분 코드 (기본값: "00")
+
+    Returns:
+        Dict: 관심종목 그룹 목록
+            - output: 그룹 정보 리스트
+    """
+    agent = get_agent()
+    result = agent.get_interest_group_list(user_id, type_code, fid_etc_cls_code)
+    return validate_api_response(result, "관심종목 그룹 목록 조회")
+
+
+@server.tool()
+async def get_interest_stock_list(
+    user_id: str,
+    inter_grp_code: str,
+    type_code: str = "1",
+    data_rank: str = "",
+    inter_grp_name: str = "",
+    hts_kor_isnm: str = "",
+    cntg_cls_code: str = "",
+    fid_etc_cls_code: str = "4",
+) -> Dict[str, Any]:
+    """관심종목 그룹별 종목 조회
+
+    Args:
+        user_id: 사용자 ID
+        inter_grp_code: 관심종목 그룹 코드 (예: "001")
+        type_code: 타입 코드 (기본값: "1")
+        data_rank: 데이터 순위 (기본값: "")
+        inter_grp_name: 관심종목 그룹명 (기본값: "")
+        hts_kor_isnm: HTS 한글 종목명 (기본값: "")
+        cntg_cls_code: 체결 구분 코드 (기본값: "")
+        fid_etc_cls_code: 기타 구분 코드 (기본값: "4")
+
+    Returns:
+        Dict: 관심종목 그룹별 종목 목록
+            - output1: 그룹 정보
+            - output2: 종목 목록 리스트
+                - fid_mrkt_cls_code: 시장 구분 코드
+                - jong_code: 종목 코드
+                - hts_kor_isnm: 종목명
+                - exch_code: 거래소 코드
+                등
+    """
+    agent = get_agent()
+    result = agent.get_interest_stock_list(
+        user_id=user_id,
+        inter_grp_code=inter_grp_code,
+        type_code=type_code,
+        data_rank=data_rank,
+        inter_grp_name=inter_grp_name,
+        hts_kor_isnm=hts_kor_isnm,
+        cntg_cls_code=cntg_cls_code,
+        fid_etc_cls_code=fid_etc_cls_code,
+    )
+    return validate_api_response(result, "관심종목 그룹별 종목 조회")
 
 
 @server.tool()
@@ -109,7 +178,7 @@ async def search_methods(query: str) -> Dict[str, Any]:
 
     # Get all public methods
     for name in dir(agent):
-        if name.startswith('_'):
+        if name.startswith("_"):
             continue
 
         attr = getattr(agent, name)
@@ -121,18 +190,15 @@ async def search_methods(query: str) -> Dict[str, Any]:
             doc = inspect.getdoc(attr) or "설명 없음"
             sig = str(inspect.signature(attr))
 
-            methods.append({
-                "name": name,
-                "signature": f"{name}{sig}",
-                "description": doc.split('\n')[0]  # First line only
-            })
+            methods.append(
+                {
+                    "name": name,
+                    "signature": f"{name}{sig}",
+                    "description": doc.split("\n")[0],  # First line only
+                }
+            )
 
-    return {
-        "success": True,
-        "query": query,
-        "count": len(methods),
-        "methods": methods
-    }
+    return {"success": True, "query": query, "count": len(methods), "methods": methods}
 
 
 @server.tool()
@@ -150,12 +216,12 @@ async def get_all_methods() -> Dict[str, Any]:
         "account": [],
         "investor": [],
         "utility": [],
-        "other": []
+        "other": [],
     }
 
     # Get all public methods
     for name in dir(agent):
-        if name.startswith('_'):
+        if name.startswith("_"):
             continue
 
         attr = getattr(agent, name)
@@ -168,21 +234,24 @@ async def get_all_methods() -> Dict[str, Any]:
         method_info = {
             "name": name,
             "signature": f"{name}{sig}",
-            "description": doc.split('\n')[0]
+            "description": doc.split("\n")[0],
         }
 
         methods.append(method_info)
 
         # Categorize
-        if any(k in name.lower() for k in ['stock', 'price', 'orderbook', 'daily', 'minute']):
+        if any(
+            k in name.lower()
+            for k in ["stock", "price", "orderbook", "daily", "minute"]
+        ):
             categories["stock"].append(name)
-        elif any(k in name.lower() for k in ['order', 'buy', 'sell']):
+        elif any(k in name.lower() for k in ["order", "buy", "sell"]):
             categories["order"].append(name)
-        elif any(k in name.lower() for k in ['balance', 'account', 'psbl']):
+        elif any(k in name.lower() for k in ["balance", "account", "psbl"]):
             categories["account"].append(name)
-        elif any(k in name.lower() for k in ['investor', 'member', 'program']):
+        elif any(k in name.lower() for k in ["investor", "member", "program"]):
             categories["investor"].append(name)
-        elif any(k in name.lower() for k in ['holiday', 'credit', 'condition']):
+        elif any(k in name.lower() for k in ["holiday", "credit", "condition"]):
             categories["utility"].append(name)
         else:
             categories["other"].append(name)
@@ -191,7 +260,7 @@ async def get_all_methods() -> Dict[str, Any]:
         "success": True,
         "total_count": len(methods),
         "methods": methods,
-        "categories": categories
+        "categories": categories,
     }
 
 
@@ -211,7 +280,7 @@ async def show_method_usage(method_name: str) -> Dict[str, Any]:
         return {
             "success": False,
             "message": f"메서드 '{method_name}'을 찾을 수 없습니다",
-            "error_code": "METHOD_NOT_FOUND"
+            "error_code": "METHOD_NOT_FOUND",
         }
 
     method = getattr(agent, method_name)
@@ -220,7 +289,7 @@ async def show_method_usage(method_name: str) -> Dict[str, Any]:
         return {
             "success": False,
             "message": f"'{method_name}'은 메서드가 아닙니다",
-            "error_code": "NOT_CALLABLE"
+            "error_code": "NOT_CALLABLE",
         }
 
     # Get method details
@@ -230,14 +299,18 @@ async def show_method_usage(method_name: str) -> Dict[str, Any]:
     # Parse parameters
     params = []
     for param_name, param in sig.parameters.items():
-        if param_name == 'self':
+        if param_name == "self":
             continue
 
         param_info = {
             "name": param_name,
-            "type": str(param.annotation) if param.annotation != inspect.Parameter.empty else "Any",
-            "default": str(param.default) if param.default != inspect.Parameter.empty else None,
-            "required": param.default == inspect.Parameter.empty
+            "type": str(param.annotation)
+            if param.annotation != inspect.Parameter.empty
+            else "Any",
+            "default": str(param.default)
+            if param.default != inspect.Parameter.empty
+            else None,
+            "required": param.default == inspect.Parameter.empty,
         }
         params.append(param_info)
 
@@ -247,5 +320,7 @@ async def show_method_usage(method_name: str) -> Dict[str, Any]:
         "signature": f"{method_name}{sig}",
         "parameters": params,
         "documentation": doc,
-        "return_type": str(sig.return_annotation) if sig.return_annotation != inspect.Signature.empty else "Any"
+        "return_type": str(sig.return_annotation)
+        if sig.return_annotation != inspect.Signature.empty
+        else "Any",
     }

@@ -1,27 +1,10 @@
 """
 agent_stock.py - 종목 단위 시세 조회 및 주문 전용 모듈
 
-이 모듈은 한국투자증권 OpenAPI를 통해 다음 기능을 제공합니다:
-- 종목 현재가 조회
-- 일별 시세 및 분봉 데이터 조회
-- 호가 및 잔량 정보 조회
-- 현금 주문 가능 여부 확인
-- 지정가/시장가 주문 실행
-- 시간외 단일가 정보 조회
-
- 의존:
-- kis_core.KISClient: API 호출 실행기
-
- 연관 모듈:
-- program_trade_api.py: 프로그램 매매 정보 필터링
-- account_api.py: 잔고 및 주문 가능 금액 확인
-- (전략 관련 모듈은 deprecated되어 제거됨)
-
- 사용 예시:
-client = KISClient()
-account = {"CANO": "12345678", "ACNT_PRDT_CD": "01"}
-stock = StockAPI(client, account)
-price = stock.get_stock_price("005930")
+DEPRECATION NOTICE:
+- 이 파일의 `StockAPI` 구현은 레거시입니다. 신규 코드에서는 `pykis.stock.StockAPI`(Facade)를 사용하세요.
+- Facade가 `StockPriceAPI`/`StockMarketAPI`/`StockInvestorAPI`로 위임하며, 누락 메서드는 `__getattr__`로 자동 위임됩니다.
+- 이 모듈은 하위 호환성 유지를 위해 유지되지만, 더 이상 기능 추가/수정은 권장하지 않습니다.
 """
 
 # [변경 이유] pandas 로딩 시간 단축을 위해 필요한 메서드에서만 지역 import 사용
@@ -136,6 +119,14 @@ class StockAPI(BaseAPI):
         enable_cache=True,
         cache_config=None,
     ):
+        # [DEPRECATION] 레거시 StockAPI 경고: Facade 사용 권장
+        import warnings
+
+        warnings.warn(
+            "pykis.stock.api.StockAPI 는 deprecated 입니다. pykis.stock.StockAPI(Facade)를 사용하세요.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         super().__init__(client, account_info, enable_cache, cache_config)
 
     def _make_request_dataframe(
@@ -155,6 +146,30 @@ class StockAPI(BaseAPI):
                 else pd.DataFrame(output)
             )
         return None
+
+    def __getattr__(self, name: str):
+        """[DEPRECATION] 레거시 메서드 접근 시 Facade로 포워딩하며 경고 표시"""
+        import warnings
+        try:
+            from .api_facade import StockAPI as FacadeStockAPI
+        except Exception:
+            # Facade를 불러오지 못하면 표준 AttributeError
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute '{name}'"
+            )
+
+        warnings.warn(
+            f"{self.__class__.__name__}.{name} 는 deprecated 입니다. Agent/Facade 경유 사용을 권장합니다.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        facade = FacadeStockAPI(self.client, self.account)
+        if hasattr(facade, name):
+            return getattr(facade, name)
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{name}'"
+        )
 
     def get_stock_price(self, code: str) -> Optional[Dict]:
         """주식 현재가 조회 (Get current stock price)

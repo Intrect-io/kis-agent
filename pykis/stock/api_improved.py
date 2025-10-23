@@ -1,8 +1,9 @@
 """
 개선된 StockAPI - 통합 예외 처리 시스템 적용 예시
 
-이것은 새로운 통합 예외 처리 시스템을 적용한 StockAPI 예시입니다.
-모든 메서드는 예외를 먹지 않고 반드시 traceback과 함께 raise합니다.
+DEPRECATION NOTICE:
+- 이 파일의 `StockAPI`는 실험적/예시용 구현으로, 프로덕션 경로에서는 사용하지 않습니다.
+- 공식 진입점은 `pykis.stock.StockAPI`(Facade)입니다. 테스트/문서 목적으로만 유지됩니다.
 """
 
 from datetime import datetime
@@ -39,6 +40,15 @@ class StockAPI(BaseAPI, ExceptionHandler):
         Raises:
             ValidationException: client 또는 account가 잘못된 경우
         """
+        # [DEPRECATION] 실험/예시용 구현 경고
+        import warnings
+
+        warnings.warn(
+            "pykis.stock.api_improved.StockAPI 는 deprecated/experimental 입니다. pykis.stock.StockAPI(Facade)를 사용하세요.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         # 입력 검증
         ensure_not_none(client, "client")
         ensure_not_none(account, "account")

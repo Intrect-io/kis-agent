@@ -7,6 +7,7 @@ Stock API 패키지 - 주식 관련 API 모음
 - StockMarketAPI: 시장 정보 전담
 - StockInvestorAPI: 투자자 정보 전담
 - ConditionAPI: 조건검색 전담
+- InterestStockAPI: 관심종목 전담
 """
 
 # 새로운 구조화된 API들 (Strategy Pattern 적용)
@@ -14,6 +15,7 @@ from .api_facade import StockAPI
 
 # 기존 기능들 (하위 호환성 유지)
 from .condition import ConditionAPI
+from .interest import InterestStockAPI
 from .investor import InvestorPositionAnalyzer
 from .investor_api import StockInvestorAPI
 from .market_api import StockMarketAPI
@@ -34,6 +36,7 @@ __all__ = [
     "StockMarketAPI",  # 시장 정보 전담 (SRP 적용)
     "StockInvestorAPI",  # 투자자 정보 전담 (SRP 적용)
     "ConditionAPI",  # 조건검색 (BaseAPI 상속)
+    "InterestStockAPI",  # 관심종목 (BaseAPI 상속)
     "MarketAPI",  # 기존 별칭 (하위 호환성)
     "InvestorPositionAnalyzer",  # 기존 유틸리티
 ]

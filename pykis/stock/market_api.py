@@ -349,3 +349,96 @@ class StockMarketAPI(BaseAPI):
         if response and response.get("rt_cd") == "0" and "output" in response:
             return pd.DataFrame(response["output"])
         return None
+
+    def get_pbar_tratio(self, code: str, retries: int = 10) -> Optional[dict]:
+        """매물대/거래비중 조회
+
+        Args:
+            code: 종목코드 (6자리)
+            retries: 재시도 횟수 (미사용, 호환성 유지)
+
+        Returns:
+            Optional[dict]: 매물대/거래비중 데이터
+        """
+        params = {
+            "fid_cond_mrkt_div_code": "J",
+            "fid_input_iscd": code,
+            "fid_cond_scr_div_code": "20113",
+            "fid_input_hour_1": "",
+        }
+        return self._make_request_dict(
+            endpoint=API_ENDPOINTS["PBAR_TRATIO"], tr_id="FHPST01130000", params=params
+        )
+
+    def get_holiday_info(self, date: Optional[str] = None) -> Optional[Dict]:
+        """국내 휴장일 정보를 조회합니다.
+
+        Args:
+            date (str, optional): YYYYMMDD 형식의 기준 날짜. Defaults to None.
+
+        Returns:
+            Dict: 휴장일 정보, 실패 시 None
+        """
+        import logging
+
+        params = {"CTX_AREA_NK": "", "CTX_AREA_FK": ""}
+        if date:
+            params["BASS_DT"] = date
+
+        try:
+            return self._make_request_dict(
+                endpoint=API_ENDPOINTS["CHK_HOLIDAY"], tr_id="CTCA0903R", params=params
+            )
+        except Exception as e:
+            logging.error(f"국내 휴장일 정보 조회 실패: {e}")
+            return None
+
+    def is_holiday(self, date: str) -> Optional[bool]:
+        """주어진 날짜가 한국 주식 시장 휴장일인지 확인합니다.
+
+        Args:
+            date: YYYYMMDD 형식의 날짜 문자열
+
+        Returns:
+            bool: 휴장일이면 True, 거래일이면 False, 확인 불가면 None
+        """
+        import logging
+        from datetime import datetime
+
+        try:
+            target_date = datetime.strptime(date, "%Y%m%d")
+
+            # 1. 주말(토요일, 일요일) 여부 확인
+            if target_date.weekday() >= 5:  # 5: 토요일, 6: 일요일
+                return True
+
+            # 2. API를 통해 공휴일 정보 확인
+            # 기준일 계산: 입력 날짜가 포함된 월의 첫 번째 날
+            base_date_str = target_date.replace(day=1).strftime("%Y%m%d")
+
+            holiday_info = self.get_holiday_info(base_date_str)
+
+            if not holiday_info or holiday_info.get("rt_cd") not in ["0", "1"]:
+                logging.warning(
+                    f"휴장일 정보를 가져올 수 없습니다: {holiday_info.get('msg1') if holiday_info else 'No response'}"
+                )
+                return None
+
+            output = holiday_info.get("output", [])
+            if not output:
+                logging.warning("휴장일 데이터가 비어있습니다")
+                # API 응답이 비어있으면 주말이 아닌 이상 거래일로 간주
+                return False
+
+            for day_info in output:
+                if day_info.get("bass_dt") == date:
+                    is_open = day_info.get("opnd_yn", "N") == "Y"
+                    # opnd_yn이 'Y'가 아니면 휴장일
+                    return not is_open
+
+            # 해당 날짜 정보가 없으면 거래일로 간주
+            return False
+
+        except Exception as e:
+            logging.error(f"Error checking holiday status for {date}: {e}")
+            return None

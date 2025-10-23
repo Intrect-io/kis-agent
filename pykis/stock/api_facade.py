@@ -77,6 +77,28 @@ class StockAPI(BaseAPI):
         """특정일 분봉 시세 조회"""
         return self.price_api.get_daily_minute_price(code, date, hour)
 
+    def inquire_price(self, code: str, market: str = "J") -> Optional[Dict]:
+        """주식현재가 시세 조회 (추가 정보 포함)
+
+        [변경 이유] price_api에 구현된 시세 관련 메서드를 Facade에서 일관되게 노출하여
+        Agent 파사드를 통해 접근 시 AttributeError가 발생하지 않도록 위임합니다.
+        """
+        return self.price_api.inquire_price(code, market)
+
+    def inquire_price_2(self, code: str, market: str = "J") -> Optional[Dict]:
+        """주식현재가 시세2 조회 (추가 정보 포함)"""
+        return self.price_api.inquire_price_2(code, market)
+
+    def inquire_ccnl(self, code: str, market: str = "J") -> Optional[Dict]:
+        """주식현재가 체결 조회 (최근 30건)"""
+        return self.price_api.inquire_ccnl(code, market)
+
+    def inquire_time_itemconclusion(
+        self, code: str, hour: str = "153000", market: str = "J"
+    ) -> Optional[Dict]:
+        """주식현재가 당일시간대별체결 조회"""
+        return self.price_api.inquire_time_itemconclusion(code, hour, market)
+
     # ===== 시장 정보 관련 메서드 (StockMarketAPI 위임) =====
 
     def get_market_fluctuation(self) -> Optional[Dict[str, Any]]:
@@ -247,6 +269,18 @@ class StockAPI(BaseAPI):
             fid_input_hour_1,
             fid_cond_mrkt_div_code,
         )
+
+    def __getattr__(self, name: str):
+        """하위 모듈로 동적 위임
+
+        [변경 이유] price_api/market_api/investor_api에 존재하는 메서드가 Facade에 누락될 경우
+        Agent에서 Facade를 통해 호출 시 AttributeError가 발생한다. 이를 방지하기 위해
+        존재하는 하위 API로 자동 위임한다.
+        """
+        for api in (self.price_api, self.market_api, self.investor_api):
+            if hasattr(api, name):
+                return getattr(api, name)
+        raise AttributeError(f"{self.__class__.__name__} has no attribute '{name}'")
 
 
 # 하위 호환성을 위한 별칭

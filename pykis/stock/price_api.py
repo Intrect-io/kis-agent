@@ -133,6 +133,26 @@ class StockPriceAPI(BaseAPI):
             },
         )
 
+    def inquire_price(self, code: str, market: str = "J") -> Optional[Dict]:
+        """
+        주식현재가 시세 조회 (추가 정보 포함)
+
+        Args:
+            code: 종목코드 (6자리)
+            market: 시장구분 (J:KRX, NX:NXT, UN:통합)
+
+        Returns:
+            주식현재가 시세2 데이터
+        """
+        return self._make_request_dict(
+            endpoint=API_ENDPOINTS["INQUIRE_PRICE"],
+            tr_id="FHKST01010100",
+            params={
+                "FID_COND_MRKT_DIV_CODE": market,
+                "FID_INPUT_ISCD": code,
+            },
+        )
+
     def inquire_price_2(self, code: str, market: str = "J") -> Optional[Dict]:
         """
         주식현재가 시세2 조회 (추가 정보 포함)
@@ -882,3 +902,93 @@ class StockPriceAPI(BaseAPI):
                 "FID_TRGT_EXLS_CLS_CODE": exclude_cls,
             },
         )
+
+    def get_stock_ccnl(self, code: str, retries: int = 10) -> Optional[dict]:
+        """주식현재가 체결(최근30건) 조회 - inquire_ccnl 래퍼
+
+        최근 30건의 체결 내역과 함께 당일 체결강도(tday_rltv)를 포함한 상세한 체결 정보를 제공합니다.
+
+        Args:
+            code: 종목코드 (6자리)
+            retries: 재시도 횟수 (미사용, 호환성 유지)
+
+        Returns:
+            Optional[dict]: 최근 30건 체결 내역
+                - output: 체결 내역 리스트 (30건)
+                  - stck_cntg_hour: 체결시간
+                  - stck_prpr: 체결가격
+                  - prdy_vrss: 전일대비
+                  - prdy_ctrt: 등락률
+                  - tday_rltv: 당일 체결강도 ★
+                  - cntg_vol: 체결량
+                  - acml_vol: 누적거래량
+                  - askp: 매도호가
+                  - bidp: 매수호가
+                  - cnqn: 체결건수
+        """
+        return self.inquire_ccnl(code, market="J")
+
+    def get_intraday_price(self, code: str, date: str) -> Optional[Dict]:
+        """
+        하루 전체 분봉시세조회 - 4번 호출로 하루 전체 분봉 데이터 수집
+
+        Args:
+            code (str): 종목코드 (6자리)
+            date (str): 조회 날짜 (YYYYMMDD 형식)
+
+        Returns:
+            Optional[Dict]: 하루 전체 분봉시세 데이터
+
+        Note:
+            - 9시부터 15시30분까지 전체 분봉 데이터 수집
+            - 4번의 API 호출로 최대 480건 분봉 수집
+            - 시간 순서로 정렬되어 반환
+        """
+        import logging
+
+        # 4번 호출할 시간 기준점 설정 (HHMMSS 형식)
+        time_points = ["090000", "110000", "130000", "153000"]
+
+        all_minute_data = []
+        output1_data = None
+
+        for hour in time_points:
+            try:
+                result = self.get_daily_minute_price(code, date, hour)
+
+                if result and result.get("rt_cd") == "0":
+                    # 첫 번째 호출에서 output1 데이터 저장
+                    if output1_data is None:
+                        output1_data = result.get("output1", {})
+
+                    # output2의 분봉 데이터 수집
+                    minute_data = result.get("output2", [])
+                    if minute_data:
+                        all_minute_data.extend(minute_data)
+
+            except Exception as e:
+                logging.warning(f"시간 {hour} 분봉 조회 중 오류 발생: {e}")
+                continue
+
+        # 시간 순서로 정렬 (최신 시간이 앞에 오도록)
+        all_minute_data.sort(
+            key=lambda x: x.get("stck_cntg_hour", "000000"), reverse=True
+        )
+
+        # 중복 제거 (같은 시간의 분봉이 있을 경우)
+        seen_hours = set()
+        unique_minute_data = []
+        for data in all_minute_data:
+            hour_key = data.get("stck_cntg_hour", "")
+            if hour_key not in seen_hours:
+                seen_hours.add(hour_key)
+                unique_minute_data.append(data)
+
+        # 최종 결과 반환
+        return {
+            "output1": output1_data or {},
+            "output2": unique_minute_data,
+            "rt_cd": "0",
+            "msg_cd": "MCA00000",
+            "msg1": f"하루 전체 분봉 데이터 수집 완료 (총 {len(unique_minute_data)}건)",
+        }
