@@ -39,10 +39,11 @@ Claude Desktop 설정 (`.claude/config.json`):
 
 ## Available Tools
 
-### Stock Price & Market Data (15 tools)
+### Stock Price & Market Data (16 tools)
 - `get_stock_price` - 주식 현재가 조회
 - `get_daily_price` - 일봉 데이터
-- `get_minute_price` - 분봉 데이터
+- `inquire_minute_price` - 분봉시세조회 (일별분봉 우선, **권장**)
+- `get_minute_price` - 당일 분봉 데이터
 - `get_orderbook_raw` - 호가 조회
 - ... 및 11개 더
 

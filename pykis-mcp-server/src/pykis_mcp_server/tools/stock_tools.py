@@ -1,8 +1,9 @@
 """Stock price and market data MCP tools"""
-from typing import Any, Dict
+from datetime import datetime
+from typing import Any, Dict, Optional
 
+from ..errors import InvalidParameterError, validate_api_response
 from ..server import get_agent, server
-from ..errors import validate_api_response, InvalidParameterError
 
 
 @server.tool()
@@ -226,6 +227,46 @@ async def get_daily_minute_price(
     agent = get_agent()
     result = agent.get_daily_minute_price(code, date, hour)
     return validate_api_response(result, "특정일 분봉 데이터 조회")
+
+
+@server.tool()
+async def inquire_minute_price(
+    code: str, date: Optional[str] = None, hour: str = "153000"
+) -> Dict[str, Any]:
+    """분봉시세조회 (일별분봉시세조회 우선)
+
+    분봉 데이터를 조회합니다. date 파라미터가 제공되면 특정일 분봉(get_daily_minute_price)을,
+    그렇지 않으면 당일 분봉(get_minute_price)을 조회합니다.
+
+    **권장**: 일별분봉시세조회(get_daily_minute_price)를 우선 사용합니다.
+    날짜를 지정하면 최대 120건의 분봉 데이터를 조회할 수 있습니다.
+
+    Args:
+        code: 종목코드 6자리 (예: "005930")
+        date: 날짜 (YYYYMMDD, 선택). 미입력 시 오늘 날짜 사용
+        hour: 시각 (HHMMSS, 기본값: 153000)
+
+    Returns:
+        Dict: 분봉 데이터 (최대 120건)
+            - output: 분봉 시세 리스트
+            - output[].stck_bsop_date: 영업일자
+            - output[].stck_cntg_hour: 체결시각
+            - output[].stck_prpr: 현재가
+            - output[].cntg_vol: 체결거래량
+    """
+    if not code or len(code) != 6:
+        raise InvalidParameterError("code", "종목코드는 6자리여야 합니다")
+
+    # date가 없으면 오늘 날짜 사용 (일별분봉시세조회 우선)
+    if not date:
+        date = datetime.now().strftime("%Y%m%d")
+
+    if len(date) != 8:
+        raise InvalidParameterError("date", "날짜는 YYYYMMDD 형식이어야 합니다")
+
+    agent = get_agent()
+    result = agent.get_daily_minute_price(code, date, hour)
+    return validate_api_response(result, "분봉시세조회")
 
 
 @server.tool()

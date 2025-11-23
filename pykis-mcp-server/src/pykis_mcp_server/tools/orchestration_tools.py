@@ -1,7 +1,7 @@
 """Tool orchestration and planning for meta-queries"""
 from typing import Any, Dict, List
-from ..server import server
 
+from ..server import server
 
 # Tool Registry - 도구 간 관계 정의
 TOOL_REGISTRY = {
@@ -91,12 +91,23 @@ TOOL_REGISTRY = {
         "inputs": ["stock_code"],
         "use_case": "일별 가격 데이터"
     },
-    "get_minute_price": {
+    "inquire_minute_price": {
         "category": "price_data",
-        "description": "분봉 데이터",
+        "description": "분봉시세조회 (일별분봉 우선)",
         "outputs": ["minute_prices", "minute_volumes"],
         "inputs": ["stock_code"],
-        "use_case": "분별 가격 데이터"
+        "use_case": "분봉 데이터, 분별 가격 데이터, 분봉시세조회",
+        "priority": 1,
+        "note": "get_daily_minute_price를 내부적으로 호출하여 최대 120건 조회"
+    },
+    "get_minute_price": {
+        "category": "price_data",
+        "description": "당일 분봉 데이터 (레거시)",
+        "outputs": ["minute_prices", "minute_volumes"],
+        "inputs": ["stock_code"],
+        "use_case": "당일 분별 가격 데이터",
+        "priority": 2,
+        "note": "inquire_minute_price 사용 권장"
     },
 
     # === 복합 분석 도구 ===
