@@ -225,26 +225,27 @@ class Agent(BaseExceptionHandler):
         self._init_apis()
 
     def _ensure_valid_token(self, config: Optional[KISConfig]) -> None:
-        """토큰 유효성 검증 및 자동 재발급"""
+        """토큰 유효성 검증 및 자동 재발급
+
+        APP_KEY별로 토큰 파일을 분리 저장하여, 동일 APP_KEY로 Agent 재생성 시
+        기존 토큰을 재사용합니다. 이를 통해 불필요한 토큰 발급을 방지합니다.
+        """
         try:
-            # 기존 토큰 확인
-            saved_token = read_token()
+            # APP_KEY를 전달하여 해당 키 전용 토큰 파일에서 조회
+            app_key = config.APP_KEY if config else None
+            saved_token = read_token(app_key=app_key)
 
             if saved_token is None:
                 # 토큰이 없거나 만료된 경우 새로 발급
-                if not os.environ.get("PYKIS_SILENT"):
-                    print("[Agent] 토큰이 없거나 만료되었습니다. 새 토큰을 발급받습니다.")
+                self.logger.info("토큰이 없거나 만료되었습니다. 새 토큰을 발급받습니다.")
                 auth(config=config)
-                if not os.environ.get("PYKIS_SILENT"):
-                    print("[Agent] 토큰 발급이 완료되었습니다.")
+                self.logger.info("토큰 발급이 완료되었습니다.")
             else:
-                # 유효한 토큰이 있는 경우
-                if not os.environ.get("PYKIS_SILENT"):
-                    print("[Agent] 유효한 토큰이 확인되었습니다.")
+                # 유효한 토큰이 있는 경우 - 디버그 레벨로 변경 (기본적으로 출력 안됨)
+                self.logger.debug("유효한 토큰이 확인되었습니다.")
 
         except Exception as e:
-            # [변경 이유] 미정의 logger 사용 오류 수정 -> 클래스 로거 사용
-            self.logger.error(f"[Agent] 토큰 검증/발급 중 오류 발생: {e}")
+            self.logger.error(f"토큰 검증/발급 중 오류 발생: {e}")
             # 토큰 발급 실패는 중요한 문제이므로 예외 재발생
             raise RuntimeError(f"토큰 자동 발급 실패: {e}")
 
