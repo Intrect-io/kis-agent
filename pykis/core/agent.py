@@ -14,6 +14,11 @@ from ..stock import (
 )
 from ..stock.interest import InterestStockAPI
 from ..stock.investor_api import StockInvestorAPI
+from ..utils.sector_code import (
+    SECTOR_CODES,
+    get_sector_code_by_market,
+    get_sector_codes,
+)
 from ..websocket.client import KisWebSocket
 from .auth import auth, read_token
 from .base_exception_handler import BaseExceptionHandler, exception_handler
@@ -228,9 +233,7 @@ class Agent(BaseExceptionHandler):
             if saved_token is None:
                 # 토큰이 없거나 만료된 경우 새로 발급
                 if not os.environ.get("PYKIS_SILENT"):
-                    print(
-                        "[Agent] 토큰이 없거나 만료되었습니다. 새 토큰을 발급받습니다."
-                    )
+                    print("[Agent] 토큰이 없거나 만료되었습니다. 새 토큰을 발급받습니다.")
                 auth(config=config)
                 if not os.environ.get("PYKIS_SILENT"):
                     print("[Agent] 토큰 발급이 완료되었습니다.")
@@ -433,9 +436,7 @@ class Agent(BaseExceptionHandler):
             - 과거 데이터 범위: 최대 10년 (Up to 10 years of historical data)
             - 수정주가 권장: 장기 차트 분석 시 "0" 사용
         """
-        return self.stock_api.inquire_daily_itemchartprice(
-            code, start_date, end_date, period, org_adj_prc
-        )
+        return self.stock_api.inquire_daily_itemchartprice(code, start_date, end_date, period, org_adj_prc)
 
     def get_orderbook(self, code: str) -> Optional[Dict[str, Any]]:
         """주식 호가 정보 조회"""
@@ -453,9 +454,7 @@ class Agent(BaseExceptionHandler):
         """주식 당일 분봉 데이터 조회 (전체)"""
         return self.stock_api.get_intraday_price(code)
 
-    def get_daily_credit_balance(
-        self, code: str, date: str
-    ) -> Optional[Dict[str, Any]]:
+    def get_daily_credit_balance(self, code: str, date: str) -> Optional[Dict[str, Any]]:
         """
         국내주식 신용잔고 일별추이 조회
 
@@ -468,9 +467,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.stock_api.get_daily_credit_balance(code, date)
 
-    def get_minute_price(
-        self, code: str, hour: str = "153000"
-    ) -> Optional[Dict[str, Any]]:
+    def get_minute_price(self, code: str, hour: str = "153000") -> Optional[Dict[str, Any]]:
         """당일 분봉 데이터 조회 (Get intraday minute candlestick data)
 
         당일 개장 시간부터 지정된 시각까지의 1분봉 데이터를 조회합니다. 단타 매매 및 데이트레이딩에 필수적입니다.
@@ -526,9 +523,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.stock_api.get_minute_price(code, hour)
 
-    def get_daily_minute_price(
-        self, code: str, date: str, hour: str = "153000"
-    ) -> Optional[Dict[str, Any]]:
+    def get_daily_minute_price(self, code: str, date: str, hour: str = "153000") -> Optional[Dict[str, Any]]:
         """
         일별분봉시세조회 - 과거일자 분봉 데이터 조회
 
@@ -548,9 +543,7 @@ class Agent(BaseExceptionHandler):
         # [변경 이유] 한국투자증권 새로운 일별분봉시세조회 API 추가
         return self.stock_api.get_daily_minute_price(code, date, hour)
 
-    def inquire_time_itemconclusion(
-        self, code: str, hour: str = "153000", market: str = "J"
-    ) -> Optional[Dict[str, Any]]:
+    def inquire_time_itemconclusion(self, code: str, hour: str = "153000", market: str = "J") -> Optional[Dict[str, Any]]:
         """
         주식현재가 당일시간대별체결 조회
 
@@ -590,9 +583,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.stock_api.inquire_price_2(code, market)
 
-    def search_stock_info(
-        self, code: str, product_type: str = "300"
-    ) -> Optional[Dict[str, Any]]:
+    def search_stock_info(self, code: str, product_type: str = "300") -> Optional[Dict[str, Any]]:
         """
         주식 기본정보 조회
 
@@ -858,9 +849,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.stock_api.get_pbar_tratio(code, retries)
 
-    def inquire_daily_overtimeprice(
-        self, code: str, market: str = "J"
-    ) -> Optional[Dict[str, Any]]:
+    def inquire_daily_overtimeprice(self, code: str, market: str = "J") -> Optional[Dict[str, Any]]:
         """
         주식현재가 시간외 일자별주가 조회 (최근 30건)
 
@@ -873,9 +862,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.stock_api.inquire_daily_overtimeprice(code, market)
 
-    def inquire_elw_price(
-        self, code: str, market: str = "W"
-    ) -> Optional[Dict[str, Any]]:
+    def inquire_elw_price(self, code: str, market: str = "W") -> Optional[Dict[str, Any]]:
         """
         ELW 현재가 조회
 
@@ -909,13 +896,9 @@ class Agent(BaseExceptionHandler):
         Returns:
             업종별 전체시세 데이터 (output1: 요약, output2: 업종별 리스트)
         """
-        return self.stock_api.inquire_index_category_price(
-            index_code, screen_code, market_cls, belong_cls, market
-        )
+        return self.stock_api.inquire_index_category_price(index_code, screen_code, market_cls, belong_cls, market)
 
-    def inquire_index_price(
-        self, index_code: str, market: str = "U"
-    ) -> Optional[Dict[str, Any]]:
+    def inquire_index_price(self, index_code: str, market: str = "U") -> Optional[Dict[str, Any]]:
         """
         국내업종 현재지수 조회
 
@@ -934,9 +917,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.stock_api.inquire_index_price(index_code, market)
 
-    def inquire_index_tickprice(
-        self, index_code: str, market: str = "U"
-    ) -> Optional[Dict[str, Any]]:
+    def inquire_index_tickprice(self, index_code: str, market: str = "U") -> Optional[Dict[str, Any]]:
         """
         국내업종 시간별지수(틱) 조회
 
@@ -949,9 +930,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.stock_api.inquire_index_tickprice(index_code, market)
 
-    def inquire_index_timeprice(
-        self, index_code: str, market: str = "U", time_div: str = "0"
-    ) -> Optional[Dict[str, Any]]:
+    def inquire_index_timeprice(self, index_code: str, market: str = "U", time_div: str = "0") -> Optional[Dict[str, Any]]:
         """
         국내업종 지수 분/일봉 시세 조회
 
@@ -989,9 +968,7 @@ class Agent(BaseExceptionHandler):
             >>> agent.get_index_timeprice("1001", "300")  # KOSPI 5분봉 데이터
             >>> agent.get_index_timeprice("2001", "60")  # KOSDAQ 1분봉 데이터
         """
-        return self.stock_api.get_index_timeprice(
-            fid_input_iscd, fid_input_hour_1, fid_cond_mrkt_div_code
-        )
+        return self.stock_api.get_index_timeprice(fid_input_iscd, fid_input_hour_1, fid_cond_mrkt_div_code)
 
     def get_index_minute_data(
         self,
@@ -1010,9 +987,7 @@ class Agent(BaseExceptionHandler):
             fid_etc_cls_code,
         )
 
-    def get_future_option_price(
-        self, market_div_code: str = "F", input_iscd: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+    def get_future_option_price(self, market_div_code: str = "F", input_iscd: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         선물옵션 시세 조회
 
@@ -1035,9 +1010,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.stock_api.get_future_option_price(market_div_code, input_iscd)
 
-    def inquire_overtime_asking_price(
-        self, code: str, market: str = "J"
-    ) -> Optional[Dict[str, Any]]:
+    def inquire_overtime_asking_price(self, code: str, market: str = "J") -> Optional[Dict[str, Any]]:
         """
         국내주식 시간외호가 조회
 
@@ -1050,9 +1023,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.stock_api.inquire_overtime_asking_price(code, market)
 
-    def inquire_overtime_price(
-        self, code: str, market: str = "J"
-    ) -> Optional[Dict[str, Any]]:
+    def inquire_overtime_price(self, code: str, market: str = "J") -> Optional[Dict[str, Any]]:
         """
         국내주식 시간외현재가 조회
 
@@ -1139,9 +1110,7 @@ class Agent(BaseExceptionHandler):
         Returns:
             배당률 상위 데이터
         """
-        return self.stock_api.dividend_rate(
-            cts_area, gb1, upjong, gb2, gb3, f_dt, t_dt, gb4
-        )
+        return self.stock_api.dividend_rate(cts_area, gb1, upjong, gb2, gb3, f_dt, t_dt, gb4)
 
     def market_time(self) -> Optional[Dict[str, Any]]:
         """
@@ -1165,9 +1134,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.stock_api.market_value(code, market)
 
-    def profit_asset_index(
-        self, index_code: str = "0001", market: str = "U"
-    ) -> Optional[Dict[str, Any]]:
+    def profit_asset_index(self, index_code: str = "0001", market: str = "U") -> Optional[Dict[str, Any]]:
         """
         국내주식 자산/수익지수 조회
 
@@ -1180,9 +1147,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.stock_api.profit_asset_index(index_code, market)
 
-    def intstock_multprice(
-        self, codes: str, market: str = "J"
-    ) -> Optional[Dict[str, Any]]:
+    def intstock_multprice(self, codes: str, market: str = "J") -> Optional[Dict[str, Any]]:
         """
         국내주식 복수종목 현재가 조회
 
@@ -1269,9 +1234,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.program_api.get_program_trade_by_stock(code)
 
-    def get_member_transaction(
-        self, code: str, mem_code: str = "99999"
-    ) -> Optional[Dict[str, Any]]:
+    def get_member_transaction(self, code: str, mem_code: str = "99999") -> Optional[Dict[str, Any]]:
         """
         회원사별 매매 정보 조회
 
@@ -1318,9 +1281,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.stock_api.get_volume_power(volume)
 
-    def get_index_daily_price(
-        self, index_code: str = "0001", end_date: str = None, period: str = "D"
-    ) -> Optional[Dict[str, Any]]:
+    def get_index_daily_price(self, index_code: str = "0001", end_date: str = None, period: str = "D") -> Optional[Dict[str, Any]]:
         """
         국내 지수 일자별 시세 조회
 
@@ -1619,9 +1580,7 @@ class Agent(BaseExceptionHandler):
             fid_vol_cnt,
         )
 
-    def get_investor_program_trade_today(
-        self, mrkt_div_cls_code: str = "1"
-    ) -> Optional[Dict[str, Any]]:
+    def get_investor_program_trade_today(self, mrkt_div_cls_code: str = "1") -> Optional[Dict[str, Any]]:
         """
         프로그램매매 투자자매매동향(당일) 조회
 
@@ -1662,9 +1621,7 @@ class Agent(BaseExceptionHandler):
             fid_etc_cls_code,
         )
 
-    def get_investor_trend_estimate(
-        self, mksc_shrn_iscd: str
-    ) -> Optional[Dict[str, Any]]:
+    def get_investor_trend_estimate(self, mksc_shrn_iscd: str) -> Optional[Dict[str, Any]]:
         """
         종목별 외국인/기관 추정가집계 조회
 
@@ -1702,13 +1659,9 @@ class Agent(BaseExceptionHandler):
         Returns:
             Optional[Dict[str, Any]]: 외국인/기관 종합 매매동향 데이터
         """
-        return self.stock_api.foreign_institution_total(
-            market, screen_code, stock_code, div_cls, sort_cls, etc_cls
-        )
+        return self.stock_api.foreign_institution_total(market, screen_code, stock_code, div_cls, sort_cls, etc_cls)
 
-    def daily_credit_balance(
-        self, code: str, market: str = "J", screen_code: str = "20476", date: str = ""
-    ) -> Optional[Dict[str, Any]]:
+    def daily_credit_balance(self, code: str, market: str = "J", screen_code: str = "20476", date: str = "") -> Optional[Dict[str, Any]]:
         """
         신용잔고 일별추이 조회
 
@@ -1860,9 +1813,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.account_api.get_total_asset()
 
-    def inquire_psbl_order(
-        self, price: int, pdno: str = "", ord_dvsn: str = "01"
-    ) -> Optional[Dict[str, Any]]:
+    def inquire_psbl_order(self, price: int, pdno: str = "", ord_dvsn: str = "01") -> Optional[Dict[str, Any]]:
         """매수가능 조회
 
         Args:
@@ -1878,9 +1829,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.account_api.inquire_psbl_order(price, pdno, ord_dvsn)
 
-    def get_possible_order_amount(
-        self, code: str, price: str, order_type: str = "01"
-    ) -> Optional[Dict[str, Any]]:
+    def get_possible_order_amount(self, code: str, price: str, order_type: str = "01") -> Optional[Dict[str, Any]]:
         """
         주문 가능 금액 조회
 
@@ -1946,9 +1895,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.program_api.get_program_trade_hourly_trend(code)
 
-    def get_program_trade_daily_summary(
-        self, code: str, date_str: str
-    ) -> Optional[Dict[str, Any]]:
+    def get_program_trade_daily_summary(self, code: str, date_str: str) -> Optional[Dict[str, Any]]:
         """
         종목별 일별 프로그램 매매 집계 조회
 
@@ -1963,9 +1910,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.program_api.get_program_trade_daily_summary(code, date_str)
 
-    def get_program_trade_period_detail(
-        self, start_date: str, end_date: str
-    ) -> Optional[Dict[str, Any]]:
+    def get_program_trade_period_detail(self, start_date: str, end_date: str) -> Optional[Dict[str, Any]]:
         """
         기간별 프로그램 매매 상세 조회
 
@@ -1980,9 +1925,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.program_api.get_program_trade_period_detail(start_date, end_date)
 
-    def get_program_trade_market_daily(
-        self, start_date: str, end_date: str
-    ) -> Optional[Dict[str, Any]]:
+    def get_program_trade_market_daily(self, start_date: str, end_date: str) -> Optional[Dict[str, Any]]:
         """
         시장 전체 프로그램 매매 종합현황 조회
 
@@ -2001,9 +1944,7 @@ class Agent(BaseExceptionHandler):
     # 기타 유틸리티 메서드들
     # ============================================================================
 
-    def get_all_methods(
-        self, show_details: bool = False, category: str = None
-    ) -> Dict[str, Any]:
+    def get_all_methods(self, show_details: bool = False, category: str = None) -> Dict[str, Any]:
         """
         Agent에서 사용 가능한 모든 메서드를 카테고리별로 정리하여 반환합니다.
 
@@ -2244,10 +2185,7 @@ class Agent(BaseExceptionHandler):
         result["_summary"] = {
             "total_methods": total_methods,
             "total_categories": len(result) - 1,  # _summary 제외
-            "usage_tip": (
-                'agent.get_all_methods(show_details=True, category="stock") '
-                "형태로 상세 정보를 확인할 수 있습니다."
-            ),
+            "usage_tip": ('agent.get_all_methods(show_details=True, category="stock") ' "형태로 상세 정보를 확인할 수 있습니다."),
         }
 
         return result
@@ -2279,10 +2217,7 @@ class Agent(BaseExceptionHandler):
 
             for method in category_info["methods"]:
                 # 메서드명이나 설명에서 키워드 검색
-                if (
-                    keyword_lower in method["name"].lower()
-                    or keyword_lower in method["description"].lower()
-                ):
+                if keyword_lower in method["name"].lower() or keyword_lower in method["description"].lower():
                     results.append(
                         {
                             "name": method["name"],
@@ -2356,9 +2291,7 @@ class Agent(BaseExceptionHandler):
         else:
             return "기타"
 
-    @exception_handler(
-        message="휴장일 정보 조회 실패", reraise=False, default_return=None
-    )
+    @exception_handler(message="휴장일 정보 조회 실패", reraise=False, default_return=None)
     def get_holiday_info(self) -> Optional[Dict[str, Any]]:
         """휴장일 정보를 조회합니다.
 
@@ -2407,9 +2340,7 @@ class Agent(BaseExceptionHandler):
             logging.error(f"분봉 DB 초기화 실패: {e}")
             return False
 
-    def migrate_minute_csv_to_db(
-        self, code: str, db_path: str = "db/stonks_candles.db"
-    ) -> bool:
+    def migrate_minute_csv_to_db(self, code: str, db_path: str = "db/stonks_candles.db") -> bool:
         """기존 csv 분봉 데이터를 DB로 이관 (한 번만)"""
         cache_dir = "cache"
         csv_file_path = os.path.join(cache_dir, f"{code}_minute_data.csv")
@@ -2452,11 +2383,7 @@ class Agent(BaseExceptionHandler):
         # [변경 이유] 영업일 계산을 위한 헬퍼 함수 추가
         import datetime
 
-        current_date = (
-            datetime.datetime.strptime(date_str, "%Y%m%d")
-            if date_str
-            else datetime.datetime.now()
-        )
+        current_date = datetime.datetime.strptime(date_str, "%Y%m%d") if date_str else datetime.datetime.now()
 
         # 최대 10일까지만 확인 (무한 루프 방지)
         for i in range(10):
@@ -2479,9 +2406,7 @@ class Agent(BaseExceptionHandler):
         # 영업일을 찾지 못했을 경우 오늘 날짜 반환
         return current_date.strftime("%Y%m%d")
 
-    def fetch_minute_data(
-        self, code: str, date: Optional[str] = None, cache_dir: str = "cache"
-    ) -> "pd.DataFrame":
+    def fetch_minute_data(self, code: str, date: Optional[str] = None, cache_dir: str = "cache") -> "pd.DataFrame":
         """
         분봉 데이터 수집 (4번 호출 방식으로 효율적 수집)
 
@@ -2514,22 +2439,11 @@ class Agent(BaseExceptionHandler):
             market_open_time = now.replace(hour=9, minute=0, second=0, microsecond=0)
             if now < market_open_time:
                 target_dates = [last_business_day]
-                logging.info(
-                    f"[{code}] 장 시작 전: 최근 영업일 분봉 수집 ({last_business_day})"
-                )
+                logging.info(f"[{code}] 장 시작 전: 최근 영업일 분봉 수집 ({last_business_day})")
             else:
                 # 장 시작 후면 최근 영업일 + 전일 분봉
-                prev_business_day = self._get_last_business_day(
-                    (
-                        datetime.datetime.strptime(last_business_day, "%Y%m%d")
-                        - datetime.timedelta(days=1)
-                    ).strftime("%Y%m%d")
-                )
-                target_dates = (
-                    [last_business_day, prev_business_day]
-                    if prev_business_day != last_business_day
-                    else [last_business_day]
-                )
+                prev_business_day = self._get_last_business_day((datetime.datetime.strptime(last_business_day, "%Y%m%d") - datetime.timedelta(days=1)).strftime("%Y%m%d"))
+                target_dates = [last_business_day, prev_business_day] if prev_business_day != last_business_day else [last_business_day]
                 logging.info(f"[{code}] 최근 영업일 + 전일 분봉 수집 ({target_dates})")
         else:
             # 특정 날짜 지정
@@ -2539,9 +2453,7 @@ class Agent(BaseExceptionHandler):
         all_data_frames = []
 
         for target_date in target_dates:
-            csv_file_path = os.path.join(
-                cache_dir, f"{code}_minute_data_{target_date}.csv"
-            )
+            csv_file_path = os.path.join(cache_dir, f"{code}_minute_data_{target_date}.csv")
 
             # 캐시 확인
             cached_df = self._check_cache(csv_file_path, target_date, now)
@@ -2563,15 +2475,11 @@ class Agent(BaseExceptionHandler):
 
                     # 시간 포맷 정규화
                     if "stck_cntg_hour" in df.columns:
-                        df["stck_cntg_hour"] = df["stck_cntg_hour"].apply(
-                            lambda x: int(target_date + str(x).zfill(6)[-6:])
-                        )
+                        df["stck_cntg_hour"] = df["stck_cntg_hour"].apply(lambda x: int(target_date + str(x).zfill(6)[-6:]))
 
                     # CSV 저장
                     df.to_csv(csv_file_path, index=False)
-                    logging.info(
-                        f"[{code}] 분봉 데이터 수집 완료: {len(df)}건, CSV 저장됨 ({target_date})"
-                    )
+                    logging.info(f"[{code}] 분봉 데이터 수집 완료: {len(df)}건, CSV 저장됨 ({target_date})")
 
                     # DB 저장 시도
                     self._save_to_db(df, code, target_date)
@@ -2597,9 +2505,7 @@ class Agent(BaseExceptionHandler):
             import pandas as pd  # 지역 import로 로딩 시간 단축
         return pd.DataFrame()
 
-    def _check_cache(
-        self, csv_file_path: str, target_date: str, now: "datetime.datetime"
-    ) -> "pd.DataFrame":
+    def _check_cache(self, csv_file_path: str, target_date: str, now: "datetime.datetime") -> "pd.DataFrame":
         """
         캐시 파일 유효성 확인
 
@@ -2622,9 +2528,7 @@ class Agent(BaseExceptionHandler):
 
         try:
             # 파일 수정 시간 확인
-            file_mtime = datetime.datetime.fromtimestamp(
-                os.path.getmtime(csv_file_path)
-            )
+            file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(csv_file_path))
 
             # 과거 날짜는 캐시 유효
             target_datetime = datetime.datetime.strptime(target_date, "%Y%m%d")
@@ -2670,18 +2574,14 @@ class Agent(BaseExceptionHandler):
             db_path = "db/stonks_candles.db"
             conn = sqlite3.connect(db_path)
             # 기존 해당 날짜 데이터 삭제 후 새로 저장
-            conn.execute(
-                "DELETE FROM minute_data WHERE code = ? AND date = ?", (code, date)
-            )
+            conn.execute("DELETE FROM minute_data WHERE code = ? AND date = ?", (code, date))
             df.to_sql("minute_data", conn, if_exists="append", index=False)
             conn.close()
             logging.info(f"[{code}] {date} 분봉 데이터 DB 저장 완료")
         except Exception as e:
             logging.warning(f"DB 저장 실패: {e}")
 
-    def calculate_support_resistance(
-        self, code: str, date: str = None, price_bins: int = 50
-    ) -> dict:
+    def calculate_support_resistance(self, code: str, date: str = None, price_bins: int = 50) -> dict:
         """
         매물대 분석 - 지지선과 저항선 계산
 
@@ -2748,23 +2648,14 @@ class Agent(BaseExceptionHandler):
             "volume_profile": volume_profile,
             "pivot_points": pivot_points,
             "vwap": float(vwap),
-            "support_levels": [
-                {"price": float(level), "strength": float(strength)}
-                for level, strength in zip(support_levels, support_strength)
-            ],
-            "resistance_levels": [
-                {"price": float(level), "strength": float(strength)}
-                for level, strength in zip(resistance_levels, resistance_strength)
-            ],
+            "support_levels": [{"price": float(level), "strength": float(strength)} for level, strength in zip(support_levels, support_strength)],
+            "resistance_levels": [{"price": float(level), "strength": float(strength)} for level, strength in zip(resistance_levels, resistance_strength)],
             "current_price": float(df["stck_prpr"].iloc[0]),
             "total_volume": int(df["cntg_vol"].sum()),
             "data_points": len(df),
         }
 
-        logging.info(
-            f"[{code}] 매물대 분석 완료: "
-            f"지지선 {len(support_levels)}개, 저항선 {len(resistance_levels)}개"
-        )
+        logging.info(f"[{code}] 매물대 분석 완료: " f"지지선 {len(support_levels)}개, 저항선 {len(resistance_levels)}개")
         return result
 
     def _calculate_volume_profile(self, df: "pd.DataFrame", bins: int = 50) -> list:
@@ -2796,9 +2687,7 @@ class Agent(BaseExceptionHandler):
 
                 if overlap_low < overlap_high:
                     # 겹치는 비율만큼 거래량 분배
-                    overlap_ratio = (
-                        (overlap_high - overlap_low) / (high - low) if high > low else 1
-                    )
+                    overlap_ratio = (overlap_high - overlap_low) / (high - low) if high > low else 1
                     volume_profile[i] += volume * overlap_ratio
 
         # 결과 반환
@@ -2856,18 +2745,14 @@ class Agent(BaseExceptionHandler):
         for vp in volume_profile:
             if vp["volume"] >= volume_threshold:
                 # 해당 가격대에서 저가 터치 횟수 확인
-                touch_count = len(
-                    df[df["stck_lwpr"] <= vp["price"] * 1.002]
-                )  # 0.2% 오차 허용
+                touch_count = len(df[df["stck_lwpr"] <= vp["price"] * 1.002])  # 0.2% 오차 허용
                 if touch_count >= 2:  # 최소 2회 이상 터치
                     support_candidates.append(vp["price"])
 
         # 가격 순으로 정렬하여 상위 5개 반환
         return sorted(support_candidates)[:5]
 
-    def _detect_resistance_levels(
-        self, df: "pd.DataFrame", volume_profile: list
-    ) -> list:
+    def _detect_resistance_levels(self, df: "pd.DataFrame", volume_profile: list) -> list:
         """저항선 감지"""
         # [변경 이유] 거래량이 많은 가격대에서 저항선 감지
         import numpy as np
@@ -2880,9 +2765,7 @@ class Agent(BaseExceptionHandler):
         for vp in volume_profile:
             if vp["volume"] >= volume_threshold:
                 # 해당 가격대에서 고가 터치 횟수 확인
-                touch_count = len(
-                    df[df["stck_hgpr"] >= vp["price"] * 0.998]
-                )  # 0.2% 오차 허용
+                touch_count = len(df[df["stck_hgpr"] >= vp["price"] * 0.998])  # 0.2% 오차 허용
                 if touch_count >= 2:  # 최소 2회 이상 터치
                     resistance_candidates.append(vp["price"])
 
@@ -2897,23 +2780,11 @@ class Agent(BaseExceptionHandler):
         for level in levels:
             # 해당 가격대 근처(±0.5%) 거래량 합계
             price_range = level * 0.005
-            nearby_volume = df[
-                (df["stck_lwpr"] <= level + price_range)
-                & (df["stck_hgpr"] >= level - price_range)
-            ]["cntg_vol"].sum()
+            nearby_volume = df[(df["stck_lwpr"] <= level + price_range) & (df["stck_hgpr"] >= level - price_range)]["cntg_vol"].sum()
 
             # 터치 횟수 (고가 또는 저가가 해당 가격대 근처)
             touch_count = len(
-                df[
-                    (
-                        (df["stck_hgpr"] >= level - price_range)
-                        & (df["stck_hgpr"] <= level + price_range)
-                    )
-                    | (
-                        (df["stck_lwpr"] >= level - price_range)
-                        & (df["stck_lwpr"] <= level + price_range)
-                    )
-                ]
+                df[((df["stck_hgpr"] >= level - price_range) & (df["stck_hgpr"] <= level + price_range)) | ((df["stck_lwpr"] >= level - price_range) & (df["stck_lwpr"] <= level + price_range))]
             )
 
             # 강도 = 거래량 가중치 * 터치 횟수
@@ -2923,15 +2794,11 @@ class Agent(BaseExceptionHandler):
         # 정규화 (0-100 스케일)
         if strengths:
             max_strength = max(strengths)
-            strengths = [
-                s / max_strength * 100 if max_strength > 0 else 0 for s in strengths
-            ]
+            strengths = [s / max_strength * 100 if max_strength > 0 else 0 for s in strengths]
 
         return strengths
 
-    def get_condition_stocks(
-        self, user_id: str = "unohee", seq: int = 0, tr_cont: str = "N"
-    ) -> Optional[List[Dict[str, Any]]]:
+    def get_condition_stocks(self, user_id: str = "unohee", seq: int = 0, tr_cont: str = "N") -> Optional[List[Dict[str, Any]]]:
         """조건검색 결과를 조회합니다.
 
         Args:
@@ -2987,9 +2854,7 @@ class Agent(BaseExceptionHandler):
         inqr_dvsn: str = "01",
         inqr_dvsn_3: str = "00",
         max_pages: int = 100,
-        page_callback: Optional[
-            Callable[[int, List[Dict[str, Any]], Dict[str, Any]], None]
-        ] = None,
+        page_callback: Optional[Callable[[int, List[Dict[str, Any]], Dict[str, Any]], None]] = None,
     ) -> Optional[Dict[str, Any]]:
         """일별 주문체결 내역 조회 (Get daily order execution history)
 
@@ -3103,9 +2968,7 @@ class Agent(BaseExceptionHandler):
             page_callback,
         )
 
-    def inquire_period_trade_profit(
-        self, start_date: str, end_date: str
-    ) -> Optional[pd.DataFrame]:
+    def inquire_period_trade_profit(self, start_date: str, end_date: str) -> Optional[pd.DataFrame]:
         """기간별매매손익현황조회
 
         지정한 기간 동안의 실현 매매손익을 종목별로 조회합니다.
@@ -3180,13 +3043,9 @@ class Agent(BaseExceptionHandler):
         See Also:
             AccountAPI.order_cash: 상세 구현
         """
-        return self.account_api.order_cash(
-            pdno, qty, price, buy_sell, order_type, exchange
-        )
+        return self.account_api.order_cash(pdno, qty, price, buy_sell, order_type, exchange)
 
-    def order_cash_sor(
-        self, pdno: str, qty: int, buy_sell: str, order_type: str = "03"
-    ) -> Optional[Dict[str, Any]]:
+    def order_cash_sor(self, pdno: str, qty: int, buy_sell: str, order_type: str = "03") -> Optional[Dict[str, Any]]:
         """SOR 최유리지정가 주문
 
         Smart Order Routing으로 최적 가격에 주문합니다.
@@ -3210,9 +3069,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.account_api.order_cash_sor(pdno, qty, buy_sell, order_type)
 
-    def order_rvsecncl(
-        self, org_order_no: str, qty: int, price: int, order_type: str, cncl_type: str
-    ) -> Optional[Dict[str, Any]]:
+    def order_rvsecncl(self, org_order_no: str, qty: int, price: int, order_type: str, cncl_type: str) -> Optional[Dict[str, Any]]:
         """주문 정정/취소 (Modify or cancel order)
 
         미체결 또는 부분체결된 주문의 수량이나 가격을 변경하거나 완전히 취소합니다.
@@ -3304,13 +3161,9 @@ class Agent(BaseExceptionHandler):
             AccountAPI.order_rvsecncl: 상세 구현 참조
             inquire_psbl_rvsecncl: 정정/취소 가능한 주문 조회
         """
-        return self.account_api.order_rvsecncl(
-            org_order_no, qty, price, order_type, cncl_type
-        )
+        return self.account_api.order_rvsecncl(org_order_no, qty, price, order_type, cncl_type)
 
-    def order_resv(
-        self, code: str, qty: int, price: int, order_type: str
-    ) -> Optional[Dict[str, Any]]:
+    def order_resv(self, code: str, qty: int, price: int, order_type: str) -> Optional[Dict[str, Any]]:
         """주식예약주문
 
         특정 조건에서 자동으로 실행될 예약주문을 등록합니다.
@@ -3342,9 +3195,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.account_api.order_resv_ccnl()
 
-    def order_resv_rvsecncl(
-        self, seq: int, qty: int, price: int, order_type: str
-    ) -> Optional[Dict[str, Any]]:
+    def order_resv_rvsecncl(self, seq: int, qty: int, price: int, order_type: str) -> Optional[Dict[str, Any]]:
         """주식예약주문정정취소
 
         등록된 예약주문을 정정하거나 취소합니다.
@@ -3407,9 +3258,7 @@ class Agent(BaseExceptionHandler):
         See Also:
             AccountAPI.order_credit_buy: 상세 구현
         """
-        return self.account_api.order_credit_buy(
-            pdno, qty, price, order_type, credit_type
-        )
+        return self.account_api.order_credit_buy(pdno, qty, price, order_type, credit_type)
 
     def order_credit_sell(
         self,
@@ -3436,9 +3285,7 @@ class Agent(BaseExceptionHandler):
         See Also:
             AccountAPI.order_credit_sell: 상세 구현
         """
-        return self.account_api.order_credit_sell(
-            pdno, qty, price, order_type, credit_type
-        )
+        return self.account_api.order_credit_sell(pdno, qty, price, order_type, credit_type)
 
     def order_stock_cash(
         self,
@@ -3765,9 +3612,7 @@ class Agent(BaseExceptionHandler):
         """
         return self.account_api.inquire_intgr_margin()
 
-    def inquire_period_rights(
-        self, start_date: str, end_date: str
-    ) -> Optional[pd.DataFrame]:
+    def inquire_period_rights(self, start_date: str, end_date: str) -> Optional[pd.DataFrame]:
         """기간별계좌권리현황조회
 
         특정 기간 동안의 배당, 증자 등 권리 현황을 조회합니다.
@@ -4047,6 +3892,114 @@ class Agent(BaseExceptionHandler):
         )
 
     # ============================================================================
+    # 업종코드 마스터 데이터 조회 (한투 서버에서 다운로드)
+    # ============================================================================
+
+    def get_sector_codes(
+        self,
+        as_dict: bool = False,
+    ) -> pd.DataFrame | Dict[str, str]:
+        """
+        업종코드 마스터 데이터를 조회합니다.
+
+        한국투자증권 서버에서 업종코드 MST 파일을 다운로드하고 파싱합니다.
+
+        Args:
+            as_dict (bool): True이면 {코드: 이름} Dict 반환, False면 DataFrame 반환
+
+        Returns:
+            pd.DataFrame | Dict[str, str]: 업종코드 데이터
+                - DataFrame: columns = ['market_div', 'sector_code', 'full_code', 'sector_name']
+                - Dict: {sector_code: sector_name}
+
+        Example:
+            >>> # DataFrame으로 조회
+            >>> df = agent.get_sector_codes()
+            >>> print(df.head())
+               market_div sector_code full_code sector_name
+            0           0        0001     00001          종합
+            1           0        0002     00002         대형주
+            ...
+
+            >>> # Dict로 조회
+            >>> codes = agent.get_sector_codes(as_dict=True)
+            >>> print(codes['0001'])
+            종합
+
+        Note:
+            - 시장구분 (market_div):
+              - 0: 코스피
+              - 1: 코스닥
+              - 2: KOSPI200 관련
+              - 3: KOSDAQ150 관련
+              - 4: KRX 지수
+              - 6, 7: 기타 지수
+        """
+        return get_sector_codes(as_dict=as_dict)
+
+    def get_sector_code_by_market(
+        self,
+        market: str = "kospi",
+    ) -> pd.DataFrame:
+        """
+        시장별 업종코드를 조회합니다.
+
+        Args:
+            market (str): 시장 구분
+                - "kospi" 또는 "0": 코스피 업종
+                - "kosdaq" 또는 "1": 코스닥 업종
+                - "other" 또는 "2": 기타 지수 (KOSPI200 등)
+                - "all": 전체
+
+        Returns:
+            pd.DataFrame: 해당 시장의 업종코드 DataFrame
+                - columns = ['market_div', 'sector_code', 'full_code', 'sector_name']
+
+        Example:
+            >>> # 코스피 업종 조회
+            >>> kospi_df = agent.get_sector_code_by_market("kospi")
+            >>> print(kospi_df.head())
+
+            >>> # 코스닥 업종 조회
+            >>> kosdaq_df = agent.get_sector_code_by_market("kosdaq")
+
+            >>> # 전체 조회
+            >>> all_df = agent.get_sector_code_by_market("all")
+        """
+        return get_sector_code_by_market(market=market)
+
+    @property
+    def sector_codes_constants(self) -> Dict[str, str]:
+        """
+        주요 업종코드 상수를 반환합니다.
+
+        자주 사용되는 업종코드를 상수로 제공합니다.
+
+        Returns:
+            Dict[str, str]: 업종코드 상수
+                - KOSPI: 0001 (코스피 종합)
+                - KOSPI_LARGE: 0002 (대형주)
+                - KOSPI_MEDIUM: 0003 (중형주)
+                - KOSPI_SMALL: 0004 (소형주)
+                - KOSDAQ: 1001 (코스닥)
+                - KOSDAQ_LARGE: 1002 (코스닥 대형주)
+                - KOSDAQ_MEDIUM: 1003 (코스닥 중형주)
+                - KOSDAQ_SMALL: 1004 (코스닥 소형주)
+                - KOSPI200: 2001
+                - KOSPI100: 2007
+                - KOSPI50: 2008
+                - KOSDAQ150: 3003 (KSQ150)
+                - KRX100: 4001
+                - KRX300: 4300
+
+        Example:
+            >>> codes = agent.sector_codes_constants
+            >>> print(codes["KOSPI"])  # '0001'
+            >>> print(codes["KOSDAQ150"])  # '3003'
+        """
+        return SECTOR_CODES
+
+    # ============================================================================
     # 하위 호환성을 위한 __getattr__ 메서드 (기존 코드와의 호환성)
     # ============================================================================
 
@@ -4071,9 +4024,7 @@ class Agent(BaseExceptionHandler):
             if hasattr(api, name):
                 return getattr(api, name)
 
-        raise AttributeError(
-            f"'{self.__class__.__name__}' object has no attribute '{name}'"
-        )
+        raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
 
 # Expose facade class for flat import
