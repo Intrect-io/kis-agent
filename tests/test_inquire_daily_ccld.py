@@ -18,6 +18,7 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 
 from pykis.account.api import AccountAPI
+from pykis.core.exceptions import APIException
 
 # ==================== Fixtures ====================
 
@@ -1226,15 +1227,13 @@ class TestEdgeCases:
     def test_exception_handling(self, account_api):
         """예외 처리 검증.
 
-        make_request 호출 중 예외 발생 시 None을 반환하는지 확인합니다.
+        @api_method(reraise=True) 기본값으로 인해 예외 발생 시 APIException으로 래핑되어 발생합니다.
         """
         # Mock 예외 발생
         account_api.client.make_request.side_effect = Exception("네트워크 오류")
 
-        # 단일 조회 실행
-        result = account_api.inquire_daily_ccld(
-            start_date="20251001", end_date="20251002", pagination=False
-        )
-
-        # None 반환 검증
-        assert result is None
+        # 단일 조회 실행 - APIException 발생 검증
+        with pytest.raises(APIException):
+            account_api.inquire_daily_ccld(
+                start_date="20251001", end_date="20251002", pagination=False
+            )

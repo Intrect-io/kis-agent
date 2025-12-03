@@ -19,11 +19,11 @@
     >>> stocks = interest.get_interest_stock_list("unohee", "001")
 """
 
-import logging
 from typing import Any, Dict, Optional
 
 from ..core.base_api import BaseAPI
 from ..core.client import API_ENDPOINTS, KISClient
+from ..core.exceptions import api_method
 
 
 class InterestStockAPI(BaseAPI):
@@ -41,7 +41,14 @@ class InterestStockAPI(BaseAPI):
         >>> groups = interest.get_interest_group_list("unohee")
     """
 
-    def __init__(self, client: KISClient, account_info=None, enable_cache=True, cache_config=None):
+    def __init__(
+        self,
+        client: KISClient,
+        account_info=None,
+        enable_cache=True,
+        cache_config=None,
+        _from_agent: bool = False,
+    ):
         """
         InterestStockAPI를 초기화합니다.
 
@@ -50,13 +57,17 @@ class InterestStockAPI(BaseAPI):
             account_info (dict, optional): 계좌 정보
             enable_cache (bool, optional): 캐시 사용 여부. 기본값은 True.
             cache_config (dict, optional): 캐시 설정
+            _from_agent (bool): Agent를 통해 생성되었는지 여부 (내부 사용)
 
         Example:
             >>> client = KISClient()
             >>> api = InterestStockAPI(client)
         """
-        super().__init__(client, account_info, enable_cache, cache_config)
+        super().__init__(
+            client, account_info, enable_cache, cache_config, _from_agent=_from_agent
+        )
 
+    @api_method("관심종목 그룹 목록 조회")
     def get_interest_group_list(
         self,
         user_id: str,
@@ -83,37 +94,35 @@ class InterestStockAPI(BaseAPI):
         Example:
             >>> api.get_interest_group_list("unohee")
         """
-        try:
-            # API 요청 파라미터
-            params = {
-                "TYPE": type_code,
-                "FID_ETC_CLS_CODE": fid_etc_cls_code,
-                "USER_ID": user_id,
-            }
+        # API 요청 파라미터
+        params = {
+            "TYPE": type_code,
+            "FID_ETC_CLS_CODE": fid_etc_cls_code,
+            "USER_ID": user_id,
+        }
 
-            # API 호출
-            response = self.client.make_request(
-                endpoint=API_ENDPOINTS["INTEREST_GROUP_LIST"],
-                tr_id="HHKCM113004C7",
-                params=params,
-            )
+        # API 호출
+        response = self.client.make_request(
+            endpoint=API_ENDPOINTS["INTEREST_GROUP_LIST"],
+            tr_id="HHKCM113004C7",
+            params=params,
+        )
 
-            if not response:
-                logging.error("관심종목 그룹 목록 조회 응답이 없습니다.")
-                return None
-
-            rt_cd = response.get("rt_cd")
-            if rt_cd == "0":
-                logging.info("관심종목 그룹 목록 조회 성공")
-                return response
-            else:
-                logging.error(f"관심종목 그룹 목록 조회 실패: rt_cd={rt_cd}, msg={response.get('msg1', '')}")
-                return None
-
-        except Exception as e:
-            logging.error(f"관심종목 그룹 목록 조회 중 오류 발생: {e}")
+        if not response:
+            self._log_warning("관심종목 그룹 목록 조회 응답이 없습니다.")
             return None
 
+        rt_cd = response.get("rt_cd")
+        if rt_cd == "0":
+            self._log_info("관심종목 그룹 목록 조회 성공")
+            return response
+        else:
+            self._log_warning(
+                f"관심종목 그룹 목록 조회 실패: rt_cd={rt_cd}, msg={response.get('msg1', '')}"
+            )
+            return None
+
+    @api_method("관심종목 그룹별 종목 조회")
     def get_interest_stock_list(
         self,
         user_id: str,
@@ -161,39 +170,36 @@ class InterestStockAPI(BaseAPI):
         Example:
             >>> api.get_interest_stock_list("unohee", "001")
         """
-        try:
-            # API 요청 파라미터
-            params = {
-                "TYPE": type_code,
-                "USER_ID": user_id,
-                "DATA_RANK": data_rank,
-                "INTER_GRP_CODE": inter_grp_code,
-                "INTER_GRP_NAME": inter_grp_name,
-                "HTS_KOR_ISNM": hts_kor_isnm,
-                "CNTG_CLS_CODE": cntg_cls_code,
-                "FID_ETC_CLS_CODE": fid_etc_cls_code,
-            }
+        # API 요청 파라미터
+        params = {
+            "TYPE": type_code,
+            "USER_ID": user_id,
+            "DATA_RANK": data_rank,
+            "INTER_GRP_CODE": inter_grp_code,
+            "INTER_GRP_NAME": inter_grp_name,
+            "HTS_KOR_ISNM": hts_kor_isnm,
+            "CNTG_CLS_CODE": cntg_cls_code,
+            "FID_ETC_CLS_CODE": fid_etc_cls_code,
+        }
 
-            # API 호출
-            response = self.client.make_request(
-                endpoint=API_ENDPOINTS["INTEREST_STOCK_LIST"],
-                tr_id="HHKCM113004C6",
-                params=params,
+        # API 호출
+        response = self.client.make_request(
+            endpoint=API_ENDPOINTS["INTEREST_STOCK_LIST"],
+            tr_id="HHKCM113004C6",
+            params=params,
+        )
+
+        if not response:
+            self._log_warning("관심종목 그룹별 종목 조회 응답이 없습니다.")
+            return None
+
+        rt_cd = response.get("rt_cd")
+        if rt_cd == "0":
+            stocks = response.get("output2", [])
+            self._log_info(f"관심종목 그룹별 종목 조회 성공: {len(stocks)}개 종목")
+            return response
+        else:
+            self._log_warning(
+                f"관심종목 그룹별 종목 조회 실패: rt_cd={rt_cd}, msg={response.get('msg1', '')}"
             )
-
-            if not response:
-                logging.error("관심종목 그룹별 종목 조회 응답이 없습니다.")
-                return None
-
-            rt_cd = response.get("rt_cd")
-            if rt_cd == "0":
-                stocks = response.get("output2", [])
-                logging.info(f"관심종목 그룹별 종목 조회 성공: {len(stocks)}개 종목")
-                return response
-            else:
-                logging.error(f"관심종목 그룹별 종목 조회 실패: rt_cd={rt_cd}, msg={response.get('msg1', '')}")
-                return None
-
-        except Exception as e:
-            logging.error(f"관심종목 그룹별 종목 조회 중 오류 발생: {e}")
             return None

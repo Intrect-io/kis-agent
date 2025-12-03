@@ -71,7 +71,9 @@ class TestNewAPIs:
             return False
 
         if not isinstance(response, dict):
-            logger.warning(f"[{api_name}] 응답이 dict 타입이 아닙니다: {type(response)}")
+            logger.warning(
+                f"[{api_name}] 응답이 dict 타입이 아닙니다: {type(response)}"
+            )
             return False
 
         # rt_cd 확인 (0: 성공)
@@ -214,7 +216,9 @@ class TestNewAPIs:
             assert issubclass(w[0].category, DeprecationWarning)
             assert "deprecated" in str(w[0].message).lower()
 
-        logger.info("[inquire_index_price] ✓ DeprecationWarning 발생 확인 (inquire_index_timeprice로 리다이렉트)")
+        logger.info(
+            "[inquire_index_price] ✓ DeprecationWarning 발생 확인 (inquire_index_timeprice로 리다이렉트)"
+        )
         self._rate_limit_sleep()
 
     @pytest.mark.requires_credentials
@@ -225,7 +229,9 @@ class TestNewAPIs:
         if response is None:
             logger.info("[market_time] ⚠ 서버 미지원 (None 반환)")
         elif response.get("rt_cd") != "0":
-            logger.info(f"[market_time] ⚠ 서버 미지원 (에러 응답: {response.get('msg1', 'N/A')})")
+            logger.info(
+                f"[market_time] ⚠ 서버 미지원 (에러 응답: {response.get('msg1', 'N/A')})"
+            )
         else:
             logger.warning("[market_time] 예상과 달리 정상 응답을 받았습니다")
         self._rate_limit_sleep()
@@ -238,7 +244,9 @@ class TestNewAPIs:
         if response is None:
             logger.info("[market_value] ⚠ 서버 미지원 (None 반환, 404 에러)")
         elif response.get("rt_cd") != "0":
-            logger.info(f"[market_value] ⚠ 서버 미지원 (에러 응답: {response.get('msg1', 'N/A')})")
+            logger.info(
+                f"[market_value] ⚠ 서버 미지원 (에러 응답: {response.get('msg1', 'N/A')})"
+            )
         else:
             logger.warning("[market_value] 예상과 달리 정상 응답을 받았습니다")
         self._rate_limit_sleep()
@@ -275,9 +283,7 @@ class TestNewAPIs:
         response = agent.get_investor_trade_by_stock_daily(
             fid_input_iscd="005930", fid_input_date_1=today
         )
-        assert self._validate_response(
-            response, "get_investor_trade_by_stock_daily"
-        )
+        assert self._validate_response(response, "get_investor_trade_by_stock_daily")
         self._rate_limit_sleep()
 
 
@@ -298,7 +304,9 @@ def run_full_test_suite():
         logger.error(f"KIS_APP_KEY: {'✓' if app_key else '✗'}")
         logger.error(f"KIS_SECRET/KIS_APP_SECRET: {'✓' if app_secret else '✗'}")
         logger.error(f"KIS_ACCOUNT_NO: {'✓' if account_no else '✗'}")
-        logger.error("환경변수를 확인하세요: KIS_APP_KEY, KIS_APP_SECRET/KIS_SECRET, KIS_ACCOUNT_NO")
+        logger.error(
+            "환경변수를 확인하세요: KIS_APP_KEY, KIS_APP_SECRET/KIS_SECRET, KIS_ACCOUNT_NO"
+        )
         return 1
 
     try:

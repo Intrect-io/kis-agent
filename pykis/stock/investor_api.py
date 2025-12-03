@@ -109,7 +109,10 @@ class StockInvestorAPI(BaseAPI):
         )
 
     def get_foreign_broker_net_buy(
-        self, code: str, foreign_brokers: Optional[list] = None, date: Optional[str] = None
+        self,
+        code: str,
+        foreign_brokers: Optional[list] = None,
+        date: Optional[str] = None,
     ) -> Optional[tuple]:
         """
         거래원 정보를 활용해 외국계 증권사의 순매수(매수-매도) 합계를 집계합니다.
@@ -237,12 +240,14 @@ class StockInvestorAPI(BaseAPI):
 
                 if is_foreign and broker_name and sell_qty > 0:
                     total_sell += sell_qty
-                    foreign_brokers.append({
-                        "name": broker_name,
-                        "type": "sell",
-                        "volume": sell_qty,
-                        "rank": i
-                    })
+                    foreign_brokers.append(
+                        {
+                            "name": broker_name,
+                            "type": "sell",
+                            "volume": sell_qty,
+                            "rank": i,
+                        }
+                    )
 
             # 매수 상위 5개 회원사 확인
             for i in range(1, 6):
@@ -252,12 +257,14 @@ class StockInvestorAPI(BaseAPI):
 
                 if is_foreign and broker_name and buy_qty > 0:
                     total_buy += buy_qty
-                    foreign_brokers.append({
-                        "name": broker_name,
-                        "type": "buy",
-                        "volume": buy_qty,
-                        "rank": i
-                    })
+                    foreign_brokers.append(
+                        {
+                            "name": broker_name,
+                            "type": "buy",
+                            "volume": buy_qty,
+                            "rank": i,
+                        }
+                    )
 
             net_buy = total_buy - total_sell
 

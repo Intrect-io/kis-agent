@@ -8,7 +8,14 @@ from pykis.core.client import API_ENDPOINTS, KISClient
 def mock_make_request(monkeypatch):
     calls = []
 
-    def _fake_make_request(self, endpoint: str, tr_id: str, params: dict, retries: int = 0):
+    def _fake_make_request(
+        self,
+        endpoint: str,
+        tr_id: str,
+        params: dict,
+        retries: int = 0,
+        method: str = "GET",
+    ):
         calls.append({"endpoint": endpoint, "tr_id": tr_id, "params": params})
         return {"rt_cd": "0", "msg1": "OK", "output": {}}
 
@@ -21,8 +28,14 @@ def mock_make_request(monkeypatch):
 @pytest.fixture(autouse=True)
 def mock_agent_token_flow(monkeypatch):
     """Agent._ensure_valid_token 경로 우회: read_token은 존재, auth는 no-op."""
-    monkeypatch.setattr("pykis.core.agent.read_token", lambda: {"access_token": "dummy"})
-    monkeypatch.setattr("pykis.core.agent.auth", lambda config=None: None)
+    monkeypatch.setattr(
+        "pykis.core.agent.read_token",
+        lambda path=None, app_key=None: {"access_token": "dummy"},
+    )
+    monkeypatch.setattr(
+        "pykis.core.agent.auth",
+        lambda config=None, svr="prod", product=None, url=None: None,
+    )
     monkeypatch.setenv("PYKIS_SILENT", "1")
 
 
@@ -56,5 +69,3 @@ def test_agent_inquire_ccnl_delegates_to_price_api(mock_make_request):
     assert last["tr_id"] == "FHKST01010300"
     assert last["endpoint"] == API_ENDPOINTS["INQUIRE_CCNL"]
     assert last["params"]["FID_INPUT_ISCD"] == "005930"
-
-

@@ -8,7 +8,6 @@ from typing import List, TypedDict
 
 from .common import BaseResponse
 
-
 # ============================================================
 # get_stock_price() - 주식 현재가 조회
 # ============================================================
@@ -296,7 +295,9 @@ class StockInvestorOutput(TypedDict, total=False):
 
     # 개인 (Individual)
     prsn_ntby_qty: str  # 개인 순매수 수량 (Person Net Buy Quantity)
-    prsn_ntby_tr_pbmn: str  # 개인 순매수 거래대금 (Person Net Buy Trade Price By Million)
+    prsn_ntby_tr_pbmn: (
+        str  # 개인 순매수 거래대금 (Person Net Buy Trade Price By Million)
+    )
     prsn_shnu_vol: str  # 개인 매수 거래량
     prsn_shnu_tr_pbmn: str  # 개인 매수 거래대금
     prsn_seln_vol: str  # 개인 매도 거래량

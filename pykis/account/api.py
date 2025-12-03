@@ -1,10 +1,10 @@
-import logging
 from typing import Any, Callable, Dict, List, Optional
 
 import pandas as pd
 
 from ..core.base_api import BaseAPI
 from ..core.client import API_ENDPOINTS, KISClient
+from ..core.exceptions import api_method
 
 """
 account.py - 계좌 정보 조회 전용 모듈
@@ -30,12 +30,18 @@ df = account.get_account_balance()
 
 
 class AccountAPI(BaseAPI):
+    """계좌 관련 API 클래스
+
+    BaseAPI를 상속받아 ExceptionHandler 기능을 자동으로 포함합니다.
+    """
+
     def __init__(
         self,
         client: KISClient,
         account_info: Dict[str, str],
         enable_cache=True,
         cache_config=None,
+        _from_agent: bool = False,
     ):
         """Wrapper around KIS account related endpoints.
 
@@ -49,13 +55,18 @@ class AccountAPI(BaseAPI):
             캐시 사용 여부 (기본: True)
         cache_config : dict
             캐시 설정 (default_ttl, max_size)
+        _from_agent : bool
+            Agent를 통해 생성되었는지 여부 (내부 사용)
 
         Example
         -------
         >>> account = load_account_info()
         >>> api = AccountAPI(KISClient(), account)
         """
-        super().__init__(client, account_info, enable_cache, cache_config)
+        # BaseAPI가 ExceptionHandler를 상속하므로 단일 상속만 필요
+        super().__init__(
+            client, account_info, enable_cache, cache_config, _from_agent=_from_agent
+        )
 
     def get_account_balance(self) -> Optional[Dict]:
         """
@@ -187,6 +198,7 @@ class AccountAPI(BaseAPI):
             )
         return res
 
+    @api_method("계좌별 주문 수량 조회")
     def get_account_order_quantity(self, code: str) -> Optional[Dict]:
         """
         계좌별 주문 수량 조회
@@ -207,25 +219,20 @@ class AccountAPI(BaseAPI):
             >>> if result and result.get('rt_cd') == '0':
             ...     print(f"주문 가능 수량: {result['output']['ord_psbl_qty']}")
         """
-        try:
-            return self._make_request_dict(
-                endpoint=(
-                    "/uapi/domestic-stock/v1/trading/inquire-account-order-quantity"
-                ),
-                tr_id="TTTC8434R",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "PDNO": code,
-                    "ORD_UNPR": "0",
-                    "CTX_AREA_FK200": "",
-                    "CTX_AREA_NK200": "",
-                },
-            )
-        except Exception as e:
-            logging.error(f"계좌별 주문 수량 조회 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint=("/uapi/domestic-stock/v1/trading/inquire-account-order-quantity"),
+            tr_id="TTTC8434R",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "PDNO": code,
+                "ORD_UNPR": "0",
+                "CTX_AREA_FK200": "",
+                "CTX_AREA_NK200": "",
+            },
+        )
 
+    @api_method("주문 가능 금액 조회")
     def get_possible_order_amount(self) -> Optional[Dict]:
         """
         주문 가능 금액 조회
@@ -244,24 +251,21 @@ class AccountAPI(BaseAPI):
             ...     available_amount = result['output']['ord_psbl_amt']
             ...     print(f"주문 가능 금액: {available_amount:,}원")
         """
-        try:
-            return self._make_request_dict(
-                endpoint=API_ENDPOINTS["INQUIRE_PSBL_ORDER"],
-                tr_id="TTTC8908R",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "PDNO": "",
-                    "ORD_UNPR": "0",
-                    "ORD_DVSN": "00",
-                    "CMA_EVLU_AMT_ICLD_YN": "Y",
-                    "OVRS_ICLD_YN": "N",
-                },
-            )
-        except Exception as e:
-            logging.error(f"주문 가능 금액 조회 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint=API_ENDPOINTS["INQUIRE_PSBL_ORDER"],
+            tr_id="TTTC8908R",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "PDNO": "",
+                "ORD_UNPR": "0",
+                "ORD_DVSN": "00",
+                "CMA_EVLU_AMT_ICLD_YN": "Y",
+                "OVRS_ICLD_YN": "N",
+            },
+        )
 
+    @api_method("신용 주문", reraise=True)
     def order_credit(
         self, code: str, qty: int, price: int, order_type: str
     ) -> Optional[Dict]:
@@ -290,26 +294,23 @@ class AccountAPI(BaseAPI):
             >>> if result and result.get('rt_cd') == '0':
             ...     print(f"주문번호: {result['output']['odno']}")
         """
-        try:
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/order-credit",
-                tr_id="TTTC0052U",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "PDNO": code,
-                    "CRDT_TYPE": "21",
-                    "LOAN_DT": "",
-                    "ORD_DVSN": order_type,
-                    "ORD_QTY": str(qty),
-                    "ORD_UNPR": str(price),
-                },
-                method="POST",  # 주문 API는 POST 메서드 사용
-            )
-        except Exception as e:
-            logging.error(f"신용 주문 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/order-credit",
+            tr_id="TTTC0052U",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "PDNO": code,
+                "CRDT_TYPE": "21",
+                "LOAN_DT": "",
+                "ORD_DVSN": order_type,
+                "ORD_QTY": str(qty),
+                "ORD_UNPR": str(price),
+            },
+            method="POST",  # 주문 API는 POST 메서드 사용
+        )
 
+    @api_method("정정/취소 주문", reraise=True)
     def order_rvsecncl(
         self, org_order_no: str, qty: int, price: int, order_type: str, cncl_type: str
     ) -> Optional[Dict]:
@@ -330,27 +331,24 @@ class AccountAPI(BaseAPI):
                 - 성공 시: rt_cd와 함께 정정/취소 결과 정보
                 - 실패 시: None
         """
-        try:
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/order-rvsecncl",
-                tr_id="TTTC0803U",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "KRX_FWDG_ORD_ORGNO": "",
-                    "ORGN_ODNO": org_order_no,
-                    "ORD_DVSN": order_type,
-                    "RVSE_CNCL_DVSN_CD": cncl_type,
-                    "ORD_QTY": str(qty),
-                    "ORD_UNPR": str(price),
-                    "QTY_ALL_ORD_YN": "Y",
-                },
-                method="POST",  # 주문 API는 POST 메서드 사용
-            )
-        except Exception as e:
-            logging.error(f"정정/취소 주문 ��패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/order-rvsecncl",
+            tr_id="TTTC0803U",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "KRX_FWDG_ORD_ORGNO": "",
+                "ORGN_ODNO": org_order_no,
+                "ORD_DVSN": order_type,
+                "RVSE_CNCL_DVSN_CD": cncl_type,
+                "ORD_QTY": str(qty),
+                "ORD_UNPR": str(price),
+                "QTY_ALL_ORD_YN": "Y",
+            },
+            method="POST",  # 주문 API는 POST 메서드 사용
+        )
 
+    @api_method("정정/취소 가능 주문 조회")
     def inquire_psbl_rvsecncl(self) -> Optional[Dict]:
         """
         정정/취소 가능 주문 조회
@@ -369,23 +367,20 @@ class AccountAPI(BaseAPI):
             ...     for order in result['output']:
             ...         print(f"주문번호: {order['odno']}")
         """
-        try:
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/inquire-psbl-rvsecncl",
-                tr_id="TTTC8036R",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "CTX_AREA_FK100": "",
-                    "CTX_AREA_NK100": "",
-                    "INQR_DVSN_1": "1",
-                    "INQR_DVSN_2": "0",
-                },
-            )
-        except Exception as e:
-            logging.error(f"정정/취소 가능 주문 조회 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/inquire-psbl-rvsecncl",
+            tr_id="TTTC8036R",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "CTX_AREA_FK100": "",
+                "CTX_AREA_NK100": "",
+                "INQR_DVSN_1": "1",
+                "INQR_DVSN_2": "0",
+            },
+        )
 
+    @api_method("예약 주문", reraise=True)
     def order_resv(
         self, code: str, qty: int, price: int, order_type: str
     ) -> Optional[Dict]:
@@ -411,26 +406,23 @@ class AccountAPI(BaseAPI):
             >>> if result and result.get('rt_cd') == '0':
             ...     print(f"예약주문 등록: {result['output']['odno']}")
         """
-        try:
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/order-resv",
-                tr_id="CTSC0008U",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "PDNO": code,
-                    "ORD_QTY": str(qty),
-                    "ORD_UNPR": str(price),
-                    "SLL_BUY_DVSN_CD": "02",
-                    "ORD_DVSN_CD": order_type,
-                    "ORD_OBJT_CBLC_DVSN_CD": "10",
-                },
-                method="POST",  # 주문 API는 POST 메서드 사용
-            )
-        except Exception as e:
-            logging.error(f"예약 주문 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/order-resv",
+            tr_id="CTSC0008U",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "PDNO": code,
+                "ORD_QTY": str(qty),
+                "ORD_UNPR": str(price),
+                "SLL_BUY_DVSN_CD": "02",
+                "ORD_DVSN_CD": order_type,
+                "ORD_OBJT_CBLC_DVSN_CD": "10",
+            },
+            method="POST",  # 주문 API는 POST 메서드 사용
+        )
 
+    @api_method("예약 주문 정정/취소", reraise=True)
     def order_resv_rvsecncl(
         self, seq: int, qty: int, price: int, order_type: str
     ) -> Optional[Dict]:
@@ -456,27 +448,24 @@ class AccountAPI(BaseAPI):
             >>> if result and result.get('rt_cd') == '0':
             ...     print("예약주문 정정 완료")
         """
-        try:
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/order-resv-rvsecncl",
-                tr_id="CTSC0013U",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "PDNO": "",
-                    "ORD_QTY": str(qty),
-                    "ORD_UNPR": str(price),
-                    "SLL_BUY_DVSN_CD": "02",
-                    "ORD_DVSN_CD": order_type,
-                    "ORD_OBJT_CBLC_DVSN_CD": "10",
-                    "RSVN_ORD_SEQ": str(seq),
-                },
-                method="POST",  # 주문 API는 POST 메서드 사용
-            )
-        except Exception as e:
-            logging.error(f"예약 주문 정정/취소 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/order-resv-rvsecncl",
+            tr_id="CTSC0013U",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "PDNO": "",
+                "ORD_QTY": str(qty),
+                "ORD_UNPR": str(price),
+                "SLL_BUY_DVSN_CD": "02",
+                "ORD_DVSN_CD": order_type,
+                "ORD_OBJT_CBLC_DVSN_CD": "10",
+                "RSVN_ORD_SEQ": str(seq),
+            },
+            method="POST",  # 주문 API는 POST 메서드 사용
+        )
 
+    @api_method("예약 주문 조회")
     def order_resv_ccnl(self) -> Optional[Dict]:
         """
         예약주문 조회
@@ -495,29 +484,26 @@ class AccountAPI(BaseAPI):
             ...     for order in result['output']:
             ...         print(f"예약주문: {order['pdno']} {order['ord_qty']}주")
         """
-        try:
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/order-resv-ccnl",
-                tr_id="CTSC0004R",
-                params={
-                    "RSVN_ORD_ORD_DT": "",
-                    "RSVN_ORD_END_DT": "",
-                    "RSVN_ORD_SEQ": "",
-                    "TMNL_MDIA_KIND_CD": "00",
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "PRCS_DVSN_CD": "0",
-                    "CNCL_YN": "Y",
-                    "PDNO": "",
-                    "SLL_BUY_DVSN_CD": "",
-                    "CTX_AREA_FK200": "",
-                    "CTX_AREA_NK200": "",
-                },
-            )
-        except Exception as e:
-            logging.error(f"예약 주문 조회 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/order-resv-ccnl",
+            tr_id="CTSC0004R",
+            params={
+                "RSVN_ORD_ORD_DT": "",
+                "RSVN_ORD_END_DT": "",
+                "RSVN_ORD_SEQ": "",
+                "TMNL_MDIA_KIND_CD": "00",
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "PRCS_DVSN_CD": "0",
+                "CNCL_YN": "Y",
+                "PDNO": "",
+                "SLL_BUY_DVSN_CD": "",
+                "CTX_AREA_FK200": "",
+                "CTX_AREA_NK200": "",
+            },
+        )
 
+    @api_method("일별주문체결조회")
     def inquire_daily_ccld(
         self,
         start_date: str = "",
@@ -752,46 +738,40 @@ class AccountAPI(BaseAPI):
             )
 
         # 기존 단일 조회
-        try:
-            # 조회 기간에 따라 TR ID 선택
-            from datetime import datetime, timedelta
+        # 조회 기간에 따라 TR ID 선택
+        from datetime import datetime, timedelta
 
-            today = datetime.now()
-            three_months_ago = (today - timedelta(days=90)).strftime("%Y%m%d")
+        today = datetime.now()
+        three_months_ago = (today - timedelta(days=90)).strftime("%Y%m%d")
 
-            # start_date가 3개월 이전이면 CTSC9215R, 이내면 TTTC0081R
-            if start_date and start_date < three_months_ago:
-                tr_id = "CTSC9215R"  # 3개월 이전 데이터
-            else:
-                tr_id = "TTTC0081R"  # 3개월 이내 데이터
+        # start_date가 3개월 이전이면 CTSC9215R, 이내면 TTTC0081R
+        if start_date and start_date < three_months_ago:
+            tr_id = "CTSC9215R"  # 3개월 이전 데이터
+        else:
+            tr_id = "TTTC0081R"  # 3개월 이내 데이터
 
-            res = self.client.make_request(
-                endpoint="/uapi/domestic-stock/v1/trading/inquire-daily-ccld",
-                tr_id=tr_id,
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "INQR_STRT_DT": start_date,
-                    "INQR_END_DT": end_date,
-                    "SLL_BUY_DVSN_CD": ord_dvsn_cd,
-                    "INQR_DVSN": "00",
-                    "PDNO": pdno,
-                    "CCLD_DVSN": "00",  # 00: 전체, 01: 체결, 02: 미체결
-                    "ORD_GNO_BRNO": "",
-                    "ODNO": "",
-                    "INQR_DVSN_3": "00",
-                    "INQR_DVSN_1": "",
-                    "CTX_AREA_FK100": "",
-                    "CTX_AREA_NK100": "",
-                },
-            )
+        return self.client.make_request(
+            endpoint="/uapi/domestic-stock/v1/trading/inquire-daily-ccld",
+            tr_id=tr_id,
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "INQR_STRT_DT": start_date,
+                "INQR_END_DT": end_date,
+                "SLL_BUY_DVSN_CD": ord_dvsn_cd,
+                "INQR_DVSN": "00",
+                "PDNO": pdno,
+                "CCLD_DVSN": "00",  # 00: 전체, 01: 체결, 02: 미체결
+                "ORD_GNO_BRNO": "",
+                "ODNO": "",
+                "INQR_DVSN_3": "00",
+                "INQR_DVSN_1": "",
+                "CTX_AREA_FK100": "",
+                "CTX_AREA_NK100": "",
+            },
+        )
 
-            # API 응답을 그대로 딕셔너리로 반환
-            return res
-        except Exception as e:
-            logging.error(f"일별주문체결 조회 실패: {e}")
-            return None
-
+    @api_method("일별주문체결 연속조회")
     def _inquire_daily_ccld_pagination(
         self,
         start_date: str,
@@ -954,186 +934,182 @@ class AccountAPI(BaseAPI):
         else:
             tr_id = "TTTC0081R"  # 3개월 이내 데이터
 
-        try:
-            while page_count < max_pages:
-                # 연속조회 헤더 설정
-                # 첫 번째 조회: tr_cont = "" (빈 문자열)
-                # 이후 조회: tr_cont = "N"
-                req_headers = {}
-                if page_count > 0:
-                    req_headers["tr_cont"] = "N"
+        while page_count < max_pages:
+            # 연속조회 헤더 설정
+            # 첫 번째 조회: tr_cont = "" (빈 문자열)
+            # 이후 조회: tr_cont = "N"
+            req_headers = {}
+            if page_count > 0:
+                req_headers["tr_cont"] = "N"
 
-                # API 요청
-                res = self.client.make_request(
-                    endpoint="/uapi/domestic-stock/v1/trading/inquire-daily-ccld",
-                    tr_id=tr_id,
-                    headers=req_headers,
-                    params={
-                        "CANO": self.account["CANO"],
-                        "ACNT_PRDT_CD": self.account.get("ACNT_PRDT_CD", "01"),
-                        "INQR_STRT_DT": start_date,
-                        "INQR_END_DT": end_date,
-                        "SLL_BUY_DVSN_CD": sll_buy_dvsn_cd,
-                        "INQR_DVSN": inqr_dvsn,
-                        "PDNO": pdno,
-                        "CCLD_DVSN": ccld_dvsn,
-                        "ORD_GNO_BRNO": "",
-                        "ODNO": "",
-                        "INQR_DVSN_3": inqr_dvsn_3,
-                        "INQR_DVSN_1": "",
-                        "CTX_AREA_FK100": ctx_area_fk100,
-                        "CTX_AREA_NK100": ctx_area_nk100,
-                    },
-                )
-
-                # 응답 처리
-                if not res or res.get("rt_cd") != "0":
-                    if page_count == 0:
-                        logging.error(
-                            f"일별주문체결 조회 실패: {res.get('msg1', 'Unknown error') if res else 'No response'}"
-                        )
-                        return None
-                    else:
-                        # 연속조회 중 오류 발생시 현재까지 데이터 반환
-                        logging.warning(
-                            f"페이지 {page_count + 1} 조회 실패, 현재까지 데이터 반환"
-                        )
-                        break
-
-                # output1 데이터 처리
-                output1 = res.get("output1", [])
-                if not output1:
-                    # 더 이상 데이터가 없음
-                    break
-
-                # 데이터 저장 (딕셔너리 리스트로 유지)
-                all_data.extend(output1)
-
-                page_count += 1
-
-                # 콜백 호출
-                if page_callback:
-                    ctx_info = {
-                        "FK100": res.get("ctx_area_fk100", ""),
-                        "NK100": res.get("ctx_area_nk100", ""),
-                        "total_rows": len(output1),
-                    }
-                    page_callback(page_count, output1, ctx_info)
-
-                # 연속조회 키 추출 (소문자 키 사용)
-                ctx_area_fk100 = res.get("ctx_area_fk100", "").strip()
-                ctx_area_nk100 = res.get("ctx_area_nk100", "").strip()
-
-                # 연속조회 종료 조건 확인
-                # 1. msg1이 "조회가 계속됩니다"가 아니면 마지막 페이지
-                # 2. 연속조회 키가 모두 비어있으면 마지막 페이지
-                # 3. 데이터가 100건 미만이면 마지막 페이지
-                msg1 = res.get("msg1", "").strip()
-                is_continue = "계속" in msg1 or "조회가 계속됩니다" in msg1
-
-                if not is_continue:
-                    logging.info(f"연속조회 종료: msg1='{msg1}'")
-                    break
-
-                if not ctx_area_fk100 and not ctx_area_nk100:
-                    logging.info("연속조회 종료: 연속조회키 없음")
-                    break
-
-                if len(output1) < 100:
-                    logging.info(f"연속조회 종료: 데이터 {len(output1)}건 (100건 미만)")
-                    break
-
-            # 전체 데이터를 딕셔너리로 반환
-            if all_data:
-                # 중복 제거
-                unique_data = []
-                seen = set()
-                for item in all_data:
-                    key = (
-                        item.get("ord_dt", ""),
-                        item.get("odno", ""),
-                        item.get("pdno", ""),
-                    )
-                    if key not in seen:
-                        seen.add(key)
-                        unique_data.append(item)
-
-                # 정렬
-                if unique_data:
-                    unique_data.sort(
-                        key=lambda x: (x.get("ord_dt", ""), x.get("ord_tmd", "")),
-                        reverse=(inqr_dvsn == "00"),
-                    )
-
-                # 요약 정보 생성
-                tot_ord_qty = sum(
-                    int(item.get("ord_qty", 0))
-                    for item in unique_data
-                    if item.get("ord_qty")
-                )
-                tot_ccld_qty = sum(
-                    int(item.get("tot_ccld_qty", 0))
-                    for item in unique_data
-                    if item.get("tot_ccld_qty")
-                )
-                tot_ccld_amt = sum(
-                    float(item.get("tot_ccld_amt", 0))
-                    for item in unique_data
-                    if item.get("tot_ccld_amt")
-                )
-
-                logging.info(
-                    f"일별주문체결 조회 완료: 총 {page_count}페이지, {len(unique_data)}건"
-                )
-
-                # output2 요약 정보 생성
-                # 연속조회 시에는 prsm_tlex_smtl (추정제비용합계)와 pchs_avg_pric (매입평균가격)이
-                # 제공되지 않으므로, 마지막 응답(res)의 output2를 기반으로 생성
-                output2 = {
-                    "tot_ord_qty": str(tot_ord_qty),
-                    "tot_ccld_qty": str(tot_ccld_qty),
-                    "tot_ccld_amt": str(tot_ccld_amt),
-                    "page_count": page_count,
-                    "total_count": len(unique_data),
-                }
-
-                # 마지막 응답의 output2에서 추가 필드 복사
-                # (prsm_tlex_smtl, pchs_avg_pric 등)
-                if res and "output2" in res:
-                    last_output2 = res.get("output2", {})
-                    if "prsm_tlex_smtl" in last_output2:
-                        output2["prsm_tlex_smtl"] = last_output2["prsm_tlex_smtl"]
-                    if "pchs_avg_pric" in last_output2:
-                        output2["pchs_avg_pric"] = last_output2["pchs_avg_pric"]
-
-                # 최종 결과 반환
-                return {
-                    "rt_cd": "0",
-                    "msg_cd": "SUCCESSFUL",
-                    "msg1": f"정상처리 완료 - 총 {len(unique_data)}건 조회",
-                    "output1": unique_data,
-                    "output2": output2,
-                }
-
-            # 빈 결과 반환
-            return {
-                "rt_cd": "0",
-                "msg_cd": "NO_DATA",
-                "msg1": "조회된 데이터가 없습니다",
-                "output1": [],
-                "output2": {
-                    "tot_ord_qty": "0",
-                    "tot_ccld_qty": "0",
-                    "tot_ccld_amt": "0",
-                    "page_count": 0,
-                    "total_count": 0,
+            # API 요청
+            res = self.client.make_request(
+                endpoint="/uapi/domestic-stock/v1/trading/inquire-daily-ccld",
+                tr_id=tr_id,
+                headers=req_headers,
+                params={
+                    "CANO": self.account["CANO"],
+                    "ACNT_PRDT_CD": self.account.get("ACNT_PRDT_CD", "01"),
+                    "INQR_STRT_DT": start_date,
+                    "INQR_END_DT": end_date,
+                    "SLL_BUY_DVSN_CD": sll_buy_dvsn_cd,
+                    "INQR_DVSN": inqr_dvsn,
+                    "PDNO": pdno,
+                    "CCLD_DVSN": ccld_dvsn,
+                    "ORD_GNO_BRNO": "",
+                    "ODNO": "",
+                    "INQR_DVSN_3": inqr_dvsn_3,
+                    "INQR_DVSN_1": "",
+                    "CTX_AREA_FK100": ctx_area_fk100,
+                    "CTX_AREA_NK100": ctx_area_nk100,
                 },
+            )
+
+            # 응답 처리
+            if not res or res.get("rt_cd") != "0":
+                if page_count == 0:
+                    self._log_warning(
+                        f"일별주문체결 조회 실패: {res.get('msg1', 'Unknown error') if res else 'No response'}"
+                    )
+                    return None
+                else:
+                    # 연속조회 중 오류 발생시 현재까지 데이터 반환
+                    self._log_warning(
+                        f"페이지 {page_count + 1} 조회 실패, 현재까지 데이터 반환"
+                    )
+                    break
+
+            # output1 데이터 처리
+            output1 = res.get("output1", [])
+            if not output1:
+                # 더 이상 데이터가 없음
+                break
+
+            # 데이터 저장 (딕셔너리 리스트로 유지)
+            all_data.extend(output1)
+
+            page_count += 1
+
+            # 콜백 호출
+            if page_callback:
+                ctx_info = {
+                    "FK100": res.get("ctx_area_fk100", ""),
+                    "NK100": res.get("ctx_area_nk100", ""),
+                    "total_rows": len(output1),
+                }
+                page_callback(page_count, output1, ctx_info)
+
+            # 연속조회 키 추출 (소문자 키 사용)
+            ctx_area_fk100 = res.get("ctx_area_fk100", "").strip()
+            ctx_area_nk100 = res.get("ctx_area_nk100", "").strip()
+
+            # 연속조회 종료 조건 확인
+            # 1. msg1이 "조회가 계속됩니다"가 아니면 마지막 페이지
+            # 2. 연속조회 키가 모두 비어있으면 마지막 페이지
+            # 3. 데이터가 100건 미만이면 마지막 페이지
+            msg1 = res.get("msg1", "").strip()
+            is_continue = "계속" in msg1 or "조회가 계속됩니다" in msg1
+
+            if not is_continue:
+                self._log_info(f"연속조회 종료: msg1='{msg1}'")
+                break
+
+            if not ctx_area_fk100 and not ctx_area_nk100:
+                self._log_info("연속조회 종료: 연속조회키 없음")
+                break
+
+            if len(output1) < 100:
+                self._log_info(f"연속조회 종료: 데이터 {len(output1)}건 (100건 미만)")
+                break
+
+        # 전체 데이터를 딕셔너리로 반환
+        if all_data:
+            # 중복 제거
+            unique_data = []
+            seen = set()
+            for item in all_data:
+                key = (
+                    item.get("ord_dt", ""),
+                    item.get("odno", ""),
+                    item.get("pdno", ""),
+                )
+                if key not in seen:
+                    seen.add(key)
+                    unique_data.append(item)
+
+            # 정렬
+            if unique_data:
+                unique_data.sort(
+                    key=lambda x: (x.get("ord_dt", ""), x.get("ord_tmd", "")),
+                    reverse=(inqr_dvsn == "00"),
+                )
+
+            # 요약 정보 생성
+            tot_ord_qty = sum(
+                int(item.get("ord_qty", 0))
+                for item in unique_data
+                if item.get("ord_qty")
+            )
+            tot_ccld_qty = sum(
+                int(item.get("tot_ccld_qty", 0))
+                for item in unique_data
+                if item.get("tot_ccld_qty")
+            )
+            tot_ccld_amt = sum(
+                float(item.get("tot_ccld_amt", 0))
+                for item in unique_data
+                if item.get("tot_ccld_amt")
+            )
+
+            self._log_info(
+                f"일별주문체결 조회 완료: 총 {page_count}페이지, {len(unique_data)}건"
+            )
+
+            # output2 요약 정보 생성
+            # 연속조회 시에는 prsm_tlex_smtl (추정제비용합계)와 pchs_avg_pric (매입평균가격)이
+            # 제공되지 않으므로, 마지막 응답(res)의 output2를 기반으로 생성
+            output2 = {
+                "tot_ord_qty": str(tot_ord_qty),
+                "tot_ccld_qty": str(tot_ccld_qty),
+                "tot_ccld_amt": str(tot_ccld_amt),
+                "page_count": page_count,
+                "total_count": len(unique_data),
             }
 
-        except Exception as e:
-            logging.error(f"일별주문체결 연속조회 실패: {e}")
-            return None
+            # 마지막 응답의 output2에서 추가 필드 복사
+            # (prsm_tlex_smtl, pchs_avg_pric 등)
+            if res and "output2" in res:
+                last_output2 = res.get("output2", {})
+                if "prsm_tlex_smtl" in last_output2:
+                    output2["prsm_tlex_smtl"] = last_output2["prsm_tlex_smtl"]
+                if "pchs_avg_pric" in last_output2:
+                    output2["pchs_avg_pric"] = last_output2["pchs_avg_pric"]
 
+            # 최종 결과 반환
+            return {
+                "rt_cd": "0",
+                "msg_cd": "SUCCESSFUL",
+                "msg1": f"정상처리 완료 - 총 {len(unique_data)}건 조회",
+                "output1": unique_data,
+                "output2": output2,
+            }
+
+        # 빈 결과 반환
+        return {
+            "rt_cd": "0",
+            "msg_cd": "NO_DATA",
+            "msg1": "조회된 데이터가 없습니다",
+            "output1": [],
+            "output2": {
+                "tot_ord_qty": "0",
+                "tot_ccld_qty": "0",
+                "tot_ccld_amt": "0",
+                "page_count": 0,
+                "total_count": 0,
+            },
+        }
+
+    @api_method("기간별매매손익 조회")
     def inquire_period_trade_profit(
         self, start_date: str, end_date: str
     ) -> Optional[pd.DataFrame]:
@@ -1165,31 +1141,28 @@ class AccountAPI(BaseAPI):
             ...     total_profit = df['sell_pnl_smtl'].astype(float).sum()
             ...     print(f"총 실현손익: {total_profit:,.0f}원")
         """
-        try:
-            res = self.client.make_request(
-                endpoint="/uapi/domestic-stock/v1/trading/inquire-period-trade-profit",
-                tr_id="TTTC8715R",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "INQR_STRT_DT": start_date,
-                    "INQR_END_DT": end_date,
-                    "CTX_AREA_FK100": "",
-                    "CTX_AREA_NK100": "",
-                },
-            )
-            if res and "output1" in res:
-                df = pd.DataFrame(res["output1"])
-                # rt_cd 컬럼 추가 (API 응답 성공/실패 추적용)
-                df["rt_cd"] = res.get("rt_cd", "")
-                df["msg_cd"] = res.get("msg_cd", "")
-                df["msg1"] = res.get("msg1", "")
-                return df
-            return None
-        except Exception as e:
-            logging.error(f"기간별매매손익 조회 실패: {e}")
-            return None
+        res = self.client.make_request(
+            endpoint="/uapi/domestic-stock/v1/trading/inquire-period-trade-profit",
+            tr_id="TTTC8715R",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "INQR_STRT_DT": start_date,
+                "INQR_END_DT": end_date,
+                "CTX_AREA_FK100": "",
+                "CTX_AREA_NK100": "",
+            },
+        )
+        if res and "output1" in res:
+            df = pd.DataFrame(res["output1"])
+            # rt_cd 컬럼 추가 (API 응답 성공/실패 추적용)
+            df["rt_cd"] = res.get("rt_cd", "")
+            df["msg_cd"] = res.get("msg_cd", "")
+            df["msg1"] = res.get("msg1", "")
+            return df
+        return None
 
+    @api_method("실현손익 잔고 조회")
     def inquire_balance_rlz_pl(self) -> Optional[Dict]:
         """주식잔고조회_실현손익 - 보유 종목의 실현손익 정보를 포함한 잔고를 조회합니다.
 
@@ -1222,29 +1195,26 @@ class AccountAPI(BaseAPI):
             ...         eval_profit = float(item.get('evlu_pfls_amt', 0))
             ...         realized_profit = float(item.get('rlzt_pfls', 0))
         """
-        try:
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/inquire-balance-rlz-pl",
-                tr_id="TTTC8494R",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "AFHR_FLPR_YN": "N",
-                    "OFL_YN": "",
-                    "INQR_DVSN": "00",
-                    "UNPR_DVSN": "01",
-                    "FUND_STTL_ICLD_YN": "N",
-                    "FNCG_AMT_AUTO_RDPT_YN": "N",
-                    "PRCS_DVSN": "00",
-                    "COST_ICLD_YN": "N",
-                    "CTX_AREA_FK100": "",
-                    "CTX_AREA_NK100": "",
-                },
-            )
-        except Exception as e:
-            logging.error(f"실현손익 잔고 조회 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/inquire-balance-rlz-pl",
+            tr_id="TTTC8494R",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "AFHR_FLPR_YN": "N",
+                "OFL_YN": "",
+                "INQR_DVSN": "00",
+                "UNPR_DVSN": "01",
+                "FUND_STTL_ICLD_YN": "N",
+                "FNCG_AMT_AUTO_RDPT_YN": "N",
+                "PRCS_DVSN": "00",
+                "COST_ICLD_YN": "N",
+                "CTX_AREA_FK100": "",
+                "CTX_AREA_NK100": "",
+            },
+        )
 
+    @api_method("매도가능수량 조회")
     def inquire_psbl_sell(self, pdno: str) -> Optional[Dict[str, Any]]:
         """매도가능수량조회 - 특정 종목의 매도 가능한 수량을 조회합니다.
 
@@ -1270,22 +1240,19 @@ class AccountAPI(BaseAPI):
             ...     qty = result['output']['ord_psbl_qty']
             ...     print(f"매도가능수량: {qty}주")
         """
-        try:
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/inquire-psbl-sell",
-                tr_id="TTTC8408R",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "PDNO": pdno,
-                    "ORD_UNPR": "",
-                    "ORD_DVSN": "01",
-                },
-            )
-        except Exception as e:
-            logging.error(f"매도가능수량 조회 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/inquire-psbl-sell",
+            tr_id="TTTC8408R",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "PDNO": pdno,
+                "ORD_UNPR": "",
+                "ORD_DVSN": "01",
+            },
+        )
 
+    @api_method("현금 주문", reraise=True)
     def order_cash(
         self,
         pdno: str,
@@ -1349,36 +1316,32 @@ class AccountAPI(BaseAPI):
             >>> # SOR 최유리지정가 매수
             >>> result = api.order_cash("005930", 10, 0, "BUY", "03", "SOR")
         """
-        try:
-            # TR_ID 결정 (실거래용)
-            if buy_sell.upper() == "SELL":
-                tr_id = "TTTC0801U"  # 실거래 매도
-            else:
-                tr_id = "TTTC0802U"  # 실거래 매수
+        # TR_ID 결정 (실거래용)
+        if buy_sell.upper() == "SELL":
+            tr_id = "TTTC0801U"  # 실거래 매도
+        else:
+            tr_id = "TTTC0802U"  # 실거래 매수
 
-            # 파라미터 구성
-            params = {
-                "CANO": self.account["CANO"],
-                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                "PDNO": pdno,
-                "ORD_DVSN": order_type,
-                "ORD_QTY": str(qty),
-                "ORD_UNPR": str(price),
-            }
+        # 파라미터 구성
+        params = {
+            "CANO": self.account["CANO"],
+            "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+            "PDNO": pdno,
+            "ORD_DVSN": order_type,
+            "ORD_QTY": str(qty),
+            "ORD_UNPR": str(price),
+        }
 
-            # SOR 또는 NXT 선택 시 거래소 구분 추가
-            if exchange != "KRX":
-                params["EXCD"] = exchange
+        # SOR 또는 NXT 선택 시 거래소 구분 추가
+        if exchange != "KRX":
+            params["EXCD"] = exchange
 
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/order-cash",
-                tr_id=tr_id,
-                params=params,
-                method="POST",  # 주문 API는 POST 메서드 사용
-            )
-        except Exception as e:
-            logging.error(f"현금 주문 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/order-cash",
+            tr_id=tr_id,
+            params=params,
+            method="POST",  # 주문 API는 POST 메서드 사용
+        )
 
     def order_cash_sor(
         self, pdno: str, qty: int, buy_sell: str, order_type: str = "03"
@@ -1426,6 +1389,7 @@ class AccountAPI(BaseAPI):
             exchange="SOR",
         )
 
+    @api_method("신용매수가능 조회")
     def inquire_credit_psamount(self, pdno: str) -> Optional[Dict[str, Any]]:
         """신용매수가능조회 - 신용거래로 매수 가능한 금액과 수량을 조회합니다.
 
@@ -1450,26 +1414,23 @@ class AccountAPI(BaseAPI):
             ...     amt = result['output']['crdt_ord_psbl_amt']
             ...     print(f"신용매수가능금액: {amt}원")
         """
-        try:
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/inquire-credit-psamount",
-                tr_id="TTTC8909R",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "PDNO": pdno,
-                    "ORD_UNPR": "0",
-                    "ORD_DVSN": "00",
-                    "CRDT_TYPE": "21",
-                    "CRDT_LOAN_DT": "",
-                    "CMA_EVLU_AMT_ICLD_YN": "Y",
-                    "OVRS_ICLD_YN": "N",
-                },
-            )
-        except Exception as e:
-            logging.error(f"신용매수가능 조회 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/inquire-credit-psamount",
+            tr_id="TTTC8909R",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "PDNO": pdno,
+                "ORD_UNPR": "0",
+                "ORD_DVSN": "00",
+                "CRDT_TYPE": "21",
+                "CRDT_LOAN_DT": "",
+                "CMA_EVLU_AMT_ICLD_YN": "Y",
+                "OVRS_ICLD_YN": "N",
+            },
+        )
 
+    @api_method("신용매수 주문", reraise=True)
     def order_credit_buy(
         self,
         pdno: str,
@@ -1478,6 +1439,7 @@ class AccountAPI(BaseAPI):
         order_type: str = "00",
         credit_type: str = "21",
         exchange: str = "KRX",
+        loan_dt: str = "",
     ) -> Optional[Dict[str, Any]]:
         """주식주문(신용매수) - 신용으로 주식을 매수합니다.
 
@@ -1517,32 +1479,29 @@ class AccountAPI(BaseAPI):
             >>> # 삼성전자 10주 신용매수
             >>> result = api.order_credit_buy("005930", 10, 70000)
         """
-        try:
-            params = {
-                "CANO": self.account["CANO"],
-                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                "PDNO": pdno,
-                "ORD_DVSN": order_type,
-                "ORD_QTY": str(qty),
-                "ORD_UNPR": str(price),
-                "CRDT_TYPE": credit_type,
-                "LOAN_DT": "",
-            }
+        params = {
+            "CANO": self.account["CANO"],
+            "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+            "PDNO": pdno,
+            "ORD_DVSN": order_type,
+            "ORD_QTY": str(qty),
+            "ORD_UNPR": str(price),
+            "CRDT_TYPE": credit_type,
+            "LOAN_DT": loan_dt,
+        }
 
-            # SOR 선택 시 거래소 구분 추가
-            if exchange != "KRX":
-                params["EXCD"] = exchange
+        # SOR 선택 시 거래소 구분 추가
+        if exchange != "KRX":
+            params["EXCD"] = exchange
 
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/order-credit",
-                tr_id="TTTC0052U",  # 신용매수
-                params=params,
-                method="POST",  # 주문 API는 POST 메서드 사용
-            )
-        except Exception as e:
-            logging.error(f"신용매수 주문 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/order-credit",
+            tr_id="TTTC0052U",  # 신용매수
+            params=params,
+            method="POST",  # 주문 API는 POST 메서드 사용
+        )
 
+    @api_method("신용매도 주문", reraise=True)
     def order_credit_sell(
         self,
         pdno: str,
@@ -1581,26 +1540,23 @@ class AccountAPI(BaseAPI):
             >>> # 신용매수 종목 매도로 상환
             >>> result = api.order_credit_sell("005930", 10, 75000)
         """
-        try:
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/order-credit",
-                tr_id="TTTC0051U",  # 신용매도
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "PDNO": pdno,
-                    "ORD_DVSN": order_type,
-                    "ORD_QTY": str(qty),
-                    "ORD_UNPR": str(price),
-                    "CRDT_TYPE": credit_type,
-                    "LOAN_DT": "",
-                },
-                method="POST",  # 주문 API는 POST 메서드 사용
-            )
-        except Exception as e:
-            logging.error(f"신용매도 주문 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/order-credit",
+            tr_id="TTTC0051U",  # 신용매도
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "PDNO": pdno,
+                "ORD_DVSN": order_type,
+                "ORD_QTY": str(qty),
+                "ORD_UNPR": str(price),
+                "CRDT_TYPE": credit_type,
+                "LOAN_DT": "",
+            },
+            method="POST",  # 주문 API는 POST 메서드 사용
+        )
 
+    @api_method("통합증거금 조회")
     def inquire_intgr_margin(self) -> Optional[Dict[str, Any]]:
         """주식통합증거금 현황 - 통합증거금 계좌의 증거금 현황을 조회합니다.
 
@@ -1624,20 +1580,17 @@ class AccountAPI(BaseAPI):
             ...     rate = result['output']['dpsit_rate']
             ...     print(f"증거금률: {rate}%")
         """
-        try:
-            return self._make_request_dict(
-                endpoint="/uapi/domestic-stock/v1/trading/intgr-margin",
-                tr_id="TTTC0869R",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "LOAN_DT": "",
-                },
-            )
-        except Exception as e:
-            logging.error(f"통합증거금 조회 실패: {e}")
-            return None
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/trading/intgr-margin",
+            tr_id="TTTC0869R",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "LOAN_DT": "",
+            },
+        )
 
+    @api_method("기간별권리현황 조회")
     def inquire_period_rights(
         self, start_date: str, end_date: str
     ) -> Optional[pd.DataFrame]:
@@ -1667,36 +1620,35 @@ class AccountAPI(BaseAPI):
             ...     dividends = df[df['rght_type_name'] == '배당']
             ...     total_div = dividends['rght_amt'].sum()
         """
-        try:
-            res = self.client.make_request(
-                endpoint="/uapi/domestic-stock/v1/trading/period-rights",
-                tr_id="CTRGA011R",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "STRT_DT": start_date,
-                    "END_DT": end_date,
-                    "STND_DT": "",
-                    "KST_STCK_CNTP_CD": "",
-                    "PDNO": "",
-                    "MRGN_DVSN": "",
-                    "CTX_AREA_FK100": "",
-                    "CTX_AREA_NK100": "",
-                },
-            )
-            if res and "output1" in res:
-                df = pd.DataFrame(res["output1"])
-                # rt_cd 컬럼 추가 (API 응답 성공/실패 추적용)
-                df["rt_cd"] = res.get("rt_cd", "")
-                df["msg_cd"] = res.get("msg_cd", "")
-                df["msg1"] = res.get("msg1", "")
-                return df
-            return None
-        except Exception as e:
-            logging.error(f"기간별권리현황 조회 실패: {e}")
-            return None
+        res = self.client.make_request(
+            endpoint="/uapi/domestic-stock/v1/trading/period-rights",
+            tr_id="CTRGA011R",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "STRT_DT": start_date,
+                "END_DT": end_date,
+                "STND_DT": "",
+                "KST_STCK_CNTP_CD": "",
+                "PDNO": "",
+                "MRGN_DVSN": "",
+                "CTX_AREA_FK100": "",
+                "CTX_AREA_NK100": "",
+            },
+        )
+        if res and "output1" in res:
+            df = pd.DataFrame(res["output1"])
+            # rt_cd 컬럼 추가 (API 응답 성공/실패 추적용)
+            df["rt_cd"] = res.get("rt_cd", "")
+            df["msg_cd"] = res.get("msg_cd", "")
+            df["msg1"] = res.get("msg1", "")
+            return df
+        return None
 
-    def inquire_psbl_order(self, price: int, pdno: str = "", ord_dvsn: str = "01") -> Optional[Dict]:
+    @api_method("매수가능 조회")
+    def inquire_psbl_order(
+        self, price: int, pdno: str = "", ord_dvsn: str = "01"
+    ) -> Optional[Dict]:
         """
         매수가능 조회
 
@@ -1711,26 +1663,22 @@ class AccountAPI(BaseAPI):
                 - max_buy_qty: 최대매수수량
                 - ord_psbl_qty: 주문가능수량
         """
-        try:
-            res = self.client.make_request(
-                endpoint="/uapi/domestic-stock/v1/trading/inquire-psbl-order",
-                tr_id="TTTC8908R" if self.client.is_real else "VTTC8908R",
-                params={
-                    "CANO": self.account["CANO"],
-                    "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
-                    "PDNO": pdno,
-                    "ORD_UNPR": str(price),
-                    "ORD_DVSN": ord_dvsn,
-                    "CMA_EVLU_AMT_ICLD_YN": "Y",
-                    "OVRS_ICLD_YN": "N",
-                },
-            )
-            if res and res.get("rt_cd") == "0":
-                return res.get("output", {})
-            return None
-        except Exception as e:
-            logging.error(f"매수가능 조회 실패: {e}")
-            return None
+        res = self.client.make_request(
+            endpoint="/uapi/domestic-stock/v1/trading/inquire-psbl-order",
+            tr_id="TTTC8908R" if self.client.is_real else "VTTC8908R",
+            params={
+                "CANO": self.account["CANO"],
+                "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
+                "PDNO": pdno,
+                "ORD_UNPR": str(price),
+                "ORD_DVSN": ord_dvsn,
+                "CMA_EVLU_AMT_ICLD_YN": "Y",
+                "OVRS_ICLD_YN": "N",
+            },
+        )
+        if res and res.get("rt_cd") == "0":
+            return res.get("output", {})
+        return None
 
 
 # Expose facade class for flat import

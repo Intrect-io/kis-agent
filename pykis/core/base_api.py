@@ -6,20 +6,45 @@
 - 숫자형 필드 자동 변환
 - DataFrame/Dict 반환 타입 통합
 - API 응답 정규화
+- 통합 예외 처리 (ExceptionHandler 상속)
+- Agent를 통한 올바른 사용법 검증
 """
 
+import logging
+import traceback
+import warnings
 from typing import Dict, List, Optional
 
 import pandas as pd
 
 from .cache import APICache
+from .exceptions import ExceptionHandler, api_method
 from .response_processor import APIRequestManager
 
+# 모듈 레벨 로거
+_logger = logging.getLogger(__name__)
 
-class BaseAPI:
+
+class DirectAPIUsageWarning(UserWarning):
+    """Agent를 통하지 않고 직접 API를 사용할 때 발생하는 경고"""
+
+    pass
+
+
+class BaseAPI(ExceptionHandler):
     """모든 API 클래스들의 공통 베이스 클래스"""
 
-    def __init__(self, client, account_info=None, enable_cache=True, cache_config=None):
+    # Agent를 통해 생성되었는지 추적하는 플래그
+    _created_via_agent: bool = False
+
+    def __init__(
+        self,
+        client,
+        account_info=None,
+        enable_cache=True,
+        cache_config=None,
+        _from_agent: bool = False,
+    ):
         """
         BaseAPI 초기화
 
@@ -28,9 +53,30 @@ class BaseAPI:
             account_info: 계좌 정보 (필요한 경우)
             enable_cache: 캐시 사용 여부 (기본: True)
             cache_config: 캐시 설정 (default_ttl, max_size)
+            _from_agent: Agent를 통해 생성되었는지 여부 (내부 사용)
+
+        Warning:
+            이 클래스를 직접 인스턴스화하지 마세요.
+            반드시 `pykis.Agent`를 통해 API에 접근해야 합니다.
+
+        Example:
+            올바른 사용법:
+            >>> from pykis import Agent
+            >>> agent = Agent(app_key="...", app_secret="...", ...)
+            >>> price = agent.get_stock_price("005930")
+
+            잘못된 사용법 (경고 발생):
+            >>> from pykis.stock.price_api import StockPriceAPI
+            >>> api = StockPriceAPI(client)  # DirectAPIUsageWarning 발생
         """
+        ExceptionHandler.__init__(self)
         self.client = client
         self.account = account_info
+        self._created_via_agent = _from_agent
+
+        # Agent를 통하지 않고 직접 사용하면 경고 발생
+        if not _from_agent:
+            self._warn_direct_usage()
 
         # 캐시 초기화
         if enable_cache:
@@ -50,6 +96,52 @@ class BaseAPI:
             client=client,
             metadata_adder=self._add_response_metadata,
             field_converter=self._convert_numeric_fields,
+        )
+
+    def _warn_direct_usage(self) -> None:
+        """Agent를 통하지 않고 직접 API를 사용할 때 경고 발생"""
+        class_name = self.__class__.__name__
+
+        # 호출 스택 정보 가져오기 (사용자 코드 위치 파악)
+        stack_info = "".join(traceback.format_stack()[:-2])
+
+        warning_message = f"""
+================================================================================
+⚠️  PyKIS 직접 API 사용 경고 (DirectAPIUsageWarning)
+================================================================================
+
+'{class_name}'를 직접 인스턴스화했습니다.
+이 방식은 권장되지 않으며 인증 문제나 설정 충돌이 발생할 수 있습니다.
+
+📌 올바른 사용법:
+    from pykis import Agent
+
+    agent = Agent(
+        app_key="YOUR_APP_KEY",
+        app_secret="YOUR_APP_SECRET",
+        account_no="YOUR_ACCOUNT_NO",
+        account_code="01"
+    )
+
+    # Agent를 통해 API 메서드 호출
+    price = agent.get_stock_price("005930")
+    balance = agent.get_account_balance()
+
+❌ 잘못된 사용법 (현재):
+    from pykis.stock.price_api import StockPriceAPI
+    api = StockPriceAPI(client)  # 직접 인스턴스화 - 권장하지 않음
+
+📍 호출 위치:
+{stack_info}
+================================================================================
+"""
+        # 경고 발생 (stacklevel=4로 실제 호출 위치 표시)
+        warnings.warn(warning_message, DirectAPIUsageWarning, stacklevel=4)
+
+        # 로거에도 경고 기록
+        _logger.warning(
+            f"'{class_name}'가 Agent를 통하지 않고 직접 인스턴스화되었습니다. "
+            "pykis.Agent를 사용하세요."
         )
 
     def _get_numeric_field_mappings(self) -> Dict[str, List[str]]:
@@ -261,6 +353,7 @@ class BaseAPI:
         df["msg1"] = response.get("msg1", "")
         return df
 
+    @api_method("API 요청 (Dict)", reraise=True)
     def _make_request_dict(
         self,
         endpoint: str,
@@ -298,39 +391,30 @@ class BaseAPI:
                 cached_value["_cached"] = True
                 return cached_value
 
-        try:
-            response = self.client.make_request(
-                endpoint=endpoint, tr_id=tr_id, params=params, method=method
+        response = self.client.make_request(
+            endpoint=endpoint, tr_id=tr_id, params=params, method=method
+        )
+
+        if not response:
+            return None
+
+        # 성공 응답을 캐시에 저장
+        if use_cache and self.cache and response.get("rt_cd") == "0":
+            # TTL 결정 (지정값 또는 엔드포인트별 기본값)
+            ttl = (
+                cache_ttl
+                if cache_ttl is not None
+                else self.cache.get_ttl_for_endpoint(endpoint)
             )
-
-            if not response:
-                return None
-
-            # 성공 응답을 캐시에 저장
-            if use_cache and self.cache and response.get("rt_cd") == "0":
-                # TTL 결정 (지정값 또는 엔드포인트별 기본값)
-                ttl = (
-                    cache_ttl
-                    if cache_ttl is not None
-                    else self.cache.get_ttl_for_endpoint(endpoint)
-                )
-                cache_key = self.cache._make_key(
-                    {"endpoint": endpoint, "tr_id": tr_id, "params": params}
-                )
-                self.cache.set(cache_key, response, ttl)
-
-            # Dict 응답에 rt_cd 메타데이터가 이미 포함되어 있음
-            return response
-        except Exception as e:
-            import logging
-
-            logging.error(
-                f"API 요청 실패 - TR_ID: {tr_id}, Endpoint: {endpoint}, Error: {e}"
+            cache_key = self.cache._make_key(
+                {"endpoint": endpoint, "tr_id": tr_id, "params": params}
             )
-            raise Exception(
-                f"API 요청 실패 - TR_ID: {tr_id}, Endpoint: {endpoint}, Error: {e}"
-            ) from e
+            self.cache.set(cache_key, response, ttl)
 
+        # Dict 응답에 rt_cd 메타데이터가 이미 포함되어 있음
+        return response
+
+    @api_method("API 요청 (DataFrame)", reraise=True)
     def _make_request_dataframe(
         self,
         endpoint: str,
@@ -360,41 +444,31 @@ class BaseAPI:
                 # DataFrame으로 복원
                 return cached_value
 
-        try:
-            # request_manager를 사용하여 DataFrame가져오기
-            result = self.request_manager.make_request_with_processing(
-                endpoint=endpoint,
-                tr_id=tr_id,
-                params=params,
-                field_type=field_type,
-                return_dataframe=True,
+        # request_manager를 사용하여 DataFrame가져오기
+        result = self.request_manager.make_request_with_processing(
+            endpoint=endpoint,
+            tr_id=tr_id,
+            params=params,
+            field_type=field_type,
+            return_dataframe=True,
+        )
+
+        # 성공 응답을 캐시에 저장
+        if use_cache and self.cache and result is not None and not result.empty:
+            # TTL 결정 (지정값 또는 엔드포인트별 기본값)
+            ttl = (
+                cache_ttl
+                if cache_ttl is not None
+                else self.cache.get_ttl_for_endpoint(endpoint)
             )
-
-            # 성공 응답을 캐시에 저장
-            if use_cache and self.cache and result is not None and not result.empty:
-                # TTL 결정 (지정값 또는 엔드포인트별 기본값)
-                ttl = (
-                    cache_ttl
-                    if cache_ttl is not None
-                    else self.cache.get_ttl_for_endpoint(endpoint)
-                )
-                cache_key = self.cache._make_key(
-                    {
-                        "endpoint": endpoint,
-                        "tr_id": tr_id,
-                        "params": params,
-                        "dataframe": True,
-                    }
-                )
-                self.cache.set(cache_key, result, ttl)
-
-            return result
-        except Exception as e:
-            import logging
-
-            logging.error(
-                f"DataFrame API 요청 실패 - TR_ID: {tr_id}, Endpoint: {endpoint}, Error: {e}"
+            cache_key = self.cache._make_key(
+                {
+                    "endpoint": endpoint,
+                    "tr_id": tr_id,
+                    "params": params,
+                    "dataframe": True,
+                }
             )
-            raise Exception(
-                f"DataFrame API 요청 실패 - TR_ID: {tr_id}, Endpoint: {endpoint}, Error: {e}"
-            ) from e
+            self.cache.set(cache_key, result, ttl)
+
+        return result

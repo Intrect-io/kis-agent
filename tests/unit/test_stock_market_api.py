@@ -53,6 +53,7 @@ class TestStockMarketAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS["INQUIRE_ASKING_PRICE_EXP_CCN"],
             tr_id="FHKST01010600",
             params={"FID_COND_MRKT_DIV_CODE": "J"},
+            method="GET",
         )
 
     def test_get_market_fluctuation_failure(self):
@@ -89,6 +90,7 @@ class TestStockMarketAPI(unittest.TestCase):
                 "FID_INPUT_PRICE_2": "",
                 "FID_VOL_CNT": "5000000",
             },
+            method="GET",
         )
 
     def test_get_market_rankings_custom_volume(self):
@@ -134,6 +136,7 @@ class TestStockMarketAPI(unittest.TestCase):
                 "FID_INPUT_PRICE_2": "",
                 "FID_VOL_CNT": "0",
             },
+            method="GET",
         )
 
     def test_get_volume_power_custom_volume(self):
@@ -169,6 +172,7 @@ class TestStockMarketAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS["INQUIRE_PRICE"],
             tr_id="FHKST01010100",
             params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": "005930"},
+            method="GET",
         )
 
     def test_get_stock_info_invalid_ticker(self):
@@ -180,16 +184,15 @@ class TestStockMarketAPI(unittest.TestCase):
 
         self.assertEqual(result, error_response)
 
-    @patch("logging.error")
-    def test_api_request_exception(self, mock_log):
+    def test_api_request_exception(self):
         """API 요청 중 예외 발생"""
         self.mock_client.make_request.side_effect = Exception("Network error")
 
         with self.assertRaises(Exception) as context:
             self.api.get_market_fluctuation()
 
-        self.assertIn("API 요청 실패", str(context.exception))
-        mock_log.assert_called_once()
+        # 새로운 예외 처리 형식: [API 요청 (Dict)] 또는 [컨텍스트] 형식
+        self.assertIn("Network error", str(context.exception))
 
     def test_multiple_api_calls(self):
         """여러 API 연속 호출"""

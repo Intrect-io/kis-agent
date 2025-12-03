@@ -8,7 +8,7 @@ Facade Pattern을 적용하여 복잡한 하위 시스템을 단순화
 - 기존 StockAPI와 동일한 인터페이스 유지 (하위 호환성)
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from ..core.base_api import BaseAPI
 from ..core.client import KISClient
@@ -31,21 +31,37 @@ class StockAPI(BaseAPI):
     """
 
     def __init__(
-        self, client: KISClient, account_info=None, enable_cache=True, cache_config=None
-    ):
+        self,
+        client: KISClient,
+        account_info: Optional[Dict[str, Any]] = None,
+        enable_cache: bool = True,
+        cache_config: Optional[Dict[str, Any]] = None,
+        _from_agent: bool = False,
+    ) -> None:
         """
         StockAPI Facade 초기화
 
         Args:
             client (KISClient): API 통신 클라이언트
             account_info (dict, optional): 계좌 정보
+            enable_cache (bool): 캐시 사용 여부 (기본: True)
+            cache_config (dict, optional): 캐시 설정
+            _from_agent (bool): Agent를 통해 생성되었는지 여부 (내부 사용)
         """
-        super().__init__(client, account_info, enable_cache, cache_config)
+        super().__init__(
+            client, account_info, enable_cache, cache_config, _from_agent=_from_agent
+        )
 
-        # 하위 시스템 초기화
-        self.price_api = StockPriceAPI(client, account_info)
-        self.market_api = StockMarketAPI(client, account_info)
-        self.investor_api = StockInvestorAPI(client, account_info)
+        # 하위 시스템 초기화 - Agent를 통해 생성된 경우 하위 API도 _from_agent=True로 초기화
+        self.price_api = StockPriceAPI(
+            client, account_info, _from_agent=_from_agent
+        )
+        self.market_api = StockMarketAPI(
+            client, account_info, _from_agent=_from_agent
+        )
+        self.investor_api = StockInvestorAPI(
+            client, account_info, _from_agent=_from_agent
+        )
 
     # ===== 시세 관련 메서드 (StockPriceAPI 위임) =====
 
@@ -157,7 +173,10 @@ class StockAPI(BaseAPI):
         return self.investor_api.get_frgnmem_pchs_trend(code)
 
     def get_foreign_broker_net_buy(
-        self, code: str, foreign_brokers=None, date: str = None
+        self,
+        code: str,
+        foreign_brokers: Optional[List[str]] = None,
+        date: Optional[str] = None,
     ) -> Optional[tuple]:
         """외국계 증권사 순매수 집계"""
         return self.investor_api.get_foreign_broker_net_buy(code, foreign_brokers, date)
@@ -250,13 +269,25 @@ class StockAPI(BaseAPI):
                 - output1: 업종 현재가 정보
                 - output2: 분봉 데이터 리스트
         """
-        return self.price_api.get_index_minute_data(
-            fid_input_iscd,
-            fid_input_hour_1,
-            fid_cond_mrkt_div_code,
-            fid_pw_data_incu_yn,
-            fid_etc_cls_code,
+        params = {
+            "FID_COND_MRKT_DIV_CODE": fid_cond_mrkt_div_code,
+            "FID_INPUT_ISCD": fid_input_iscd,
+            "FID_INPUT_HOUR_1": fid_input_hour_1,
+            "FID_PW_DATA_INCU_YN": fid_pw_data_incu_yn,
+            "FID_ETC_CLS_CODE": fid_etc_cls_code,
+        }
+        result: Optional[Dict[str, Any]] = self.client.make_request(
+            endpoint="/uapi/domestic-stock/v1/quotations/inquire-time-indexchartprice",
+            tr_id="FHKUP03500200",
+            params=params,
+            method="GET",
         )
+        if result:
+            if "rt_cd" not in result:
+                result["rt_cd"] = ""
+            if "msg1" not in result:
+                result["msg1"] = ""
+        return result
 
     def get_index_timeprice(
         self,
@@ -281,6 +312,55 @@ class StockAPI(BaseAPI):
             fid_input_iscd,
             fid_input_hour_1,
             fid_cond_mrkt_div_code,
+        )
+
+    def get_time_index_chart_price(
+        self,
+        index_code: str = "0001",
+        period_div: str = "4",
+    ) -> Optional[Dict[str, Any]]:
+        """
+        업종 지수 차트 조회 (일봉/분봉)
+
+        장외 시간에도 과거 데이터 조회 가능 (fid_pw_data_incu_yn=Y 내장)
+
+        Args:
+            index_code (str): 업종코드 (예: "0001"=KOSPI종합, "0013"=전기전자, "1001"=KOSDAQ)
+            period_div (str): 기간구분
+                - "1": 1분봉
+                - "2": 3분봉
+                - "3": 5분봉
+                - "4": 10분봉 (일봉 데이터 30일 반환)
+                - "5": 15분봉
+                - "6": 30분봉
+                - "7": 60분봉
+
+        Returns:
+            Dict containing:
+                - output1: 업종 현재가 정보
+                - output2: 일별/분별 지수 데이터 리스트
+                    - stck_bsop_date: 날짜 (YYYYMMDD)
+                    - bstp_nmix_prpr: 종가
+                    - bstp_nmix_oprc: 시가
+                    - bstp_nmix_hgpr: 고가
+                    - bstp_nmix_lwpr: 저가
+                    - acml_vol: 거래량
+
+        Example:
+            >>> stock_api.get_time_index_chart_price("0001", "4")  # KOSPI 일봉 30일
+            >>> stock_api.get_time_index_chart_price("0013", "4")  # 전기전자 일봉 30일
+        """
+        return self._make_request_dict(
+            endpoint="/uapi/domestic-stock/v1/quotations/inquire-time-indexchartprice",
+            tr_id="FHKUP03500100",
+            params={
+                "fid_cond_mrkt_div_code": "U",
+                "fid_input_iscd": index_code,
+                "fid_input_date_1": "",
+                "fid_input_date_2": "",
+                "fid_period_div_code": period_div,
+                "fid_pw_data_incu_yn": "Y",  # 과거 데이터 포함 (장외 시간에도 조회 가능)
+            },
         )
 
     def get_future_option_price(
@@ -382,13 +462,27 @@ class StockAPI(BaseAPI):
             exclude_cls,
         )
 
-    def get_intraday_price(self, code: str) -> Optional[Dict]:
-        """주식 당일 분봉 데이터 조회"""
-        return self.price_api.get_intraday_price(code)
+    def get_intraday_price(self, code: str, date: str = "") -> Optional[Dict]:
+        """주식 당일 분봉 데이터 조회
 
-    def get_stock_ccnl(self, code: str, market: str = "J") -> Optional[Dict]:
-        """주식현재가 체결 조회"""
-        return self.price_api.get_stock_ccnl(code, market)
+        Args:
+            code: 종목코드 6자리
+            date: 조회 날짜 (YYYYMMDD 형식, 기본값: 오늘)
+        """
+        from datetime import datetime
+
+        if not date:
+            date = datetime.now().strftime("%Y%m%d")
+        return self.price_api.get_intraday_price(code, date)
+
+    def get_stock_ccnl(self, code: str, retries: int = 10) -> Optional[Dict]:
+        """주식현재가 체결 조회
+
+        Args:
+            code: 종목코드 6자리
+            retries: 재시도 횟수 (미사용, 호환성 유지용)
+        """
+        return self.price_api.get_stock_ccnl(code, retries)
 
     def daily_credit_balance(
         self, code: str, market: str = "J", screen_code: str = "20476", date: str = ""
@@ -620,24 +714,18 @@ class StockAPI(BaseAPI):
         """휴장일 정보 조회"""
         return self.market_api.get_holiday_info()
 
-    def is_holiday(self, date: str) -> bool:
+    def is_holiday(self, date: str) -> Optional[bool]:
         """특정일 휴장일 여부 확인"""
         return self.market_api.is_holiday(date)
 
-    def get_pbar_tratio(
-        self,
-        fid_input_iscd: str = "",
-        fid_cond_mrkt_div_code: str = "J",
-        fid_trgt_cls_code: str = "0",
-        fid_trgt_exls_cls_code: str = "0",
-    ) -> Optional[Dict]:
-        """PBR/PER 비율 순위 조회"""
-        return self.market_api.get_pbar_tratio(
-            fid_input_iscd,
-            fid_cond_mrkt_div_code,
-            fid_trgt_cls_code,
-            fid_trgt_exls_cls_code,
-        )
+    def get_pbar_tratio(self, code: str, retries: int = 10) -> Optional[Dict]:
+        """매물대/거래비중 조회
+
+        Args:
+            code: 종목코드 6자리
+            retries: 재시도 횟수 (미사용, 호환성 유지)
+        """
+        return self.market_api.get_pbar_tratio(code, retries)
 
     def get_fluctuation_rank(
         self,
@@ -686,7 +774,7 @@ class StockAPI(BaseAPI):
             fid_div_cls_code,
         )
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Any:
         """하위 모듈로 동적 위임
 
         [변경 이유] price_api/market_api/investor_api에 존재하는 메서드가 Facade에 누락될 경우

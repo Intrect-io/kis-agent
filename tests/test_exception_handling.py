@@ -62,33 +62,34 @@ class TestExceptionHandler:
         assert "TestClass" in obj._exception_logger.name
 
     def test_handle_exception_with_raise(self, caplog):
-        """예외 처리 및 재발생 테스트"""
+        """예외 처리 및 재발생 테스트 - APIException으로 래핑됨"""
+        caplog.set_level(logging.ERROR)
         handler = ExceptionHandler("test")
 
-        with pytest.raises(ValueError):
-            try:
-                raise ValueError("원본 에러")
-            except ValueError as e:
-                handler._handle_exception(e, "테스트 컨텍스트")
-
-        # 로그에 traceback이 포함되었는지 확인
-        assert "[테스트 컨텍스트]" in caplog.text
-        assert "ValueError: 원본 에러" in caplog.text
-        assert "Traceback" in caplog.text
-
-    def test_handle_exception_with_reraise_as(self, caplog):
-        """다른 예외 타입으로 변환하여 재발생"""
-        handler = ExceptionHandler("test")
-
+        # 일반 Exception은 APIException으로 래핑되어 재발생됨
         with pytest.raises(APIException) as exc_info:
             try:
                 raise ValueError("원본 에러")
             except ValueError as e:
-                handler._handle_exception(e, "변환 테스트", reraise_as=APIException)
+                handler._handle_exception(e, "테스트 컨텍스트", reraise=True)
 
-        # 새 예외가 원본 예외 정보를 포함하는지 확인
+        # 래핑된 메시지 확인
         assert "원본 에러" in str(exc_info.value)
-        assert "변환 테스트" in str(exc_info.value)
+        assert "테스트 컨텍스트" in str(exc_info.value)
+
+    def test_handle_exception_pykis_exception_preserved(self, caplog):
+        """PyKIS 예외는 그대로 재발생"""
+        handler = ExceptionHandler("test")
+
+        # PyKIS 예외는 래핑 없이 그대로 재발생
+        with pytest.raises(ValidationException) as exc_info:
+            try:
+                raise ValidationException("원본 PyKIS 에러")
+            except ValidationException as e:
+                handler._handle_exception(e, "PyKIS 예외 테스트", reraise=True)
+
+        # 원본 메시지가 유지됨
+        assert "원본 PyKIS 에러" in str(exc_info.value)
 
     def test_log_warning(self, caplog):
         """경고 로깅 테스트"""
@@ -143,9 +144,10 @@ class TestHandleExceptionsDecorator:
 
         api = TestAPI()
 
-        # ValueError는 캐치됨
-        with pytest.raises(ValueError):
+        # ValueError는 캐치되어 APIException으로 래핑됨
+        with pytest.raises(APIException) as exc_info:
             api.method_with_specific_catch("value")
+        assert "값 에러" in str(exc_info.value)
 
         # RuntimeError는 캐치 안됨 (그대로 통과)
         with pytest.raises(RuntimeError):
@@ -230,14 +232,14 @@ class TestIntegrationWithStockAPI:
 
         api = StockAPI(mock_client, mock_account)
 
-        # 잘못된 종목코드 길이 - APIException으로 변환됨
-        with pytest.raises(APIException) as exc_info:
+        # 잘못된 종목코드 길이 - ValidationException이 발생 (PyKISException이므로 그대로 유지)
+        with pytest.raises(ValidationException) as exc_info:
             api.get_stock_price("123")  # 3자리
 
         assert "종목코드는 6자리" in str(exc_info.value)
 
-        # None 종목코드 - APIException으로 변환됨
-        with pytest.raises(APIException) as exc_info:
+        # None 종목코드 - ValidationException
+        with pytest.raises(ValidationException) as exc_info:
             api.get_stock_price(None)
 
         assert "None일 수 없습니다" in str(exc_info.value)
@@ -251,15 +253,11 @@ class TestIntegrationWithStockAPI:
         # 네트워크 오류 시뮬레이션
         mock_client.make_request.side_effect = NetworkException("연결 실패")
 
-        with pytest.raises(APIException) as exc_info:
+        # NetworkException은 PyKISException이므로 그대로 재발생
+        with pytest.raises(NetworkException) as exc_info:
             api.get_stock_price("005930")
 
-        # 원본 네트워크 예외가 APIException으로 변환되었는지 확인
-        assert "주식 현재가 조회" in str(exc_info.value)
-
-        # 로그에 전체 traceback이 있는지 확인
-        assert "Traceback" in caplog.text
-        assert "NetworkException" in caplog.text
+        assert "연결 실패" in str(exc_info.value)
 
     def test_stock_api_response_validation(self, mock_client, mock_account):
         """API 응답 검증 테스트"""
@@ -321,7 +319,7 @@ class TestLoggingIntegration:
                 try:
                     self.nested_method()
                 except Exception as e:
-                    self._handle_exception(e, "최상위 메서드")
+                    self._handle_exception(e, "최상위 메서드", reraise=True)
 
             def nested_method(self):
                 self.deep_nested_method()
@@ -331,7 +329,8 @@ class TestLoggingIntegration:
 
         obj = TestClass()
 
-        with pytest.raises(RuntimeError):
+        # RuntimeError는 일반 Exception이므로 APIException으로 래핑됨
+        with pytest.raises(APIException):
             obj.failing_method()
 
         # 전체 호출 스택이 로그에 있는지 확인

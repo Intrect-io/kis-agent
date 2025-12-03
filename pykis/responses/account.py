@@ -8,7 +8,6 @@ from typing import List, TypedDict
 
 from .common import BaseResponse
 
-
 # ============================================================
 # get_account_balance() - 계좌 잔고 조회
 # ============================================================
@@ -64,12 +63,18 @@ class AccountBalanceOutput2(TypedDict, total=False):
     scts_evlu_amt: str  # 유가평가금액 (Securities Evaluation Amount)
     tot_evlu_amt: str  # 총평가금액 (Total Evaluation Amount)
     nass_amt: str  # 순자산금액 (Net Asset Amount)
-    fncg_gld_auto_rdpt_yn: str  # 융자금자동상환여부 (Financing Gold Auto Repayment Yes/No)
+    fncg_gld_auto_rdpt_yn: (
+        str  # 융자금자동상환여부 (Financing Gold Auto Repayment Yes/No)
+    )
     pchs_amt_smtl_amt: str  # 매입금액합계금액 (Purchase Amount Sum Total Amount)
     evlu_amt_smtl_amt: str  # 평가금액합계금액 (Evaluation Amount Sum Total Amount)
-    evlu_pfls_smtl_amt: str  # 평가손익합계금액 (Evaluation Profit/Loss Sum Total Amount)
+    evlu_pfls_smtl_amt: (
+        str  # 평가손익합계금액 (Evaluation Profit/Loss Sum Total Amount)
+    )
     tot_stln_slng_chgs: str  # 총대주매각대금 (Total Stock Lending Selling Charges)
-    bfdy_tot_asst_evlu_amt: str  # 전일총자산평가금액 (Before Day Total Asset Evaluation Amount)
+    bfdy_tot_asst_evlu_amt: (
+        str  # 전일총자산평가금액 (Before Day Total Asset Evaluation Amount)
+    )
     asst_icdc_amt: str  # 자산증감액 (Asset Increase/Decrease Amount)
     asst_icdc_erng_rt: str  # 자산증감수익률 (Asset Increase/Decrease Earning Rate) %
 
@@ -112,7 +117,9 @@ class PossibleOrderOutput(TypedDict, total=False):
     ord_psbl_sbst: str  # 주문가능대용 (Order Possible Substitute)
     ruse_psbl_amt: str  # 재사용가능금액 (Reuse Possible Amount)
     fund_rpch_chgs: str  # 펀드환매대금 (Fund Repurchase Charges)
-    psbl_qty_calc_unpr: str  # 가능수량계산단가 (Possible Quantity Calculation Unit Price)
+    psbl_qty_calc_unpr: (
+        str  # 가능수량계산단가 (Possible Quantity Calculation Unit Price)
+    )
     nrcvb_buy_amt: str  # 미수매수금액 (Non-Receivable Buy Amount)
     nrcvb_buy_qty: str  # 미수매수수량 (Non-Receivable Buy Quantity)
     max_buy_amt: str  # 최대매수금액 (Maximum Buy Amount)
@@ -235,7 +242,9 @@ class GetTotalAssetOutput1(TypedDict, total=False):
     fncg_gld_auto_rdpt_yn: str  # 융자금자동상환여부
     pchs_amt_smtl_amt: str  # 매입금액합계금액
     evlu_amt_smtl_amt: str  # 평가금액합계금액 (Evaluation Amount Sum Total Amount)
-    evlu_pfls_smtl_amt: str  # 평가손익합계금액 (Evaluation Profit/Loss Sum Total Amount)
+    evlu_pfls_smtl_amt: (
+        str  # 평가손익합계금액 (Evaluation Profit/Loss Sum Total Amount)
+    )
     tot_stln_slng_chgs: str  # 총대주매각대금
     bfdy_tot_asst_evlu_amt: str  # 전일총자산평가금액
     asst_icdc_amt: str  # 자산증감액 (Asset Increase/Decrease Amount)

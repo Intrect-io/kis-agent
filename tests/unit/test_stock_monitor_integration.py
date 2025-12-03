@@ -39,7 +39,7 @@ class TestStockMonitorIntegration:
             "rt_cd": "0",
         }
 
-        # 2. get_daily_price (일별 시세)
+        # 2. inquire_daily_price (일별 시세)
         daily_price_response = {
             "output": [
                 {
@@ -77,7 +77,7 @@ class TestStockMonitorIntegration:
 
         # Agent의 메서드들을 Mock으로 설정
         agent.get_stock_price = Mock(return_value=stock_price_response)
-        agent.get_daily_price = Mock(return_value=daily_price_response)
+        agent.inquire_daily_price = Mock(return_value=daily_price_response)
         agent.get_program_trade_by_stock = Mock(return_value=program_trade_response)
         agent.get_member = Mock(return_value=member_response)
         agent.get_condition_stocks = Mock(
@@ -93,7 +93,7 @@ class TestStockMonitorIntegration:
         assert price_data["output"]["stck_prpr"] == "60800"
 
         # 2. 일별 시세 조회 (StockMonitor.get_daily_data)
-        daily_data = agent.get_daily_price(code)
+        daily_data = agent.inquire_daily_price(code)
         assert daily_data == daily_price_response
         assert len(daily_data["output"]) > 0
 
@@ -116,7 +116,7 @@ class TestStockMonitorIntegration:
 
         # 모든 메서드가 호출되었는지 확인
         assert agent.get_stock_price.called
-        assert agent.get_daily_price.called
+        assert agent.inquire_daily_price.called
         assert agent.get_program_trade_by_stock.called
         assert agent.get_member.called
         assert agent.get_condition_stocks.called
@@ -137,10 +137,10 @@ class TestStockMonitorIntegration:
             "rt_cd": "0",
         }
 
-        agent.get_daily_price = Mock(return_value=daily_data_response)
+        agent.inquire_daily_price = Mock(return_value=daily_data_response)
 
         # StockMonitor.calculate_volume_ratio 로직 시뮬레이션
-        daily_data = agent.get_daily_price("005930")
+        daily_data = agent.inquire_daily_price("005930")
         assert daily_data is not None
 
         output = daily_data["output"]
@@ -268,7 +268,7 @@ class TestStockMonitorIntegration:
         # StockMonitor.__init__에서 사용하는 것처럼 Agent가 정상 초기화됨
         assert agent is not None
         assert hasattr(agent, "get_stock_price")
-        assert hasattr(agent, "get_daily_price")
+        assert hasattr(agent, "inquire_daily_price")
         assert hasattr(agent, "get_program_trade_by_stock")
         assert hasattr(agent, "get_member")
         assert hasattr(agent, "get_condition_stocks")

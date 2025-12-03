@@ -58,25 +58,29 @@ class TestStockAPIFacade(unittest.TestCase):
         self.assertEqual(result, expected_result)
         self.api.price_api.get_stock_price.assert_called_once_with("005930")
 
-    def test_get_daily_price_delegation(self):
-        """get_daily_price 메서드 위임 테스트"""
+    def test_inquire_daily_price_delegation(self):
+        """inquire_daily_price 메서드 위임 테스트"""
         expected_result = {"rt_cd": "0", "output": [{"stck_bsop_date": "20231215"}]}
-        self.api.price_api.get_daily_price = Mock(return_value=expected_result)
+        self.api.price_api.inquire_daily_price = Mock(return_value=expected_result)
 
-        result = self.api.get_daily_price("005930", period="W", org_adj_prc="0")
+        result = self.api.inquire_daily_price("005930", period="W", org_adj_prc="0")
 
         self.assertEqual(result, expected_result)
-        self.api.price_api.get_daily_price.assert_called_once_with("005930", "W", "0")
+        self.api.price_api.inquire_daily_price.assert_called_once_with(
+            "005930", "W", "0"
+        )
 
-    def test_get_daily_price_default_params(self):
-        """get_daily_price 기본 파라미터 테스트"""
+    def test_inquire_daily_price_default_params(self):
+        """inquire_daily_price 기본 파라미터 테스트"""
         expected_result = {"rt_cd": "0", "output": []}
-        self.api.price_api.get_daily_price = Mock(return_value=expected_result)
+        self.api.price_api.inquire_daily_price = Mock(return_value=expected_result)
 
-        result = self.api.get_daily_price("005930")
+        result = self.api.inquire_daily_price("005930")
 
         self.assertEqual(result, expected_result)
-        self.api.price_api.get_daily_price.assert_called_once_with("005930", "D", "1")
+        self.api.price_api.inquire_daily_price.assert_called_once_with(
+            "005930", "D", "1"
+        )
 
     def test_get_orderbook_delegation(self):
         """get_orderbook 메서드 위임 테스트"""

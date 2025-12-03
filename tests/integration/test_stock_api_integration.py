@@ -57,9 +57,9 @@ class TestStockAPI(unittest.TestCase):
         elif isinstance(result, dict) and "rt_cd" in result and result["rt_cd"] == "0":
             self.assertIn("output", result)
 
-    def test_get_daily_price(self):
+    def test_inquire_daily_price(self):
         """일별 시세 조회 테스트"""
-        result = self.api.get_daily_price(self.test_code)
+        result = self.api.inquire_daily_price(self.test_code)
         self.assertIsNotNone(result)
         # DataFrame 또는 dict 형태로 반환될 수 있음
         if isinstance(result, pd.DataFrame):

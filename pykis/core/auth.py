@@ -90,7 +90,9 @@ _cfg = {
     "my_sec": os.getenv("KIS_APP_SECRET") or os.getenv("MY_SEC") or "",
     "my_acct_stock": os.getenv("KIS_ACCOUNT_NO") or os.getenv("MY_ACCT_STOCK") or "",
     "my_prod": os.getenv("KIS_ACCOUNT_CODE") or os.getenv("MY_PROD") or "01",
-    "prod": os.getenv("KIS_BASE_URL") or os.getenv("PROD_URL") or "https://openapi.koreainvestment.com:9443",
+    "prod": os.getenv("KIS_BASE_URL")
+    or os.getenv("PROD_URL")
+    or "https://openapi.koreainvestment.com:9443",
     "vps": os.getenv("KIS_VPS_URL", "https://openapivts.koreainvestment.com:29443"),
     "my_agent": os.getenv("KIS_USER_AGENT", "KIS_AGENT"),
 }
@@ -110,7 +112,9 @@ _base_headers = {"Content-Type": "application/json"}
 
 
 # 토큰 발급 받아 저장 (토큰값, 토큰 유효시간,1일, 6시간 이내 발급신청시는 기존 토큰값과 동일, 발급시 알림톡 발송)
-def save_token(my_token: str, my_expired: str, path: str = token_tmp, app_key: str = None) -> None:
+def save_token(
+    my_token: str, my_expired: str, path: str = token_tmp, app_key: str = None
+) -> None:
     """토큰을 APP_KEY별로 분리하여 저장
 
     Args:
@@ -203,14 +207,18 @@ def _getBaseHeader():
 
 # 가져오기 : 앱키, 앱시크리트, 종합계좌번호(계좌번호 중 숫자8자리), 계좌상품코드(계좌번호 중 숫자2자리), 토큰, 도메인
 def _setTRENV(cfg):
-    nt1 = namedtuple("KISEnv", ["my_app", "my_sec", "my_acct", "my_prod", "my_token", "my_url"])
+    nt1 = namedtuple(
+        "KISEnv", ["my_app", "my_sec", "my_acct", "my_prod", "my_token", "my_url"]
+    )
     d = {
         "my_app": cfg["my_app"],  # 앱키
         "my_sec": cfg["my_sec"],  # 앱시크리트
         "my_acct": cfg["my_acct"],  # 종합계좌번호(8자리)
         "my_prod": cfg["my_prod"],  # 계좌상품코드(2자리)
         "my_token": cfg["my_token"],  # 토큰
-        "my_url": cfg["my_url"],  # 실전 도메인 (https://openapi.koreainvestment.com:9443)
+        "my_url": cfg[
+            "my_url"
+        ],  # 실전 도메인 (https://openapi.koreainvestment.com:9443)
     }  # 모의 도메인 (https://openapivts.koreainvestment.com:29443)
 
     # print(cfg['my_app'])
@@ -249,9 +257,13 @@ def changeTREnv(
     cfg["my_app"] = _cfg.get(ak1, "")
     cfg["my_sec"] = _cfg.get(ak2, "")
 
-    if svr == "prod" and product == "01" or svr == "prod" and product == "30":  # 실전투자 주식투자, 위탁계좌, 투자계좌
+    if (
+        svr == "prod" and product == "01" or svr == "prod" and product == "30"
+    ):  # 실전투자 주식투자, 위탁계좌, 투자계좌
         cfg["my_acct"] = _cfg.get("my_acct_stock", "")
-    elif svr == "prod" and product == "03" or svr == "prod" and product == "08":  # 실전투자 선물옵션(파생)
+    elif (
+        svr == "prod" and product == "03" or svr == "prod" and product == "08"
+    ):  # 실전투자 선물옵션(파생)
         cfg["my_acct"] = _cfg.get("my_acct_future", "")
     elif svr == "vps" and product == "01":  # 모의투자 주식투자, 위탁계좌, 투자계좌
         cfg["my_acct"] = _cfg.get("my_paper_stock", "")
@@ -333,15 +345,25 @@ def auth(
 
     if saved_token is None:  # 기존 발급 토큰 확인이 안되면 발급처리
         # config.BASE_URL이 비어 있으면 환경 변수에서 직접 가져옴 (이중 안전장치)
-        base_url = config.BASE_URL if config and config.BASE_URL else os.getenv("KIS_BASE_URL", "")
+        base_url = (
+            config.BASE_URL
+            if config and config.BASE_URL
+            else os.getenv("KIS_BASE_URL", "")
+        )
         _logger.debug(f"인증 URL: {base_url}")  # 디버그 레벨로 변경 (기본 출력 안됨)
         url = f"{base_url}/oauth2/tokenP"
-        res = requests.post(url, data=json.dumps(p), headers=_getBaseHeader())  # 토큰 발급
+        res = requests.post(
+            url, data=json.dumps(p), headers=_getBaseHeader()
+        )  # 토큰 발급
         rescode = res.status_code
         if rescode == 200:  # 토큰 정상 발급
             my_token = _getResultObject(res.json()).access_token  # 토큰값 가져오기
-            my_expired = _getResultObject(res.json()).access_token_token_expired  # 토큰값 만료일시 가져오기
-            save_token(my_token, my_expired, app_key=current_app_key)  # APP_KEY별로 저장
+            my_expired = _getResultObject(
+                res.json()
+            ).access_token_token_expired  # 토큰값 만료일시 가져오기
+            save_token(
+                my_token, my_expired, app_key=current_app_key
+            )  # APP_KEY별로 저장
             _logger.info("토큰 발급 완료")
         else:
             _logger.error(f"토큰 발급 실패 - 응답코드: {rescode}, 응답내용: {res.text}")
@@ -349,7 +371,11 @@ def auth(
             raise RuntimeError(f"KIS API 토큰 발급 실패 (HTTP {rescode})")
     else:
         # 저장된 포맷이 딕셔너리일 경우 access_token 필드 사용
-        my_token = saved_token["access_token"] if isinstance(saved_token, dict) and "access_token" in saved_token else saved_token
+        my_token = (
+            saved_token["access_token"]
+            if isinstance(saved_token, dict) and "access_token" in saved_token
+            else saved_token
+        )
         # 저장된 토큰 사용 시 만료일이 필요 없으므로 임시 값 사용
         my_expired = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -372,7 +398,9 @@ def auth(
 
 # end of initialize, 토큰 재발급, 토큰 발급시 유효시간 1일
 # 프로그램 실행시 _last_auth_time에 저장하여 유효시간 체크, 유효시간 만료시 토큰 발급 처리
-def reAuth(config=None, svr: str = "prod", product: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def reAuth(
+    config=None, svr: str = "prod", product: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
     """토큰 재인증
 
     Args:
@@ -503,7 +531,9 @@ class APIResp:
 
 
 # 공통 API 호출부분, 모든 API 호출은 이 함수를 통해서 호출된다.
-def _url_fetch(api_url, ptr_id, tr_cont, params, appendHeaders=None, postFlag=False, hashFlag=True):
+def _url_fetch(
+    api_url, ptr_id, tr_cont, params, appendHeaders=None, postFlag=False, hashFlag=True
+):
     url = f"{getTREnv().my_url}{api_url}"
 
     headers = _getBaseHeader()

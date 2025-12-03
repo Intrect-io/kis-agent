@@ -10,8 +10,11 @@ AccountAPI 클래스의 계좌 관련 메서드들을 테스트합니다.
 import unittest
 from unittest.mock import MagicMock
 
+import pytest
+
 from pykis.account.api import AccountAPI
 from pykis.core.client import KISClient
+from pykis.core.exceptions import APIException
 
 
 class TestAccountAPI(unittest.TestCase):
@@ -242,12 +245,14 @@ class TestAccountAPI(unittest.TestCase):
         self.assertEqual(params["PDNO"], self.test_code)
 
     def test_get_account_order_quantity_exception(self):
-        """계좌별 주문 수량 조회 예외 테스트"""
+        """계좌별 주문 수량 조회 예외 테스트
+
+        @api_method(reraise=True) 기본값으로 인해 예외가 APIException으로 래핑되어 발생합니다.
+        """
         self.client.make_request.side_effect = Exception("API 오류")
 
-        result = self.api.get_account_order_quantity(self.test_code)
-
-        self.assertIsNone(result)
+        with pytest.raises(APIException):
+            self.api.get_account_order_quantity(self.test_code)
 
     def test_get_possible_order_amount_success(self):
         """주문 가능 금액 조회 성공 테스트"""
@@ -272,12 +277,14 @@ class TestAccountAPI(unittest.TestCase):
         self.assertEqual(params["OVRS_ICLD_YN"], "N")
 
     def test_get_possible_order_amount_exception(self):
-        """주문 가능 금액 조회 예외 테스트"""
+        """주문 가능 금액 조회 예외 테스트
+
+        @api_method(reraise=True) 기본값으로 인해 예외가 APIException으로 래핑되어 발생합니다.
+        """
         self.client.make_request.side_effect = Exception("API 오류")
 
-        result = self.api.get_possible_order_amount()
-
-        self.assertIsNone(result)
+        with pytest.raises(APIException):
+            self.api.get_possible_order_amount()
 
     def test_account_info_validation(self):
         """계좌 정보 유효성 검증 테스트"""

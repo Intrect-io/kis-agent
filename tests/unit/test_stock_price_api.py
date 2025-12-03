@@ -53,6 +53,7 @@ class TestStockPriceAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS["INQUIRE_PRICE"],
             tr_id="FHKST01010100",
             params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": "005930"},
+            method="GET",
         )
 
     def test_get_stock_price_failure(self):
@@ -87,6 +88,7 @@ class TestStockPriceAPI(unittest.TestCase):
                 "FID_PERIOD_DIV_CODE": "D",
                 "FID_ORG_ADJ_PRC": "1",
             },
+            method="GET",
         )
 
     def test_inquire_daily_price_custom_params(self):
@@ -125,6 +127,7 @@ class TestStockPriceAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS["INQUIRE_ASKING_PRICE_EXP_CCN"],
             tr_id="FHKST01010200",
             params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": "005930"},
+            method="GET",
         )
 
     def test_get_orderbook_raw_success(self):
@@ -139,6 +142,7 @@ class TestStockPriceAPI(unittest.TestCase):
             endpoint=API_ENDPOINTS["INQUIRE_ASKING_PRICE_EXP_CCN"],
             tr_id="FHKST01010200",
             params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": "005930"},
+            method="GET",
         )
 
     def test_get_minute_price_default_hour(self):
@@ -164,6 +168,7 @@ class TestStockPriceAPI(unittest.TestCase):
                 "FID_INPUT_ISCD": "005930",
                 "FID_INPUT_HOUR_1": "153000",
             },
+            method="GET",
         )
 
     def test_get_minute_price_custom_hour(self):
@@ -207,6 +212,7 @@ class TestStockPriceAPI(unittest.TestCase):
                 "FID_INPUT_DATE_1": "20231215",
                 "FID_INPUT_HOUR_1": "153000",
             },
+            method="GET",
         )
 
     def test_get_daily_minute_price_custom_hour(self):
@@ -234,16 +240,15 @@ class TestStockPriceAPI(unittest.TestCase):
         self.assertEqual(result, error_response)
         self.assertEqual(result["rt_cd"], "1")
 
-    @patch("logging.error")
-    def test_api_request_exception(self, mock_log):
+    def test_api_request_exception(self):
         """API 요청 중 예외 발생"""
         self.mock_client.make_request.side_effect = Exception("Connection error")
 
         with self.assertRaises(Exception) as context:
             self.api.get_stock_price("005930")
 
-        self.assertIn("API 요청 실패", str(context.exception))
-        mock_log.assert_called_once()
+        # 새로운 예외 처리 형식: [API 요청 (Dict)] 또는 [컨텍스트] 형식
+        self.assertIn("Connection error", str(context.exception))
 
     def test_multiple_consecutive_calls(self):
         """연속적인 API 호출"""
@@ -286,6 +291,470 @@ class TestStockPriceAPI(unittest.TestCase):
 
         # 총 4번 호출되었는지 확인
         self.assertEqual(self.mock_client.make_request.call_count, 4)
+
+
+class TestStockPriceAPIAdditionalMethods(unittest.TestCase):
+    """StockPriceAPI 추가 메서드 테스트 - 커버리지 향상용"""
+
+    def setUp(self):
+        self.mock_client = Mock()
+        self.api = StockPriceAPI(client=self.mock_client, enable_cache=False)
+
+    def test_inquire_daily_itemchartprice_default_params(self):
+        """기간별 시세 조회 - 기본 파라미터"""
+        expected_response = {
+            "rt_cd": "0",
+            "output1": [{"stck_bsop_date": "20231215", "stck_clpr": "70000"}],
+            "output2": {},
+        }
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_daily_itemchartprice("005930")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_INPUT_DATE_1"], "")
+        self.assertEqual(params["FID_INPUT_DATE_2"], "")
+        self.assertEqual(params["FID_PERIOD_DIV_CODE"], "D")
+        self.assertEqual(params["FID_ORG_ADJ_PRC"], "1")
+
+    def test_inquire_daily_itemchartprice_with_dates(self):
+        """기간별 시세 조회 - 날짜 지정"""
+        expected_response = {"rt_cd": "0", "output1": [], "output2": {}}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_daily_itemchartprice(
+            "005930", start_date="20240101", end_date="20240131", period="W"
+        )
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_INPUT_DATE_1"], "20240101")
+        self.assertEqual(params["FID_INPUT_DATE_2"], "20240131")
+        self.assertEqual(params["FID_PERIOD_DIV_CODE"], "W")
+
+    def test_inquire_time_itemconclusion(self):
+        """시간대별 체결 조회"""
+        expected_response = {"rt_cd": "0", "output1": {}, "output2": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_time_itemconclusion("005930", hour="120000")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_INPUT_HOUR_1"], "120000")
+
+    def test_inquire_ccnl(self):
+        """체결 정보 조회 (최근 30건)"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_ccnl("005930", market="NX")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_COND_MRKT_DIV_CODE"], "NX")
+
+    def test_inquire_price(self):
+        """현재가 시세 조회"""
+        expected_response = {"rt_cd": "0", "output": {"stck_prpr": "70000"}}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_price("005930")
+
+        self.assertEqual(result, expected_response)
+
+    def test_inquire_price_2(self):
+        """현재가 시세2 조회"""
+        expected_response = {"rt_cd": "0", "output": {"stck_prpr": "70000"}}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_price_2("005930")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        self.assertEqual(call_args[1]["tr_id"], "FHPST01010000")
+
+    def test_search_stock_info(self):
+        """주식 기본정보 조회"""
+        expected_response = {
+            "rt_cd": "0",
+            "output": {"prdt_abrv_name": "삼성전자", "std_pdno": "005930"},
+        }
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.search_stock_info("005930")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["PDNO"], "005930")
+        self.assertEqual(params["PRDT_TYPE_CD"], "300")
+
+    def test_news_title(self):
+        """뉴스 제목 조회"""
+        expected_response = {"rt_cd": "0", "output1": [], "output2": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.news_title(code="005930", date="20240101")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_INPUT_ISCD"], "005930")
+        self.assertEqual(params["FID_INPUT_DATE_1"], "20240101")
+
+    def test_fluctuation(self):
+        """등락률 순위 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.fluctuation(market="J", count="50")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["fid_cond_mrkt_div_code"], "J")
+        self.assertEqual(params["fid_input_cnt_1"], "50")
+
+    def test_volume_rank(self):
+        """거래량 순위 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.volume_rank(market="J", volume="10000")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_VOL_CNT"], "10000")
+
+    def test_market_cap(self):
+        """시가총액 순위 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.market_cap(stock_code="0001")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["fid_input_iscd"], "0001")
+
+    def test_inquire_daily_overtimeprice(self):
+        """시간외 일자별주가 조회"""
+        expected_response = {"rt_cd": "0", "output1": {}, "output2": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_daily_overtimeprice("005930")
+
+        self.assertEqual(result, expected_response)
+
+    def test_inquire_elw_price(self):
+        """ELW 현재가 조회"""
+        expected_response = {"rt_cd": "0", "output": {}}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_elw_price("580001")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_COND_MRKT_DIV_CODE"], "W")
+
+    def test_inquire_index_category_price(self):
+        """업종 구분별 전체시세 조회"""
+        expected_response = {"rt_cd": "0", "output1": {}, "output2": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_index_category_price("0001", market_cls="K")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_MRKT_CLS_CODE"], "K")
+
+    def test_inquire_index_price_deprecated(self):
+        """지수 현재가 조회 (deprecated)"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        import warnings
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.api.inquire_index_price("0001")
+            # deprecation 경고가 발생하는지 확인
+            self.assertTrue(any("deprecated" in str(warning.message).lower() for warning in w))
+
+        self.assertEqual(result, expected_response)
+
+    def test_inquire_index_tickprice(self):
+        """지수 틱 시세 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_index_tickprice("0001")
+
+        self.assertEqual(result, expected_response)
+
+    def test_inquire_index_timeprice(self):
+        """지수 시간별 시세 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_index_timeprice("0001", time_div="300")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["fid_input_hour_1"], "300")
+
+    def test_inquire_overtime_asking_price(self):
+        """시간외 호가 조회"""
+        expected_response = {"rt_cd": "0", "output": {}}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_overtime_asking_price("005930")
+
+        self.assertEqual(result, expected_response)
+
+    def test_inquire_overtime_price(self):
+        """시간외 현재가 조회"""
+        expected_response = {"rt_cd": "0", "output": {}}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_overtime_price("005930")
+
+        self.assertEqual(result, expected_response)
+
+    def test_disparity(self):
+        """이격도 순위 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.disparity(hour_cls="10", sort_code="1")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["fid_hour_cls_code"], "10")
+        self.assertEqual(params["fid_rank_sort_cls_code"], "1")
+
+    def test_dividend_rate(self):
+        """배당률 상위 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.dividend_rate(gb1="1", gb3="2")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["GB1"], "1")
+        self.assertEqual(params["GB3"], "2")
+
+    def test_market_time(self):
+        """시장 영업시간 조회"""
+        expected_response = {"rt_cd": "0", "output": {"open_time": "090000"}}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.market_time()
+
+        self.assertEqual(result, expected_response)
+
+    def test_market_value(self):
+        """종목별 시가총액 조회"""
+        expected_response = {"rt_cd": "0", "output": {"mktc_amt": "500000000000000"}}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.market_value("005930")
+
+        self.assertEqual(result, expected_response)
+
+    def test_profit_asset_index(self):
+        """자산/수익지수 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.profit_asset_index("1001")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_INPUT_ISCD"], "1001")
+
+    def test_intstock_multprice(self):
+        """복수종목 현재가 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.intstock_multprice("005930,000660,035420")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_INPUT_ISCD"], "005930,000660,035420")
+
+    def test_foreign_institution_total(self):
+        """외국인/기관 종합 매매동향 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.foreign_institution_total(etc_cls="1")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_ETC_CLS_CODE"], "1")
+
+    def test_daily_credit_balance(self):
+        """신용잔고 일별추이 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.daily_credit_balance("005930", date="20240101")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_INPUT_DATE_1"], "20240101")
+
+    def test_short_sale(self):
+        """공매도 상위종목 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.short_sale(period="1", count="50")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_PERIOD_DIV_CODE"], "1")
+        self.assertEqual(params["FID_INPUT_CNT_1"], "50")
+
+    def test_inquire_vi_status(self):
+        """VI 발동 현황 조회"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.inquire_vi_status(div_cls="1", market="1")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_DIV_CLS_CODE"], "1")
+        self.assertEqual(params["FID_MRKT_CLS_CODE"], "1")
+
+    def test_get_stock_ccnl(self):
+        """체결 조회 래퍼"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.get_stock_ccnl("005930")
+
+        self.assertEqual(result, expected_response)
+
+    def test_get_intraday_price_success(self):
+        """하루 전체 분봉 조회 성공"""
+        # 4번의 API 호출 결과 Mock
+        responses = [
+            {
+                "rt_cd": "0",
+                "output1": {"summary": "data"},
+                "output2": [
+                    {"stck_cntg_hour": "090000", "stck_prpr": "70000"},
+                    {"stck_cntg_hour": "091000", "stck_prpr": "70100"},
+                ],
+            },
+            {
+                "rt_cd": "0",
+                "output2": [
+                    {"stck_cntg_hour": "110000", "stck_prpr": "70200"},
+                    {"stck_cntg_hour": "111000", "stck_prpr": "70300"},
+                ],
+            },
+            {
+                "rt_cd": "0",
+                "output2": [
+                    {"stck_cntg_hour": "130000", "stck_prpr": "70400"},
+                ],
+            },
+            {
+                "rt_cd": "0",
+                "output2": [
+                    {"stck_cntg_hour": "153000", "stck_prpr": "70500"},
+                ],
+            },
+        ]
+        self.mock_client.make_request.side_effect = responses
+
+        result = self.api.get_intraday_price("005930", "20240101")
+
+        self.assertEqual(result["rt_cd"], "0")
+        self.assertEqual(len(result["output2"]), 6)  # 중복 없이 6건
+        self.assertEqual(self.mock_client.make_request.call_count, 4)  # 4번 호출
+
+    def test_get_intraday_price_with_api_error(self):
+        """하루 전체 분봉 조회 - API 오류 시에도 계속 진행"""
+        responses = [
+            {"rt_cd": "0", "output1": {}, "output2": [{"stck_cntg_hour": "090000"}]},
+            {"rt_cd": "1", "msg1": "error"},  # 오류 응답
+            {"rt_cd": "0", "output2": [{"stck_cntg_hour": "130000"}]},
+            Exception("Connection error"),  # 예외 발생
+        ]
+        self.mock_client.make_request.side_effect = responses
+
+        result = self.api.get_intraday_price("005930", "20240101")
+
+        # 오류에도 불구하고 수집된 데이터 반환
+        self.assertEqual(result["rt_cd"], "0")
+        self.assertEqual(len(result["output2"]), 2)  # 성공한 2건만
+
+    def test_get_index_timeprice(self):
+        """지수 시간별 시세 조회 (래퍼)"""
+        expected_response = {"rt_cd": "0", "output": []}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.get_index_timeprice("1001", "120")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["fid_input_iscd"], "1001")
+        self.assertEqual(params["fid_input_hour_1"], "120")
+
+    @patch("pykis.stock.api.get_kospi200_futures_code")
+    def test_get_future_option_price_default(self, mock_futures_code):
+        """선물옵션 시세 조회 - 기본값"""
+        mock_futures_code.return_value = "101T12"
+        expected_response = {"rt_cd": "0", "output": {}}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.get_future_option_price()
+
+        self.assertEqual(result, expected_response)
+        mock_futures_code.assert_called_once()
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["fid_input_iscd"], "101T12")
+
+    def test_get_future_option_price_with_code(self):
+        """선물옵션 시세 조회 - 코드 지정"""
+        expected_response = {"rt_cd": "0", "output": {}}
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.get_future_option_price("O", "201T12370")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["fid_cond_mrkt_div_code"], "O")
+        self.assertEqual(params["fid_input_iscd"], "201T12370")
 
 
 if __name__ == "__main__":

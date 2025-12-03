@@ -10,8 +10,8 @@ Tests cover:
 """
 
 import unittest
-from unittest.mock import Mock, patch, call
 from datetime import datetime, timedelta
+from unittest.mock import Mock, call, patch
 
 from pykis.account.api import AccountAPI
 

@@ -7,6 +7,104 @@ from typing import Any, Dict, Optional
 logger = logging.getLogger(__name__)
 
 
+# ============================================================================
+# 전역 싱글턴 Rate Limiter
+# ============================================================================
+
+_global_rate_limiter: Optional["RateLimiter"] = None
+_global_rate_limiter_lock = threading.Lock()
+
+
+def get_global_rate_limiter(
+    requests_per_second: int = 18,
+    requests_per_minute: int = 900,
+    min_interval_ms: int = 55,
+    burst_size: int = 10,
+    enable_adaptive: bool = True,
+) -> "RateLimiter":
+    """
+    전역 싱글턴 Rate Limiter 인스턴스를 반환합니다.
+
+    모든 KISClient와 Agent가 동일한 Rate Limiter를 공유하여
+    API 호출 제한을 전역적으로 관리합니다.
+
+    Args:
+        requests_per_second: 초당 최대 요청 수 (기본값: 18, 첫 호출 시에만 적용)
+        requests_per_minute: 분당 최대 요청 수 (기본값: 900, 첫 호출 시에만 적용)
+        min_interval_ms: 연속 호출 최소 간격 (기본값: 55ms, 첫 호출 시에만 적용)
+        burst_size: 순간 버스트 크기 (기본값: 10, 첫 호출 시에만 적용)
+        enable_adaptive: 적응형 속도 조절 활성화 (기본값: True, 첫 호출 시에만 적용)
+
+    Returns:
+        RateLimiter: 전역 Rate Limiter 인스턴스
+
+    Example:
+        >>> from pykis.core.rate_limiter import get_global_rate_limiter
+        >>> limiter = get_global_rate_limiter()
+        >>> wait_time = limiter.acquire()
+        >>> # API 호출 수행
+        >>> limiter.report_success()
+
+    Note:
+        - 싱글턴 패턴: 첫 호출 시 인스턴스가 생성되며, 이후 호출은 동일한 인스턴스 반환
+        - 설정 변경: 이미 생성된 후에는 전달된 설정이 무시됨
+        - 런타임 설정 변경: limiter.set_limits() 메서드 사용
+        - 완전 리셋: reset_global_rate_limiter() 호출 후 다시 get_global_rate_limiter() 호출
+
+    Warning:
+        이미 Rate Limiter가 생성된 상태에서 다른 설정으로 호출하면 경고 로그가 출력됩니다.
+        이 경우 기존 설정이 유지됩니다.
+    """
+    global _global_rate_limiter
+
+    if _global_rate_limiter is None:
+        with _global_rate_limiter_lock:
+            # Double-check locking
+            if _global_rate_limiter is None:
+                _global_rate_limiter = RateLimiter(
+                    requests_per_second=requests_per_second,
+                    requests_per_minute=requests_per_minute,
+                    min_interval_ms=min_interval_ms,
+                    burst_size=burst_size,
+                    enable_adaptive=enable_adaptive,
+                )
+                logger.info(
+                    f"전역 Rate Limiter 생성: {requests_per_second} RPS / "
+                    f"{requests_per_minute} RPM / {min_interval_ms}ms 간격"
+                )
+    else:
+        # 이미 생성된 상태에서 다른 설정으로 호출된 경우 경고
+        current = _global_rate_limiter
+        if (
+            requests_per_second != current.requests_per_second
+            or requests_per_minute != current.requests_per_minute
+        ):
+            logger.debug(
+                f"전역 Rate Limiter가 이미 존재합니다. "
+                f"전달된 설정 ({requests_per_second} RPS / {requests_per_minute} RPM)은 무시됩니다. "
+                f"현재 설정: {current.requests_per_second} RPS / {current.requests_per_minute} RPM. "
+                f"설정 변경은 limiter.set_limits() 또는 reset_global_rate_limiter() 사용"
+            )
+
+    return _global_rate_limiter
+
+
+def reset_global_rate_limiter() -> None:
+    """
+    전역 Rate Limiter를 초기화합니다.
+
+    테스트나 설정 변경이 필요한 경우 사용합니다.
+    다음 get_global_rate_limiter() 호출 시 새 인스턴스가 생성됩니다.
+    """
+    global _global_rate_limiter
+
+    with _global_rate_limiter_lock:
+        if _global_rate_limiter is not None:
+            _global_rate_limiter.reset()
+            _global_rate_limiter = None
+            logger.info("전역 Rate Limiter 리셋 완료")
+
+
 class RateLimiter:
     """
     한국투자증권 API 유량 제한 관리 클래스

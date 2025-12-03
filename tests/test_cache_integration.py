@@ -56,7 +56,9 @@ class TestCacheIntegration:
         daily_ttl = cache.get_ttl_for_endpoint(
             "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice"
         )
-        assert daily_ttl == 1800, f"일봉 데이터 TTL은 1800초여야 합니다. 실제: {daily_ttl}"
+        assert (
+            daily_ttl == 1800
+        ), f"일봉 데이터 TTL은 1800초여야 합니다. 실제: {daily_ttl}"
 
         # 종목 정보는 3600초 (1시간) TTL
         info_ttl = cache.get_ttl_for_endpoint(
@@ -281,7 +283,9 @@ class TestCacheTTLVerification:
 
         for endpoint, expected_ttl in minute_endpoints:
             ttl = cache.get_ttl_for_endpoint(endpoint)
-            assert ttl == expected_ttl, f"{endpoint}의 TTL은 {expected_ttl}초여야 합니다. 실제: {ttl}"
+            assert (
+                ttl == expected_ttl
+            ), f"{endpoint}의 TTL은 {expected_ttl}초여야 합니다. 실제: {ttl}"
 
     def test_daily_data_ttl(self):
         """일 단위 데이터 TTL 검증 (10-30분)"""
@@ -296,7 +300,9 @@ class TestCacheTTLVerification:
 
         for endpoint, expected_ttl in daily_endpoints:
             ttl = cache.get_ttl_for_endpoint(endpoint)
-            assert ttl == expected_ttl, f"{endpoint}의 TTL은 {expected_ttl}초여야 합니다. 실제: {ttl}"
+            assert (
+                ttl == expected_ttl
+            ), f"{endpoint}의 TTL은 {expected_ttl}초여야 합니다. 실제: {ttl}"
 
     def test_account_data_ttl(self):
         """계좌/잔고 데이터 TTL 검증"""
@@ -331,7 +337,9 @@ class TestCacheTTLVerification:
             assert (
                 ttl == expected_ttl
             ), f"{endpoint}의 TTL은 {expected_ttl}초여야 합니다. 실제: {ttl}"
-            assert ttl >= 1800, f"정적 데이터 TTL은 1800초 이상이어야 합니다: {endpoint}"
+            assert (
+                ttl >= 1800
+            ), f"정적 데이터 TTL은 1800초 이상이어야 합니다: {endpoint}"
 
     def test_order_no_cache(self):
         """주문 관련 API는 캐시하지 않음 검증"""

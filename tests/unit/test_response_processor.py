@@ -293,7 +293,8 @@ class TestAPIRequestManager(unittest.TestCase):
                 endpoint="/test", tr_id="TEST001", params={"code": "005930"}
             )
 
-        self.assertIn("API 요청 실패", str(context.exception))
+        # 예외 메시지에 원본 에러가 포함됨
+        self.assertIn("API Error", str(context.exception))
         mock_log.assert_called_once()
 
 

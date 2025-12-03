@@ -25,7 +25,8 @@ class TestAgentOrderAPI:
                 account_code="01",
             )
 
-            # Mock stock_api 생성
+            # Mock account_api와 stock_api 생성
+            agent.account_api = Mock()
             agent.stock_api = Mock()
             return agent
 
@@ -37,7 +38,7 @@ class TestAgentOrderAPI:
             "msg1": "주문이 정상적으로 접수되었습니다.",
             "output": {"odno": "0000117057"},
         }
-        mock_agent.stock_api.order_cash.return_value = expected_response
+        mock_agent.account_api.order_cash.return_value = expected_response
 
         # When
         result = mock_agent.order_stock_cash(
@@ -46,22 +47,20 @@ class TestAgentOrderAPI:
 
         # Then
         assert result == expected_response
-        mock_agent.stock_api.order_cash.assert_called_once_with(
-            ord_dv="buy",
+        mock_agent.account_api.order_cash.assert_called_once_with(
             pdno="005930",
-            ord_dvsn="00",
-            ord_qty="1",
-            ord_unpr="70000",
-            excg_id_dvsn_cd="KRX",
-            sll_type="",
-            cndt_pric="",
+            qty=1,
+            price=70000,
+            buy_sell="BUY",
+            order_type="00",
+            exchange="KRX",
         )
 
     def test_order_stock_cash_with_options(self, mock_agent):
         """Agent를 통한 현금 주문 옵션 파라미터 테스트"""
         # Given
         expected_response = {"rt_cd": "0", "msg1": "성공"}
-        mock_agent.stock_api.order_cash.return_value = expected_response
+        mock_agent.account_api.order_cash.return_value = expected_response
 
         # When
         result = mock_agent.order_stock_cash(
@@ -76,15 +75,13 @@ class TestAgentOrderAPI:
         )
 
         # Then
-        mock_agent.stock_api.order_cash.assert_called_once_with(
-            ord_dv="sell",
+        mock_agent.account_api.order_cash.assert_called_once_with(
             pdno="005930",
-            ord_dvsn="01",
-            ord_qty="5",
-            ord_unpr="0",
-            excg_id_dvsn_cd="SOR",
-            sll_type="01",
-            cndt_pric="69000",
+            qty=5,
+            price=0,
+            buy_sell="SELL",
+            order_type="01",
+            exchange="SOR",
         )
 
     def test_order_stock_credit_success(self, mock_agent):
@@ -95,7 +92,7 @@ class TestAgentOrderAPI:
             "msg1": "신용주문이 정상적으로 접수되었습니다.",
             "output": {"odno": "0000117058"},
         }
-        mock_agent.stock_api.order_credit.return_value = expected_response
+        mock_agent.account_api.order_credit_buy.return_value = expected_response
 
         # When
         result = mock_agent.order_stock_credit(
@@ -110,19 +107,13 @@ class TestAgentOrderAPI:
 
         # Then
         assert result == expected_response
-        mock_agent.stock_api.order_credit.assert_called_once_with(
-            ord_dv="buy",
+        mock_agent.account_api.order_credit_buy.assert_called_once_with(
             pdno="005930",
-            crdt_type="21",
-            loan_dt="20250911",
-            ord_dvsn="00",
-            ord_qty="1",
-            ord_unpr="70000",
-            excg_id_dvsn_cd="KRX",
-            sll_type="",
-            rsvn_ord_yn="N",
-            emgc_ord_yn="",
-            cndt_pric="",
+            qty=1,
+            price=70000,
+            order_type="00",
+            credit_type="21",
+            exchange="KRX",
         )
 
     def test_inquire_order_psbl_success(self, mock_agent):
@@ -226,29 +217,39 @@ class TestAgentOrderAPI:
         )
 
     def test_stock_api_error_propagation(self, mock_agent):
-        """StockAPI 에러가 Agent로 전파되는지 테스트"""
+        """AccountAPI 에러가 Agent로 전파되는지 테스트"""
         # Given
-        mock_agent.stock_api.order_cash.side_effect = ValueError("Test error")
+        mock_agent.account_api.order_cash.side_effect = ValueError("Test error")
 
         # When & Then
         with pytest.raises(ValueError, match="Test error"):
             mock_agent.order_stock_cash("buy", "005930", "00", "1", "70000")
 
     def test_agent_method_delegation(self, mock_agent):
-        """Agent 메서드가 StockAPI로 올바르게 위임되는지 테스트"""
-        # Given
-        methods_to_test = [
+        """Agent 메서드가 적절한 API로 위임되는지 테스트"""
+        # Given - account_api로 위임되는 메서드들
+        account_api_methods = [
             ("order_stock_cash", "order_cash"),
-            ("order_stock_credit", "order_credit"),
+            ("order_stock_credit", "order_credit_buy"),
+        ]
+        # stock_api로 위임되는 메서드들
+        stock_api_methods = [
             ("inquire_order_psbl", "inquire_psbl_order"),
             ("inquire_credit_order_psbl", "inquire_credit_psamount"),
         ]
 
-        for agent_method, stock_api_method in methods_to_test:
+        for agent_method, account_api_method in account_api_methods:
             # When
             agent_func = getattr(mock_agent, agent_method)
-            stock_api_func = getattr(mock_agent.stock_api, stock_api_method)
+            # Then
+            assert callable(agent_func), f"{agent_method} should be callable"
+            assert hasattr(
+                mock_agent.account_api, account_api_method
+            ), f"account_api should have {account_api_method}"
 
+        for agent_method, stock_api_method in stock_api_methods:
+            # When
+            agent_func = getattr(mock_agent, agent_method)
             # Then
             assert callable(agent_func), f"{agent_method} should be callable"
             assert hasattr(

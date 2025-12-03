@@ -122,7 +122,9 @@ def test_cache_performance_with_different_ttls():
     info_endpoint = "/uapi/domestic-stock/v1/quotations/inquire-stock-info"
     cache_key_info = cache._make_key({"endpoint": info_endpoint, "code": "005930"})
     cache.set(
-        cache_key_info, {"name": "삼성전자"}, ttl=cache.get_ttl_for_endpoint(info_endpoint)
+        cache_key_info,
+        {"name": "삼성전자"},
+        ttl=cache.get_ttl_for_endpoint(info_endpoint),
     )
 
     # 31초 후 - 시세는 만료, 종목정보는 유효
