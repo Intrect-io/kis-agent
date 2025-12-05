@@ -25,6 +25,10 @@ from dotenv import load_dotenv
 # 모듈 레벨 로거 설정 (기본적으로 WARNING 이상만 출력)
 _logger = logging.getLogger(__name__)
 
+# 전역 토큰 캐시 (APP_KEY별로 23시간 유지)
+# 구조: {app_key_prefix: {"access_token": str, "access_token_token_expired": str, "cached_at": datetime, "expired": datetime}}
+_token_cache: Dict[str, Dict[str, Any]] = {}
+
 # 환경설정 파일 로드 우선순위: 1) 현재 작업 디렉토리 .env, 2) PyKIS 패키지 루트 .env
 # 다른 프로젝트에서 PyKIS를 사용할 때는 해당 프로젝트의 .env를 우선 사용
 current_dir_env = os.path.join(os.getcwd(), ".env")
@@ -111,7 +115,7 @@ _base_headers = {"Content-Type": "application/json"}
 
 # 토큰 발급 받아 저장 (토큰값, 토큰 유효시간,1일, 6시간 이내 발급신청시는 기존 토큰값과 동일, 발급시 알림톡 발송)
 def save_token(my_token: str, my_expired: str, path: str = token_tmp, app_key: str = None) -> None:
-    """토큰을 APP_KEY별로 분리하여 저장
+    """토큰을 APP_KEY별로 분리하여 저장 (파일 + 메모리 캐시)
 
     Args:
         my_token: 토큰 값
@@ -135,10 +139,21 @@ def save_token(my_token: str, my_expired: str, path: str = token_tmp, app_key: s
     with open(path, "w", encoding="utf-8") as f:
         json.dump(token_data, f, ensure_ascii=False, indent=4)
 
+    # 메모리 캐시에도 저장 (23시간 유지)
+    if app_key:
+        key_prefix = app_key[:8] if len(app_key) >= 8 else app_key
+        _token_cache[key_prefix] = {
+            "access_token": my_token,
+            "access_token_token_expired": my_expired,
+            "cached_at": datetime.now(),
+            "expired": valid_date,
+        }
+        _logger.debug(f"토큰 캐시 저장: {key_prefix} (만료: {my_expired})")
+
 
 # 토큰 확인 (토큰값, 토큰 유효시간_1일, 6시간 이내 발급신청시는 기존 토큰값과 동일, 발급시 알림톡 발송)
 def read_token(path: str = token_tmp, app_key: str = None) -> Optional[Dict[str, Any]]:
-    """APP_KEY별로 분리된 토큰 파일에서 토큰 읽기
+    """APP_KEY별로 분리된 토큰 파일에서 토큰 읽기 (메모리 캐시 우선)
 
     Args:
         path: 기본 토큰 파일 경로
@@ -146,13 +161,50 @@ def read_token(path: str = token_tmp, app_key: str = None) -> Optional[Dict[str,
 
     Returns:
         Optional[Dict[str, Any]]: 유효한 토큰 정보 또는 None
+
+    Note:
+        메모리 캐시를 먼저 확인하여 파일 I/O를 최소화하고,
+        23시간 이내 캐시된 토큰을 우선 사용합니다.
     """
+    from datetime import timedelta
+
     try:
-        # APP_KEY가 제공되면 해당 키 전용 파일에서 읽기
+        # 1. 메모리 캐시 먼저 확인 (23시간 이내)
+        if app_key:
+            key_prefix = app_key[:8] if len(app_key) >= 8 else app_key
+            if key_prefix in _token_cache:
+                cached = _token_cache[key_prefix]
+                now = datetime.now()
+
+                # 23시간 캐시 유효성 검증
+                cache_age = now - cached["cached_at"]
+                if cache_age < timedelta(hours=23):
+                    # KIS 토큰 만료일 검증
+                    if cached["expired"] > now:
+                        _logger.debug(
+                            f"메모리 캐시 사용: {key_prefix} "
+                            f"(캐시 나이: {cache_age.seconds}초, 만료: {cached['expired']})"
+                        )
+                        return {
+                            "access_token": cached["access_token"],
+                            "access_token_token_expired": cached["access_token_token_expired"],
+                        }
+                    else:
+                        _logger.info(f"캐시된 토큰 만료됨: {cached['expired']}")
+                        # 만료된 캐시 제거
+                        del _token_cache[key_prefix]
+                else:
+                    _logger.info(f"캐시 만료 (23시간 초과): {cache_age}")
+                    # 오래된 캐시 제거
+                    del _token_cache[key_prefix]
+
+        # 2. 캐시 미스 또는 만료 시 파일에서 읽기
         if app_key:
             path = _get_token_path_for_app_key(app_key, path)
+            _logger.debug(f"토큰 파일 읽기: {path}")
 
         if not os.path.exists(path):
+            _logger.debug(f"토큰 파일이 존재하지 않음: {path}")
             return None
         with open(path, encoding="utf-8") as f:
             tkg_tmp = json.load(f)
@@ -181,6 +233,19 @@ def read_token(path: str = token_tmp, app_key: str = None) -> Optional[Dict[str,
         # print('expire dt: ', exp_dt, ' vs now dt:', now_dt)
         # 저장된 토큰 만료일자 체크 (만료일시 > 현재일시 인경우 보관 토큰 리턴)
         if exp_dt > now_dt:
+            _logger.debug(f"파일에서 유효한 토큰 발견: 만료={exp_dt}")
+
+            # 3. 파일에서 읽은 토큰도 메모리 캐시에 저장 (23시간 유지)
+            if app_key:
+                key_prefix = app_key[:8] if len(app_key) >= 8 else app_key
+                _token_cache[key_prefix] = {
+                    "access_token": tkg_tmp["token"],
+                    "access_token_token_expired": exp_dt,
+                    "cached_at": datetime.now(),
+                    "expired": exp_dt_obj,
+                }
+                _logger.debug(f"파일 토큰을 메모리 캐시에 저장: {key_prefix}")
+
             # 딕셔너리 형태로 반환하여 테스트에서 활용
             return {
                 "access_token": tkg_tmp["token"],
