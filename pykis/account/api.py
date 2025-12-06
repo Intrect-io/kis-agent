@@ -1499,11 +1499,14 @@ class AccountAPI(BaseAPI):
                 - "03": 최유리지정가 (SOR 사용 시)
             credit_type: 신용거래구분 (기본값: "21")
                 - "21": 신용융자매수
-                - "22": 자기융자매수
+                - "22": 자기융자매수 (loan_dt 자동 설정됨)
                 - "23": 유통융자매수
             exchange: 주문 거래소 (기본값: "KRX")
                 - "KRX": 한국거래소
                 - "SOR": Smart Order Routing (최적 체결)
+            loan_dt: 대출일자 (YYYYMMDD)
+                - 자기융자(credit_type="22")인 경우 자동으로 당일 날짜로 설정됨
+                - 명시적으로 지정 가능하지만, 일반적으로 빈 문자열 사용 권장
 
         Returns:
             Optional[Dict[str, Any]]: 주문 응답 정보 (rt_cd 메타데이터가 포함된)
@@ -1518,10 +1521,18 @@ class AccountAPI(BaseAPI):
             신용거래는 이자와 상환 의무가 발생하므로 신중하게 사용하세요.
 
         Example:
-            >>> # 삼성전자 10주 신용매수
+            >>> # 삼성전자 10주 신용융자 매수
             >>> result = api.order_credit_buy("005930", 10, 70000)
+
+            >>> # 삼성전자 10주 자기융자 매수 (loan_dt 자동 설정)
+            >>> result = api.order_credit_buy("005930", 10, 70000, credit_type="22")
         """
         try:
+            # 자기융자(credit_type="22")인 경우 loan_dt를 당일 날짜로 자동 설정
+            from datetime import datetime
+            if credit_type == "22" and not loan_dt:
+                loan_dt = datetime.now().strftime("%Y%m%d")
+
             params = {
                 "CANO": self.account["CANO"],
                 "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
