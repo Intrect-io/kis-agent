@@ -1478,6 +1478,7 @@ class AccountAPI(BaseAPI):
         order_type: str = "00",
         credit_type: str = "21",
         exchange: str = "KRX",
+        loan_dt: str = "",
     ) -> Optional[Dict[str, Any]]:
         """주식주문(신용매수) - 신용으로 주식을 매수합니다.
 
@@ -1526,7 +1527,7 @@ class AccountAPI(BaseAPI):
                 "ORD_QTY": str(qty),
                 "ORD_UNPR": str(price),
                 "CRDT_TYPE": credit_type,
-                "LOAN_DT": "",
+                "LOAN_DT": loan_dt,
             }
 
             # SOR 선택 시 거래소 구분 추가

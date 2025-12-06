@@ -77,15 +77,18 @@ def _get_token_path_for_app_key(app_key: str, base_path: str = token_tmp) -> str
     Returns:
         str: APP_KEY별 토큰 파일 경로
     """
+    import hashlib
+
     if not app_key:
         return base_path
 
-    # APP_KEY의 앞 8자리를 파일명에 포함 (보안상 전체 키는 사용하지 않음)
-    key_prefix = app_key[:8] if len(app_key) >= 8 else app_key
+    # APP_KEY 전체의 SHA256 해시를 사용하여 충돌 방지 (앞 16자리만 사용)
+    # SHA256는 동일한 입력에 대해 항상 동일한 출력을 보장하며, 충돌 가능성이 극히 낮음
+    key_hash = hashlib.sha256(app_key.encode()).hexdigest()[:16]
     dir_path = os.path.dirname(base_path)
     base_name = os.path.basename(base_path).replace(".json", "")
 
-    return os.path.join(dir_path, f"{base_name}_{key_prefix}.json")
+    return os.path.join(dir_path, f"{base_name}_{key_hash}.json")
 
 
 # 환경 변수 기반 설정 로드 - STONKS 환경변수도 인식
@@ -127,13 +130,15 @@ def save_token(my_token: str, my_expired: str, path: str = token_tmp, app_key: s
     if app_key:
         path = _get_token_path_for_app_key(app_key, path)
 
+    import hashlib
+
     valid_date = datetime.strptime(my_expired, "%Y-%m-%d %H:%M:%S")
     token_data = {
         "token": my_token,
         # valid-date를 ISO 형식 문자열로 저장 (JSON 호환)
         "valid-date": valid_date.isoformat(),
-        # APP_KEY의 앞 8자리를 저장하여 토큰 매칭 검증에 사용
-        "app_key_prefix": app_key[:8] if app_key and len(app_key) >= 8 else "",
+        # APP_KEY의 SHA256 해시를 저장하여 토큰 매칭 검증에 사용 (충돌 방지)
+        "app_key_hash": hashlib.sha256(app_key.encode()).hexdigest()[:16] if app_key else "",
     }
     # print('Save token date: ', valid_date)
     with open(path, "w", encoding="utf-8") as f:
@@ -141,14 +146,16 @@ def save_token(my_token: str, my_expired: str, path: str = token_tmp, app_key: s
 
     # 메모리 캐시에도 저장 (23시간 유지)
     if app_key:
-        key_prefix = app_key[:8] if len(app_key) >= 8 else app_key
-        _token_cache[key_prefix] = {
+        import hashlib
+        # SHA256 해시를 사용하여 API 키 격리 (파일명과 동일한 해시 사용)
+        key_hash = hashlib.sha256(app_key.encode()).hexdigest()[:16]
+        _token_cache[key_hash] = {
             "access_token": my_token,
             "access_token_token_expired": my_expired,
             "cached_at": datetime.now(),
             "expired": valid_date,
         }
-        _logger.debug(f"토큰 캐시 저장: {key_prefix} (만료: {my_expired})")
+        _logger.debug(f"토큰 캐시 저장: {key_hash} (만료: {my_expired})")
 
 
 # 토큰 확인 (토큰값, 토큰 유효시간_1일, 6시간 이내 발급신청시는 기존 토큰값과 동일, 발급시 알림톡 발송)
@@ -171,9 +178,11 @@ def read_token(path: str = token_tmp, app_key: str = None) -> Optional[Dict[str,
     try:
         # 1. 메모리 캐시 먼저 확인 (23시간 이내)
         if app_key:
-            key_prefix = app_key[:8] if len(app_key) >= 8 else app_key
-            if key_prefix in _token_cache:
-                cached = _token_cache[key_prefix]
+            import hashlib
+            # SHA256 해시를 사용하여 API 키 격리
+            key_hash = hashlib.sha256(app_key.encode()).hexdigest()[:16]
+            if key_hash in _token_cache:
+                cached = _token_cache[key_hash]
                 now = datetime.now()
 
                 # 23시간 캐시 유효성 검증
@@ -182,7 +191,7 @@ def read_token(path: str = token_tmp, app_key: str = None) -> Optional[Dict[str,
                     # KIS 토큰 만료일 검증
                     if cached["expired"] > now:
                         _logger.debug(
-                            f"메모리 캐시 사용: {key_prefix} "
+                            f"메모리 캐시 사용: {key_hash} "
                             f"(캐시 나이: {cache_age.seconds}초, 만료: {cached['expired']})"
                         )
                         return {
@@ -192,11 +201,11 @@ def read_token(path: str = token_tmp, app_key: str = None) -> Optional[Dict[str,
                     else:
                         _logger.info(f"캐시된 토큰 만료됨: {cached['expired']}")
                         # 만료된 캐시 제거
-                        del _token_cache[key_prefix]
+                        del _token_cache[key_hash]
                 else:
                     _logger.info(f"캐시 만료 (23시간 초과): {cache_age}")
                     # 오래된 캐시 제거
-                    del _token_cache[key_prefix]
+                    del _token_cache[key_hash]
 
         # 2. 캐시 미스 또는 만료 시 파일에서 읽기
         if app_key:
@@ -215,11 +224,19 @@ def read_token(path: str = token_tmp, app_key: str = None) -> Optional[Dict[str,
         if not tkg_tmp or "valid-date" not in tkg_tmp or "token" not in tkg_tmp:
             return None
 
-        # APP_KEY 일치 여부 검증 (app_key_prefix가 저장되어 있는 경우)
-        if app_key and "app_key_prefix" in tkg_tmp:
+        # APP_KEY 일치 여부 검증 (app_key_hash가 저장되어 있는 경우)
+        if app_key and "app_key_hash" in tkg_tmp:
+            import hashlib
+            key_hash = hashlib.sha256(app_key.encode()).hexdigest()[:16]
+            if tkg_tmp["app_key_hash"] != key_hash:
+                # APP_KEY가 일치하지 않으면 None 반환 (새 토큰 발급 필요)
+                _logger.warning(f"APP_KEY 불일치: 파일={tkg_tmp['app_key_hash']}, 요청={key_hash}")
+                return None
+        # 레거시 호환: app_key_prefix가 있는 경우도 검증 (기존 토큰 파일 지원)
+        elif app_key and "app_key_prefix" in tkg_tmp:
             key_prefix = app_key[:8] if len(app_key) >= 8 else app_key
             if tkg_tmp["app_key_prefix"] != key_prefix:
-                # APP_KEY가 일치하지 않으면 None 반환 (새 토큰 발급 필요)
+                _logger.warning(f"APP_KEY 불일치 (레거시): 파일={tkg_tmp['app_key_prefix']}, 요청={key_prefix}")
                 return None
 
         # 토큰 만료 일,시간 (ISO 형식 문자열에서 datetime 객체로 파싱)
@@ -237,14 +254,16 @@ def read_token(path: str = token_tmp, app_key: str = None) -> Optional[Dict[str,
 
             # 3. 파일에서 읽은 토큰도 메모리 캐시에 저장 (23시간 유지)
             if app_key:
-                key_prefix = app_key[:8] if len(app_key) >= 8 else app_key
-                _token_cache[key_prefix] = {
+                import hashlib
+                # SHA256 해시를 사용하여 API 키 격리
+                key_hash = hashlib.sha256(app_key.encode()).hexdigest()[:16]
+                _token_cache[key_hash] = {
                     "access_token": tkg_tmp["token"],
                     "access_token_token_expired": exp_dt,
                     "cached_at": datetime.now(),
                     "expired": exp_dt_obj,
                 }
-                _logger.debug(f"파일 토큰을 메모리 캐시에 저장: {key_prefix}")
+                _logger.debug(f"파일 토큰을 메모리 캐시에 저장: {key_hash}")
 
             # 딕셔너리 형태로 반환하여 테스트에서 활용
             return {
