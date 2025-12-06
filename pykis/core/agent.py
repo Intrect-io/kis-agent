@@ -256,7 +256,7 @@ class Agent(BaseExceptionHandler):
             raise RuntimeError(f"토큰 자동 발급 실패: {e}")
 
     def _init_apis(self) -> None:
-        """API 모듈들을 초기화합니다."""
+        """API 모듈들을 초기화합니다 (Agent를 통한 정상 경로)."""
         self.account_api = AccountAPI(
             self.client, self.account_info, _from_agent=True
         )

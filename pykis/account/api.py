@@ -36,6 +36,7 @@ class AccountAPI(BaseAPI):
         account_info: Dict[str, str],
         enable_cache=True,
         cache_config=None,
+        _from_agent=False,
     ):
         """Wrapper around KIS account related endpoints.
 
@@ -49,13 +50,15 @@ class AccountAPI(BaseAPI):
             캐시 사용 여부 (기본: True)
         cache_config : dict
             캐시 설정 (default_ttl, max_size)
+        _from_agent : bool
+            Agent를 통해 생성되었는지 여부 (내부 사용)
 
         Example
         -------
         >>> account = load_account_info()
         >>> api = AccountAPI(KISClient(), account)
         """
-        super().__init__(client, account_info, enable_cache, cache_config)
+        super().__init__(client, account_info, enable_cache, cache_config, _from_agent=_from_agent)
 
     def get_account_balance(self) -> Optional[Dict]:
         """
