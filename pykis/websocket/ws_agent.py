@@ -5,7 +5,7 @@ from base64 import b64decode
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import websockets
 from Crypto.Cipher import AES
@@ -115,6 +115,11 @@ class WSAgent:
         # AES 키 관리
         self.aes_keys: Dict[str, tuple] = {}  # tr_id: (key, iv)
 
+        # 구독 응답 대기 관리
+        self._pending_subscriptions: Dict[str, asyncio.Event] = {}
+        self._subscription_results: Dict[str, bool] = {}  # True=성공, False=실패
+        self._subscription_errors: Dict[str, str] = {}  # 실패 시 에러 메시지
+
         # 통계
         self.stats = {
             "messages_received": 0,
@@ -175,11 +180,65 @@ class WSAgent:
 
         self.subscriptions[sub_id] = subscription
 
-        # 연결되어 있으면 즉시 구독 요청
-        if self.connected and self.ws:
-            asyncio.create_task(self._send_subscription(subscription))
+        # 연결되어 있으면 비동기 태스크 생성 (결과 추적)
+        if self.connected and self.ws and not self.ws.closed:
+            task = asyncio.create_task(self._send_subscription(subscription))
+            # 태스크 완료 시 실패 로깅을 위한 콜백 추가
+            task.add_done_callback(
+                lambda t: self._on_subscription_task_done(t, sub_id)
+            )
 
         return sub_id
+
+    def _on_subscription_task_done(self, task: asyncio.Task, sub_id: str):
+        """구독 태스크 완료 콜백"""
+        try:
+            result = task.result()
+            if not result:
+                logger.warning(f"백그라운드 구독 실패: {sub_id}")
+        except Exception as e:
+            logger.error(f"구독 태스크 예외: {sub_id} - {e}")
+
+    async def subscribe_async(
+        self,
+        sub_type: SubscriptionType,
+        key: str,
+        handler: Optional[Callable] = None,
+        **metadata,
+    ) -> Tuple[str, bool]:
+        """
+        비동기 구독 추가 (연결 상태에서 사용 권장)
+
+        Args:
+            sub_type: 구독 타입
+            key: 종목코드/지수코드 등
+            handler: 개별 핸들러 (옵션)
+            **metadata: 추가 메타데이터
+
+        Returns:
+            tuple[str, bool]: (구독 ID, 성공 여부)
+        """
+        sub_id = f"{sub_type.value}_{key}"
+
+        if sub_id in self.subscriptions:
+            logger.warning(f"이미 구독 중: {sub_id}")
+            return sub_id, True
+
+        subscription = Subscription(
+            sub_type=sub_type, key=key, handler=handler, metadata=metadata
+        )
+
+        self.subscriptions[sub_id] = subscription
+
+        # 연결되어 있으면 구독 요청 및 응답 대기
+        if self.connected and self.ws and not self.ws.closed:
+            success = await self._send_subscription(subscription)
+            if not success:
+                # 구독 실패 시 등록 제거
+                del self.subscriptions[sub_id]
+            return sub_id, success
+
+        return sub_id, False
 
     def unsubscribe(self, sub_id: str):
         """
@@ -198,8 +257,8 @@ class WSAgent:
 
         subscription = self.subscriptions[sub_id]
 
-        # 구독 해제 메시지 전송
-        if self.connected and self.ws:
+        # 구독 해제 메시지 전송 (연결 상태 상세 검증)
+        if self.connected and self.ws and not self.ws.closed:
             asyncio.create_task(self._send_unsubscription(subscription))
 
         # 구독 정보 삭제
@@ -246,31 +305,94 @@ class WSAgent:
         """기본 핸들러 설정"""
         self.default_handler = handler
 
-    async def _send_subscription(self, subscription: Subscription):
-        """구독 요청 전송"""
-        try:
-            message = {
-                "header": {
-                    "approval_key": self.approval_key,
-                    "custtype": "P",
-                    "tr_type": "1",
-                    "content-type": "utf-8",
-                },
-                "body": {
-                    "input": {
-                        "tr_id": subscription.sub_type.value,
-                        "tr_key": subscription.key,
-                    }
-                },
-            }
+    async def _send_subscription(
+        self,
+        subscription: Subscription,
+        max_retries: int = 3,
+        timeout: float = 5.0,
+    ) -> bool:
+        """
+        구독 요청 전송 및 응답 대기
 
-            await self.ws.send(json.dumps(message))
-            sub_id = f"{subscription.sub_type.value}_{subscription.key}"
-            self.active_subscriptions.add(sub_id)
-            logger.info(f"구독 요청 전송: {sub_id}")
+        Args:
+            subscription: 구독 정보
+            max_retries: 최대 재시도 횟수
+            timeout: 응답 대기 타임아웃 (초)
 
-        except Exception as e:
-            logger.error(f"구독 요청 실패: {e}")
+        Returns:
+            bool: 구독 성공 여부
+        """
+        sub_id = f"{subscription.sub_type.value}_{subscription.key}"
+
+        for attempt in range(max_retries):
+            try:
+                # 연결 상태 상세 검증
+                if not self.ws or self.ws.closed:
+                    logger.error(f"구독 요청 실패 - 웹소켓 연결 없음: {sub_id}")
+                    return False
+
+                # 응답 대기용 Event 설정
+                self._pending_subscriptions[sub_id] = asyncio.Event()
+                self._subscription_results[sub_id] = False
+                self._subscription_errors[sub_id] = ""
+
+                message = {
+                    "header": {
+                        "approval_key": self.approval_key,
+                        "custtype": "P",
+                        "tr_type": "1",
+                        "content-type": "utf-8",
+                    },
+                    "body": {
+                        "input": {
+                            "tr_id": subscription.sub_type.value,
+                            "tr_key": subscription.key,
+                        }
+                    },
+                }
+
+                await self.ws.send(json.dumps(message))
+                logger.info(f"구독 요청 전송: {sub_id} (시도 {attempt + 1}/{max_retries})")
+
+                # 응답 대기
+                try:
+                    await asyncio.wait_for(
+                        self._pending_subscriptions[sub_id].wait(),
+                        timeout=timeout,
+                    )
+
+                    # 응답 결과 확인
+                    if self._subscription_results.get(sub_id, False):
+                        self.active_subscriptions.add(sub_id)
+                        logger.info(f"구독 성공 확인: {sub_id}")
+                        return True
+                    else:
+                        error_msg = self._subscription_errors.get(sub_id, "알 수 없는 오류")
+                        logger.warning(f"구독 실패 응답: {sub_id} - {error_msg}")
+
+                except asyncio.TimeoutError:
+                    logger.warning(f"구독 응답 타임아웃: {sub_id} (시도 {attempt + 1}/{max_retries})")
+
+            except websockets.exceptions.ConnectionClosed as e:
+                logger.error(f"구독 중 연결 종료: {sub_id} - {e}")
+                return False
+
+            except Exception as e:
+                logger.error(f"구독 요청 오류: {sub_id} - {e}")
+
+            finally:
+                # 정리
+                self._pending_subscriptions.pop(sub_id, None)
+
+            # 재시도 전 대기 (지수 백오프)
+            if attempt < max_retries - 1:
+                wait_time = 0.5 * (2 ** attempt)
+                logger.info(f"재시도 대기: {wait_time}초")
+                await asyncio.sleep(wait_time)
+
+        logger.error(f"구독 최종 실패: {sub_id} ({max_retries}회 시도)")
+        self.stats["errors"] += 1
+        return False
 
     async def _send_unsubscription(self, subscription: Subscription):
         """구독 해제 요청 전송"""
@@ -298,11 +420,36 @@ class WSAgent:
         except Exception as e:
             logger.error(f"구독 해제 요청 실패: {e}")
 
-    async def _subscribe_all(self):
-        """모든 구독 요청 전송"""
+    async def _subscribe_all(self) -> dict:
+        """
+        모든 구독 요청 전송
+
+        Returns:
+            dict: 구독 결과 {"success": [...], "failed": [...]}
+        """
+        results = {"success": [], "failed": []}
+
         for subscription in self.subscriptions.values():
-            await self._send_subscription(subscription)
+            sub_id = f"{subscription.sub_type.value}_{subscription.key}"
+            success = await self._send_subscription(subscription)
+
+            if success:
+                results["success"].append(sub_id)
+            else:
+                results["failed"].append(sub_id)
+
             await asyncio.sleep(0.1)  # 요청 간 딜레이
+
+        # 결과 로깅
+        if results["failed"]:
+            logger.warning(
+                f"일부 구독 실패: {len(results['failed'])}개 - {results['failed']}"
+            )
+        logger.info(
+            f"구독 완료: 성공 {len(results['success'])}개, 실패 {len(results['failed'])}개"
+        )
+
+        return results
 
     def _parse_message(self, data: str) -> tuple:
         """
@@ -355,6 +502,64 @@ class WSAgent:
             unpad(cipher.decrypt(b64decode(cipher_text)), AES.block_size)
         )
 
+    def _handle_subscription_response(self, json_data: dict) -> bool:
+        """
+        구독 응답 메시지 처리
+
+        Args:
+            json_data: 파싱된 JSON 데이터
+
+        Returns:
+            bool: 구독 응답 메시지인 경우 True (추가 처리 불필요)
+        """
+        header = json_data.get("header", {})
+        body = json_data.get("body", {})
+
+        tr_id = header.get("tr_id", "")
+        tr_key = header.get("tr_key", "")
+        msg1 = body.get("msg1", "")
+        rt_cd = body.get("rt_cd", "")
+
+        # 구독 응답 메시지 확인
+        if not msg1:
+            return False
+
+        sub_id = f"{tr_id}_{tr_key}" if tr_key else tr_id
+
+        # 대기 중인 구독이 있는지 확인
+        pending_event = self._pending_subscriptions.get(sub_id)
+        if not pending_event:
+            # tr_key 없이 tr_id만으로도 확인
+            for key in list(self._pending_subscriptions.keys()):
+                if key.startswith(f"{tr_id}_"):
+                    sub_id = key
+                    pending_event = self._pending_subscriptions.get(sub_id)
+                    break
+
+        if pending_event:
+            # 구독 성공
+            if "SUBSCRIBE SUCCESS" in msg1.upper() or rt_cd == "0":
+                self._subscription_results[sub_id] = True
+                logger.info(f"구독 응답 수신 (성공): {sub_id} - {msg1}")
+            else:
+                # 구독 실패
+                self._subscription_results[sub_id] = False
+                self._subscription_errors[sub_id] = msg1
+                logger.warning(f"구독 응답 수신 (실패): {sub_id} - {msg1}")
+
+            pending_event.set()
+            return True
+
+        # 일반 구독 성공/실패 로그 (대기 중이 아닌 경우)
+        if "SUBSCRIBE SUCCESS" in msg1.upper():
+            logger.info(f"구독 성공: {tr_id} ({tr_key})")
+            return True
+        elif "UNSUBSCRIBE" in msg1.upper():
+            logger.info(f"구독 해제: {tr_id} ({tr_key})")
+            return True
+
+        return False
+
     async def _handle_message(self, data: str):
         """메시지 처리"""
         try:
@@ -364,6 +569,15 @@ class WSAgent:
             # PINGPONG 메시지는 무시
             if "PINGPONG" in data:
                 return
+
+            # JSON 메시지인 경우 구독 응답 먼저 확인
+            if data.startswith("{"):
+                try:
+                    json_data = json.loads(data)
+                    if self._handle_subscription_response(json_data):
+                        return  # 구독 응답 메시지는 여기서 처리 완료
+                except json.JSONDecodeError:
+                    pass
 
             tr_id, tr_key, parsed_data = self._parse_message(data)
 
