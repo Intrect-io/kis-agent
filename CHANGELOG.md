@@ -2,6 +2,36 @@
 
 모든 주목할 만한 변경사항이 이 파일에 문서화됩니다.
 
+## [1.3.3] - 2025-12-10
+
+### 🆕 신규 기능
+
+#### 국내 지수 일자별 시세 조회 API 추가
+- `get_index_daily_price()` 메서드를 `StockPriceAPI`에 추가
+- KOSPI, KOSDAQ, KOSPI200 등 주요 지수의 일별/주별/월별 시세 조회 지원
+- 베타 계산 및 시장 상관관계 분석에 활용 가능
+
+**사용 예시:**
+```python
+# KOSPI 일별 시세 조회
+result = agent.stock.get_index_daily_price("0001")
+
+# KOSDAQ 특정 일자까지 시세
+result = agent.stock.get_index_daily_price("1001", "20251210")
+
+# KOSPI200 월별 시세
+result = agent.stock.get_index_daily_price("2001", period="M")
+```
+
+**지수 코드:**
+- `0001`: KOSPI
+- `1001`: KOSDAQ
+- `2001`: KOSPI200
+
+**TR ID:** FHPUP02120000
+
+---
+
 ## [1.3.2] - 2025-12-08
 
 ### 🔧 WebSocket 안정성 대폭 개선

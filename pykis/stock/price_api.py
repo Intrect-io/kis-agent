@@ -1165,6 +1165,73 @@ class StockPriceAPI(BaseAPI):
             },
         )
 
+    def get_index_daily_price(
+        self, index_code: str = "0001", end_date: str = None, period: str = "D"
+    ) -> Optional[Dict[str, Any]]:
+        """
+        국내 지수 일자별 시세 조회 (rt_cd 메타데이터가 포함된)
+
+        KOSPI, KOSDAQ 등 주요 지수의 일별/주별/월별 시세를 조회합니다.
+        베타 계산, 시장 상관관계 분석 등에 활용할 수 있습니다.
+
+        Args:
+            index_code (str): 지수코드 (기본값: "0001")
+                - "0001": KOSPI
+                - "1001": KOSDAQ
+                - "2001": KOSPI200
+            end_date (str): 조회 종료일 (YYYYMMDD), None이면 오늘
+            period (str): 기간 구분 (기본값: "D")
+                - "D": 일별
+                - "W": 주별
+                - "M": 월별
+
+        Returns:
+            Dict: 지수 일별 시세 데이터
+                - output1: 지수 기본 정보 (지수명, 현재가 등)
+                - output2: 일자별 시세 리스트 (최대 100건)
+                    - stck_bsop_date: 영업일자 (YYYYMMDD)
+                    - bstp_nmix_prpr: 업종지수 현재가
+                    - bstp_nmix_oprc: 업종지수 시가
+                    - bstp_nmix_hgpr: 업종지수 고가
+                    - bstp_nmix_lwpr: 업종지수 저가
+                    - acml_vol: 누적거래량
+                    - acml_tr_pbmn: 누적거래대금
+                    - prdy_vrss: 전일대비
+                    - prdy_vrss_sign: 전일대비부호
+
+        Example:
+            >>> # KOSPI 일별 시세 조회
+            >>> result = agent.stock.get_index_daily_price("0001")
+            >>> for day in result['output2']:
+            ...     print(day['stck_bsop_date'], day['bstp_nmix_prpr'])
+
+            >>> # KOSDAQ 최근 100일 시세
+            >>> result = agent.stock.get_index_daily_price("1001", "20251210")
+
+            >>> # KOSPI200 월별 시세
+            >>> result = agent.stock.get_index_daily_price("2001", period="M")
+
+        Note:
+            - TR ID: FHPUP02120000
+            - 최대 100건까지 조회 가능
+            - 베타 계산 시: β = Cov(Stock, Market) / Var(Market)
+        """
+        if end_date is None:
+            from datetime import datetime
+
+            end_date = datetime.now().strftime("%Y%m%d")
+
+        return self._make_request_dict(
+            endpoint=API_ENDPOINTS["INQUIRE_INDEX_DAILY_PRICE"],
+            tr_id="FHPUP02120000",
+            params={
+                "FID_PERIOD_DIV_CODE": period,
+                "FID_COND_MRKT_DIV_CODE": "U",
+                "FID_INPUT_ISCD": index_code,
+                "FID_INPUT_DATE_1": end_date,
+            },
+        )
+
     def get_future_option_price(
         self, market_div_code: str = "F", input_iscd: Optional[str] = None
     ) -> Optional[Dict[str, Any]]:
