@@ -305,7 +305,7 @@ class TestBaseAPIMakeRequestDict(unittest.TestCase):
 
         result = self.api._make_request_dict(
             endpoint="/uapi/domestic-stock/v1/order",
-            tr_id="TTTC0802U",
+            tr_id="TTTC0012U",  # 현금 매수 TR
             params={"PDNO": "005930", "ORD_QTY": "10"},
             method="POST",
             use_cache=False,
@@ -314,7 +314,7 @@ class TestBaseAPIMakeRequestDict(unittest.TestCase):
         self.assertEqual(result, expected_response)
         self.mock_client.make_request.assert_called_once_with(
             endpoint="/uapi/domestic-stock/v1/order",
-            tr_id="TTTC0802U",
+            tr_id="TTTC0012U",  # 현금 매수 TR
             params={"PDNO": "005930", "ORD_QTY": "10"},
             method="POST",
         )

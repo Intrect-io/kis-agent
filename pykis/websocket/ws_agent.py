@@ -1,32 +1,115 @@
 import asyncio
+import contextlib
 import json
 import logging
 from base64 import b64decode
 from dataclasses import dataclass, field
 from datetime import datetime
+from datetime import time as dt_time
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
+import pytz
 import websockets
+from websockets.exceptions import ConnectionClosed, ConnectionClosedError, ConnectionClosedOK
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
 logger = logging.getLogger(__name__)
 
+# 장 마감 시간 (KST)
+MARKET_CLOSE_TIME = dt_time(15, 30)
+
+
+def _is_after_market_close() -> bool:
+    """장 마감 후인지 확인 (KRX: 15:30 이후, NXT: 20:00 이후)
+
+    NXT 세션 (16:00-20:00)은 마감으로 처리하지 않음
+    """
+    kst = pytz.timezone("Asia/Seoul")
+    now = datetime.now(kst)
+    # 주말 체크 (5=토요일, 6=일요일)
+    if now.weekday() >= 5:
+        return True
+
+    current_time = now.time()
+    # NXT 세션 체크 (16:00-20:00)
+    nxt_start = dt_time(16, 0)
+    nxt_end = dt_time(20, 0)
+    if nxt_start <= current_time <= nxt_end:
+        return False  # NXT 세션 중이므로 마감 아님
+
+    # 15:30 이후 체크 (NXT 세션 제외)
+    return current_time > MARKET_CLOSE_TIME
+
 
 class SubscriptionType(Enum):
-    """구독 타입 정의"""
+    """구독 타입 정의
 
-    STOCK_TRADE = "H0STCNT0"  # 국내주식 체결
-    STOCK_ASK_BID = "H0STASP0"  # 국내주식 호가
+    국내주식 실시간 데이터 (KRX):
+        - STOCK_TRADE: 국내주식 실시간 체결가 (KRX)
+        - STOCK_ASK_BID: 국내주식 실시간 호가 (KRX)
+        - STOCK_EXPECTED: 국내주식 실시간 예상체결 (통합)
+        - STOCK_NOTICE: 국내주식 체결통보 (내 주문 체결 알림)
+        - STOCK_NOTICE_AH: 국내주식 시간외 체결통보
+
+    국내주식 실시간 데이터 (NXT):
+        - STOCK_TRADE_NXT: 국내주식 실시간 체결가 (NXT)
+        - STOCK_ASK_BID_NXT: 국내주식 실시간 호가 (NXT)
+        - STOCK_EXPECTED_NXT: 국내주식 실시간 예상체결 (NXT)
+        - PROGRAM_TRADE_NXT: 국내주식 실시간 프로그램매매 (NXT)
+        - MARKET_OPERATION_NXT: 국내주식 장운영정보 (NXT)
+        - MEMBER_TRADE_NXT: 국내주식 실시간 회원사 (NXT)
+
+    지수 실시간 데이터:
+        - INDEX: 지수 실시간
+        - INDEX_EXPECTED: 지수 실시간 예상체결
+
+    프로그램매매/회원사 (KRX):
+        - PROGRAM_TRADE: 프로그램매매 실시간 (KRX)
+        - MEMBER_TRADE: 회원사 실시간 (증권사별 매매동향)
+
+    선물/옵션:
+        - FUTURES_TRADE: 선물 체결
+        - FUTURES_ASK_BID: 선물 호가
+        - OPTION_TRADE: 옵션 체결
+        - OPTION_ASK_BID: 옵션 호가
+
+    해외:
+        - OVERSEAS_STOCK: 해외주식 체결
+        - OVERSEAS_FUTURES: 해외선물 체결
+    """
+
+    # 국내주식 실시간 (KRX)
+    STOCK_TRADE = "H0STCNT0"  # 국내주식 실시간 체결가 (KRX)
+    STOCK_ASK_BID = "H0STASP0"  # 국내주식 실시간 호가 (KRX)
+    STOCK_EXPECTED = "H0UNANC0"  # 국내주식 실시간 예상체결 (통합)
     STOCK_NOTICE = "H0STCNI0"  # 국내주식 체결통보
-    STOCK_NOTICE_AH = "H0STCNI9"  # 국내주식 시간외체결통보
-    INDEX = "H0IF1000"  # 지수
-    PROGRAM_TRADE = "H0GSCNT0"  # 프로그램매매
+    STOCK_NOTICE_AH = "H0STCNI9"  # 국내주식 시간외 체결통보
+
+    # 국내주식 실시간 (NXT)
+    STOCK_TRADE_NXT = "H0NXCNT0"  # 국내주식 실시간 체결가 (NXT)
+    STOCK_ASK_BID_NXT = "H0NXASP0"  # 국내주식 실시간 호가 (NXT)
+    STOCK_EXPECTED_NXT = "H0NXANC0"  # 국내주식 실시간 예상체결 (NXT)
+    PROGRAM_TRADE_NXT = "H0NXPGM0"  # 국내주식 실시간 프로그램매매 (NXT)
+    MARKET_OPERATION_NXT = "H0NXMKO0"  # 국내주식 장운영정보 (NXT)
+    MEMBER_TRADE_NXT = "H0NXMBC0"  # 국내주식 실시간 회원사 (NXT)
+
+    # 지수 실시간
+    INDEX = "H0IF1000"  # 지수 실시간
+    INDEX_EXPECTED = "H0UPANC0"  # 지수 실시간 예상체결
+
+    # 프로그램매매/회원사 (KRX)
+    PROGRAM_TRADE = "H0STPGM0"  # 프로그램매매 실시간 (KRX)
+    MEMBER_TRADE = "H0MBCNT0"  # 회원사별 실시간 매매동향
+
+    # 선물/옵션
     FUTURES_TRADE = "H0CFCNT0"  # 선물 체결
     FUTURES_ASK_BID = "H0CFASP0"  # 선물 호가
     OPTION_TRADE = "H0OPCNT0"  # 옵션 체결
     OPTION_ASK_BID = "H0OPASP0"  # 옵션 호가
+
+    # 해외
     OVERSEAS_STOCK = "HDFSCNT0"  # 해외주식 체결
     OVERSEAS_FUTURES = "HDFFF020"  # 해외선물 체결
 
@@ -68,6 +151,7 @@ class WSAgent:
         ping_interval: int = 30,
         ping_timeout: int = 30,
         auto_reconnect: bool = True,
+        client: Optional[Any] = None,  # KISClient 인스턴스 (토큰 재발급용)
     ):
         """
         WSAgent 초기화
@@ -78,6 +162,7 @@ class WSAgent:
             ping_interval (int): ping 전송 간격 (초)
             ping_timeout (int): ping 응답 대기 시간 (초)
             auto_reconnect (bool): 연결 실패 시 자동 재연결 여부
+            client (Optional[Any]): KISClient 인스턴스. 제공 시 토큰 재발급 시 approval_key도 갱신
 
         Raises:
             ValueError: approval_key가 None이거나 빈 문자열인 경우
@@ -91,12 +176,14 @@ class WSAgent:
             ping_interval: ping 전송 간격
             ping_timeout: ping 응답 대기 시간
             auto_reconnect: 자동 재연결 여부
+            client: KISClient 인스턴스 (토큰 재발급용)
         """
         self.approval_key = approval_key
         self.url = url
         self.ping_interval = ping_interval
         self.ping_timeout = ping_timeout
         self.auto_reconnect = auto_reconnect
+        self.client = client  # KISClient 인스턴스 저장 (토큰 재발급용)
 
         # 웹소켓 연결
         self.ws = None
@@ -128,6 +215,26 @@ class WSAgent:
             "reconnects": 0,
             "last_message_time": None,
         }
+
+    def update_approval_key(self, new_approval_key: str) -> None:
+        """
+        approval_key 갱신 (토큰 재발급 시 사용)
+
+        Args:
+            new_approval_key: 새로운 승인키
+        """
+        if not new_approval_key:
+            logger.warning("빈 approval_key로 갱신 시도 무시")
+            return
+
+        old_key = self.approval_key[:10] if self.approval_key else "None"
+        self.approval_key = new_approval_key
+        new_key = new_approval_key[:10]
+        logger.info(f"approval_key 갱신 완료: {old_key}... → {new_key}...")
+
+        # 연결 중인 경우 재연결 필요 (새 approval_key로 재연결)
+        if self.connected:
+            logger.warning("연결 중 approval_key 갱신됨. 재연결이 필요할 수 있습니다.")
 
     def subscribe(
         self,
@@ -184,9 +291,7 @@ class WSAgent:
         if self.connected and self.ws and not self.ws.closed:
             task = asyncio.create_task(self._send_subscription(subscription))
             # 태스크 완료 시 실패 로깅을 위한 콜백 추가
-            task.add_done_callback(
-                lambda t: self._on_subscription_task_done(t, sub_id)
-            )
+            task.add_done_callback(lambda t: self._on_subscription_task_done(t, sub_id))
 
         return sub_id
 
@@ -309,7 +414,7 @@ class WSAgent:
         self,
         subscription: Subscription,
         max_retries: int = 3,
-        timeout: float = 10.0,
+        timeout: float = 60.0,  # 타임아웃을 60초로 설정
     ) -> bool:
         """
         구독 요청 전송 및 응답 대기
@@ -352,7 +457,9 @@ class WSAgent:
                 }
 
                 await self.ws.send(json.dumps(message))
-                logger.info(f"구독 요청 전송: {sub_id} (시도 {attempt + 1}/{max_retries})")
+                logger.info(
+                    f"구독 요청 전송: {sub_id} (시도 {attempt + 1}/{max_retries})"
+                )
 
                 # 응답 대기
                 try:
@@ -367,13 +474,17 @@ class WSAgent:
                         logger.info(f"구독 성공 확인: {sub_id}")
                         return True
                     else:
-                        error_msg = self._subscription_errors.get(sub_id, "알 수 없는 오류")
+                        error_msg = self._subscription_errors.get(
+                            sub_id, "알 수 없는 오류"
+                        )
                         logger.warning(f"구독 실패 응답: {sub_id} - {error_msg}")
 
                 except asyncio.TimeoutError:
-                    logger.warning(f"구독 응답 타임아웃: {sub_id} (시도 {attempt + 1}/{max_retries})")
+                    logger.warning(
+                        f"구독 응답 타임아웃: {sub_id} (시도 {attempt + 1}/{max_retries})"
+                    )
 
-            except websockets.exceptions.ConnectionClosed as e:
+            except ConnectionClosed as e:
                 logger.error(f"구독 중 연결 종료: {sub_id} - {e}")
                 return False
 
@@ -386,7 +497,7 @@ class WSAgent:
 
             # 재시도 전 대기 (지수 백오프)
             if attempt < max_retries - 1:
-                wait_time = 0.5 * (2 ** attempt)
+                wait_time = 0.5 * (2**attempt)
                 logger.info(f"재시도 대기: {wait_time}초")
                 await asyncio.sleep(wait_time)
 
@@ -422,28 +533,56 @@ class WSAgent:
 
     async def _subscribe_all(self) -> dict:
         """
-        모든 구독 요청 전송
+        모든 구독 요청 전송 (순차 처리 + 딜레이로 안정성 개선)
+
+        KIS 서버에서 빠른 구독 요청을 처리하지 못하는 문제를 해결하기 위해
+        순차 처리와 딜레이를 적용합니다.
 
         Returns:
             dict: 구독 결과 {"success": [...], "failed": [...]}
         """
         results = {"success": [], "failed": []}
+        total = len(self.subscriptions)
 
-        for subscription in self.subscriptions.values():
+        logger.info(f"구독 시작: 총 {total}개 종목 (순차 처리)")
+
+        # 순차 처리로 구독 요청 (연결 안정성 향상)
+        for idx, subscription in enumerate(self.subscriptions.values()):
             sub_id = f"{subscription.sub_type.value}_{subscription.key}"
-            success = await self._send_subscription(subscription)
 
-            if success:
-                results["success"].append(sub_id)
-            else:
+            # 연결 상태 확인
+            if not self.ws or self.ws.closed:
+                logger.error(f"구독 중단 - 연결 끊김 (성공: {len(results['success'])}, 남은: {total - idx})")
+                # 남은 구독들을 실패로 처리
+                remaining_subs = list(self.subscriptions.values())[idx:]
+                for remaining in remaining_subs:
+                    remaining_id = f"{remaining.sub_type.value}_{remaining.key}"
+                    results["failed"].append(remaining_id)
+                break
+
+            try:
+                success = await self._send_subscription(subscription)
+                if success:
+                    results["success"].append(sub_id)
+                else:
+                    results["failed"].append(sub_id)
+
+                # 진행 상황 로깅 (10개마다)
+                if (idx + 1) % 10 == 0:
+                    logger.info(f"구독 진행: {idx + 1}/{total} (성공: {len(results['success'])})")
+
+                # 구독 사이 딜레이 (0.1초) - 서버 부하 방지
+                if idx < total - 1:
+                    await asyncio.sleep(0.1)
+
+            except Exception as e:
+                logger.error(f"구독 요청 중 예외 발생: {sub_id} - {e}")
                 results["failed"].append(sub_id)
-
-            await asyncio.sleep(0.3)  # 요청 간 딜레이 (0.1→0.3 타임아웃 방지)
 
         # 결과 로깅
         if results["failed"]:
             logger.warning(
-                f"일부 구독 실패: {len(results['failed'])}개 - {results['failed']}"
+                f"일부 구독 실패: {len(results['failed'])}개"
             )
         logger.info(
             f"구독 완료: 성공 {len(results['success'])}개, 실패 {len(results['failed'])}개"
@@ -647,54 +786,73 @@ class WSAgent:
         이렇게 하면 구독 요청을 보내고 응답을 기다리는 동안에도
         메시지 수신이 계속 되어 교착 상태를 방지합니다.
 
+        다량 구독 중에도 ping/pong 응답을 받을 수 있도록
+        타임아웃을 더 유연하게 처리합니다.
+
         Args:
             websocket: 웹소켓 연결 객체
         """
         ping_retry_count = 0
-        max_ping_retries = 3  # ping/pong 최대 재시도 횟수
-        recv_timeout = max(60, self.ping_interval * 2)  # recv 타임아웃
+        max_ping_retries = 5  # ping/pong 최대 재시도 횟수 증가 (3→5)
+        # 다량 구독 중에도 ping 응답을 받을 수 있도록 타임아웃 증가
+        # ping_interval * 3으로 설정하여 구독 처리 중에도 ping 응답 대기 시간 확보
+        recv_timeout = max(90, self.ping_interval * 3)  # recv 타임아웃 증가 (60→90초)
+        last_ping_time = None
+        ping_check_interval = 20  # 20초마다 ping 체크
 
         while self.connected:
             try:
+                # recv 타임아웃을 더 짧게 설정하여 ping 체크 주기적으로 수행
                 data = await asyncio.wait_for(
-                    websocket.recv(), timeout=recv_timeout
+                    websocket.recv(), timeout=min(recv_timeout, ping_check_interval)
                 )
                 await self._handle_message(data)
                 ping_retry_count = 0  # 메시지 수신 성공 시 재시도 카운트 리셋
+                last_ping_time = None  # 메시지 수신 시 ping 체크 시간 리셋
 
             except asyncio.TimeoutError:
                 # ping/pong으로 연결 확인 (설정된 타임아웃 사용)
-                try:
-                    pong_waiter = await websocket.ping()
-                    await asyncio.wait_for(
-                        pong_waiter, timeout=self.ping_timeout
-                    )
-                    ping_retry_count = 0  # ping 성공 시 리셋
-                    logger.debug("ping/pong 성공, 연결 유지")
-                except asyncio.TimeoutError:
-                    ping_retry_count += 1
-                    if ping_retry_count >= max_ping_retries:
-                        logger.error(
-                            f"ping/pong 타임아웃 {max_ping_retries}회 연속 실패, 재연결 필요"
+                now = datetime.now()
+                # 마지막 ping 체크로부터 일정 시간 경과했거나 첫 ping인 경우에만 ping 전송
+                if (
+                    last_ping_time is None
+                    or (now - last_ping_time).total_seconds() >= ping_check_interval
+                ):
+                    try:
+                        pong_waiter = await websocket.ping()
+                        await asyncio.wait_for(pong_waiter, timeout=self.ping_timeout)
+                        ping_retry_count = 0  # ping 성공 시 리셋
+                        last_ping_time = now
+                        logger.debug("ping/pong 성공, 연결 유지")
+                    except asyncio.TimeoutError:
+                        ping_retry_count += 1
+                        last_ping_time = now
+                        if ping_retry_count >= max_ping_retries:
+                            logger.error(
+                                f"ping/pong 타임아웃 {max_ping_retries}회 연속 실패, 재연결 필요"
+                            )
+                            break
+                        logger.warning(
+                            f"ping/pong 타임아웃 ({ping_retry_count}/{max_ping_retries}), 재시도..."
                         )
-                        break
-                    logger.warning(
-                        f"ping/pong 타임아웃 ({ping_retry_count}/{max_ping_retries}), 재시도..."
-                    )
-                    await asyncio.sleep(1)  # 재시도 전 짧은 대기
-                except Exception as e:
-                    ping_retry_count += 1
-                    if ping_retry_count >= max_ping_retries:
-                        logger.error(
-                            f"ping/pong 실패 {max_ping_retries}회 연속: {e}"
+                        await asyncio.sleep(1)  # 재시도 전 짧은 대기
+                    except Exception as e:
+                        ping_retry_count += 1
+                        last_ping_time = now
+                        if ping_retry_count >= max_ping_retries:
+                            logger.error(
+                                f"ping/pong 실패 {max_ping_retries}회 연속: {e}"
+                            )
+                            break
+                        logger.warning(
+                            f"ping/pong 오류 ({ping_retry_count}/{max_ping_retries}): {e}"
                         )
-                        break
-                    logger.warning(
-                        f"ping/pong 오류 ({ping_retry_count}/{max_ping_retries}): {e}"
-                    )
-                    await asyncio.sleep(1)
+                        await asyncio.sleep(1)
+                else:
+                    # ping 체크 간격이 지나지 않았으면 메시지 수신 재시도
+                    continue
 
-            except websockets.exceptions.ConnectionClosed:
+            except ConnectionClosed:
                 logger.warning("웹소켓 연결 종료 (수신 루프)")
                 break
             except asyncio.CancelledError:
@@ -714,9 +872,17 @@ class WSAgent:
         연결되면 기존에 등록된 모든 구독에 대해 자동으로 구독 요청을 전송합니다.
         메시지 수신 루프는 별도 Task로 시작되어 구독 응답을 처리합니다.
 
+        장 마감 후(15:30 이후 또는 주말)에는 연결을 시도하지 않습니다.
+
         Raises:
             Exception: 연결 실패 또는 메시지 처리 오류
         """
+        # 장 마감 후 연결 시도 차단 (EOD 모드)
+        if _is_after_market_close():
+            logger.info("📴 장 마감 시간 - WebSocket 연결 시도 차단 (EOD 모드)")
+            self.auto_reconnect = False
+            return
+
         while self.auto_reconnect:
             receive_task = None
             try:
@@ -747,6 +913,20 @@ class WSAgent:
             except Exception as e:
                 logger.error(f"웹소켓 오류: {e}")
 
+                # 토큰 재발급이 필요한 경우 (401, 403 등 인증 오류)
+                if "401" in str(e) or "403" in str(e) or "인증" in str(e):
+                    logger.warning("인증 오류 감지. approval_key 갱신 시도...")
+                    if self.client:
+                        try:
+                            new_approval_key = self.client.get_ws_approval_key(
+                                force_refresh=True
+                            )
+                            if new_approval_key:
+                                self.update_approval_key(new_approval_key)
+                                logger.info("approval_key 갱신 완료. 재연결 시도...")
+                        except Exception as refresh_error:
+                            logger.error(f"approval_key 갱신 실패: {refresh_error}")
+
             finally:
                 self.connected = False
                 self.ws = None
@@ -754,12 +934,16 @@ class WSAgent:
                 # 수신 Task 정리
                 if receive_task and not receive_task.done():
                     receive_task.cancel()
-                    try:
+                    with contextlib.suppress(asyncio.CancelledError):
                         await receive_task
-                    except asyncio.CancelledError:
-                        pass
 
             if self.auto_reconnect:
+                # 장 마감 후(15:30 이후) 재연결 중단 (EOD 모드)
+                if _is_after_market_close():
+                    logger.info("📴 장 마감 시간 - WebSocket 재연결 중단 (EOD 모드)")
+                    self.auto_reconnect = False
+                    break
+
                 self.stats["reconnects"] += 1
                 logger.info("5초 후 재연결 시도...")
                 await asyncio.sleep(5)
@@ -812,5 +996,1143 @@ class WSAgent:
         Returns:
             List[str]: 활성 구독 ID 리스트
         """
-        """활성 구독 목록 반환"""
         return list(self.active_subscriptions)
+
+    # ========================================================================
+    # 편의 메서드 (Convenience Methods)
+    # ========================================================================
+
+    def subscribe_stock(
+        self,
+        code: str,
+        handler: Optional[Callable] = None,
+        with_orderbook: bool = False,
+        with_expected: bool = False,
+        with_program: bool = False,
+        with_member: bool = False,
+        **metadata,
+    ) -> List[str]:
+        """
+        종목 실시간 구독 (편의 메서드)
+
+        Args:
+            code: 종목코드 (6자리)
+            handler: 데이터 수신 핸들러
+            with_orderbook: 호가 데이터도 함께 구독
+            with_expected: 예상체결 데이터도 함께 구독
+            with_program: 프로그램매매 데이터도 함께 구독
+            with_member: 회원사 매매동향도 함께 구독
+            **metadata: 추가 메타데이터
+
+        Returns:
+            List[str]: 생성된 구독 ID 리스트
+
+        Example:
+            >>> agent.subscribe_stock("005930", with_orderbook=True)
+            ['H0STCNT0_005930', 'H0STASP0_005930']
+        """
+        sub_ids = []
+
+        # 체결가 구독 (기본)
+        sub_ids.append(
+            self.subscribe(SubscriptionType.STOCK_TRADE, code, handler, **metadata)
+        )
+
+        # 호가 구독
+        if with_orderbook:
+            sub_ids.append(
+                self.subscribe(
+                    SubscriptionType.STOCK_ASK_BID, code, handler, **metadata
+                )
+            )
+
+        # 예상체결 구독
+        if with_expected:
+            sub_ids.append(
+                self.subscribe(
+                    SubscriptionType.STOCK_EXPECTED, code, handler, **metadata
+                )
+            )
+
+        # 프로그램매매 구독
+        if with_program:
+            sub_ids.append(
+                self.subscribe(
+                    SubscriptionType.PROGRAM_TRADE, code, handler, **metadata
+                )
+            )
+
+        # 회원사 매매동향 구독
+        if with_member:
+            sub_ids.append(
+                self.subscribe(SubscriptionType.MEMBER_TRADE, code, handler, **metadata)
+            )
+
+        return sub_ids
+
+    def subscribe_stocks(
+        self,
+        codes: List[str],
+        handler: Optional[Callable] = None,
+        with_orderbook: bool = False,
+        with_expected: bool = False,
+        with_program: bool = False,
+        with_member: bool = False,
+        **metadata,
+    ) -> List[str]:
+        """
+        여러 종목 실시간 구독 (편의 메서드)
+
+        Args:
+            codes: 종목코드 리스트
+            handler: 데이터 수신 핸들러
+            with_orderbook: 호가 데이터도 함께 구독
+            with_expected: 예상체결 데이터도 함께 구독
+            with_program: 프로그램매매 데이터도 함께 구독
+            with_member: 회원사 매매동향도 함께 구독
+            **metadata: 추가 메타데이터
+
+        Returns:
+            List[str]: 생성된 구독 ID 리스트
+        """
+        sub_ids = []
+        for code in codes:
+            sub_ids.extend(
+                self.subscribe_stock(
+                    code,
+                    handler,
+                    with_orderbook=with_orderbook,
+                    with_expected=with_expected,
+                    with_program=with_program,
+                    with_member=with_member,
+                    **metadata,
+                )
+            )
+        return sub_ids
+
+    # ========================================================================
+    # NXT 시장 전용 편의 메서드
+    # ========================================================================
+
+    def subscribe_stock_nxt(
+        self,
+        code: str,
+        handler: Optional[Callable] = None,
+        with_orderbook: bool = False,
+        with_expected: bool = False,
+        with_program: bool = False,
+        with_member: bool = False,
+        **metadata,
+    ) -> List[str]:
+        """
+        NXT 시장 종목 실시간 구독 (편의 메서드)
+
+        NXT(Next Trading System)는 한국거래소의 대체거래시스템(ATS)으로,
+        기존 KRX 시장과 별도의 실시간 데이터 스트림을 제공합니다.
+
+        Args:
+            code: 종목코드 (6자리)
+            handler: 데이터 수신 핸들러
+            with_orderbook: 호가 데이터도 함께 구독
+            with_expected: 예상체결 데이터도 함께 구독
+            with_program: 프로그램매매 데이터도 함께 구독
+            with_member: 회원사 매매동향도 함께 구독
+            **metadata: 추가 메타데이터
+
+        Returns:
+            List[str]: 생성된 구독 ID 리스트
+
+        Example:
+            >>> agent.subscribe_stock_nxt("005930", with_orderbook=True)
+            ['H0NXCNT0_005930', 'H0NXASP0_005930']
+        """
+        sub_ids = []
+
+        # NXT 체결가 구독 (기본)
+        sub_ids.append(
+            self.subscribe(SubscriptionType.STOCK_TRADE_NXT, code, handler, **metadata)
+        )
+
+        # NXT 호가 구독
+        if with_orderbook:
+            sub_ids.append(
+                self.subscribe(
+                    SubscriptionType.STOCK_ASK_BID_NXT, code, handler, **metadata
+                )
+            )
+
+        # NXT 예상체결 구독
+        if with_expected:
+            sub_ids.append(
+                self.subscribe(
+                    SubscriptionType.STOCK_EXPECTED_NXT, code, handler, **metadata
+                )
+            )
+
+        # NXT 프로그램매매 구독
+        if with_program:
+            sub_ids.append(
+                self.subscribe(
+                    SubscriptionType.PROGRAM_TRADE_NXT, code, handler, **metadata
+                )
+            )
+
+        # NXT 회원사 매매동향 구독
+        if with_member:
+            sub_ids.append(
+                self.subscribe(
+                    SubscriptionType.MEMBER_TRADE_NXT, code, handler, **metadata
+                )
+            )
+
+        return sub_ids
+
+    def subscribe_stocks_nxt(
+        self,
+        codes: List[str],
+        handler: Optional[Callable] = None,
+        with_orderbook: bool = False,
+        with_expected: bool = False,
+        with_program: bool = False,
+        with_member: bool = False,
+        **metadata,
+    ) -> List[str]:
+        """
+        NXT 시장 여러 종목 실시간 구독 (편의 메서드)
+
+        Args:
+            codes: 종목코드 리스트
+            handler: 데이터 수신 핸들러
+            with_orderbook: 호가 데이터도 함께 구독
+            with_expected: 예상체결 데이터도 함께 구독
+            with_program: 프로그램매매 데이터도 함께 구독
+            with_member: 회원사 매매동향도 함께 구독
+            **metadata: 추가 메타데이터
+
+        Returns:
+            List[str]: 생성된 구독 ID 리스트
+        """
+        sub_ids = []
+        for code in codes:
+            sub_ids.extend(
+                self.subscribe_stock_nxt(
+                    code,
+                    handler,
+                    with_orderbook=with_orderbook,
+                    with_expected=with_expected,
+                    with_program=with_program,
+                    with_member=with_member,
+                    **metadata,
+                )
+            )
+        return sub_ids
+
+    def subscribe_market_operation_nxt(
+        self,
+        handler: Optional[Callable] = None,
+        **metadata,
+    ) -> str:
+        """
+        NXT 시장 장운영정보 구독 (편의 메서드)
+
+        장운영정보는 장 시작/마감, 동시호가 등 시장 상태 변화를 알려줍니다.
+
+        Args:
+            handler: 데이터 수신 핸들러
+            **metadata: 추가 메타데이터
+
+        Returns:
+            str: 구독 ID
+
+        Example:
+            >>> agent.subscribe_market_operation_nxt()
+            'H0NXMKO0_NXT'
+        """
+        return self.subscribe(
+            SubscriptionType.MARKET_OPERATION_NXT, "NXT", handler, **metadata
+        )
+
+    def subscribe_program_trading_nxt(
+        self,
+        codes: List[str],
+        handler: Optional[Callable] = None,
+        **metadata,
+    ) -> List[str]:
+        """
+        NXT 시장 프로그램매매 실시간 구독 (편의 메서드)
+
+        Args:
+            codes: 종목코드 리스트
+            handler: 데이터 수신 핸들러
+            **metadata: 추가 메타데이터
+
+        Returns:
+            List[str]: 생성된 구독 ID 리스트
+        """
+        sub_ids = []
+        for code in codes:
+            sub_ids.append(
+                self.subscribe(
+                    SubscriptionType.PROGRAM_TRADE_NXT, code, handler, **metadata
+                )
+            )
+        return sub_ids
+
+    def subscribe_member_trading_nxt(
+        self,
+        codes: List[str],
+        handler: Optional[Callable] = None,
+        **metadata,
+    ) -> List[str]:
+        """
+        NXT 시장 회원사 실시간 매매동향 구독 (편의 메서드)
+
+        Args:
+            codes: 종목코드 리스트
+            handler: 데이터 수신 핸들러
+            **metadata: 추가 메타데이터
+
+        Returns:
+            List[str]: 생성된 구독 ID 리스트
+        """
+        sub_ids = []
+        for code in codes:
+            sub_ids.append(
+                self.subscribe(
+                    SubscriptionType.MEMBER_TRADE_NXT, code, handler, **metadata
+                )
+            )
+        return sub_ids
+
+    # ========================================================================
+    # 기존 편의 메서드 (KRX 시장)
+    # ========================================================================
+
+    def subscribe_index(
+        self,
+        codes: Optional[List[str]] = None,
+        handler: Optional[Callable] = None,
+        with_expected: bool = False,
+        **metadata,
+    ) -> List[str]:
+        """
+        지수 실시간 구독 (편의 메서드)
+
+        Args:
+            codes: 지수코드 리스트. None이면 KOSPI, KOSDAQ, KOSPI200 구독
+                - "0001": KOSPI
+                - "1001": KOSDAQ
+                - "2001": KOSPI200
+            handler: 데이터 수신 핸들러
+            with_expected: 예상체결 데이터도 함께 구독
+            **metadata: 추가 메타데이터
+
+        Returns:
+            List[str]: 생성된 구독 ID 리스트
+
+        Example:
+            >>> agent.subscribe_index(with_expected=True)
+            ['H0IF1000_0001', 'H0IF1000_1001', 'H0IF1000_2001', ...]
+        """
+        if codes is None:
+            codes = ["0001", "1001", "2001"]  # KOSPI, KOSDAQ, KOSPI200
+
+        sub_ids = []
+        for code in codes:
+            sub_ids.append(
+                self.subscribe(SubscriptionType.INDEX, code, handler, **metadata)
+            )
+            if with_expected:
+                sub_ids.append(
+                    self.subscribe(
+                        SubscriptionType.INDEX_EXPECTED, code, handler, **metadata
+                    )
+                )
+
+        return sub_ids
+
+    def subscribe_program_trading(
+        self,
+        codes: List[str],
+        handler: Optional[Callable] = None,
+        **metadata,
+    ) -> List[str]:
+        """
+        프로그램매매 실시간 구독 (편의 메서드)
+
+        Args:
+            codes: 종목코드 리스트
+            handler: 데이터 수신 핸들러
+            **metadata: 추가 메타데이터
+
+        Returns:
+            List[str]: 생성된 구독 ID 리스트
+        """
+        sub_ids = []
+        for code in codes:
+            sub_ids.append(
+                self.subscribe(
+                    SubscriptionType.PROGRAM_TRADE, code, handler, **metadata
+                )
+            )
+        return sub_ids
+
+    def subscribe_member_trading(
+        self,
+        codes: List[str],
+        handler: Optional[Callable] = None,
+        **metadata,
+    ) -> List[str]:
+        """
+        회원사 실시간 매매동향 구독 (편의 메서드)
+
+        증권사별 매매동향을 실시간으로 수신합니다.
+
+        Args:
+            codes: 종목코드 리스트
+            handler: 데이터 수신 핸들러
+            **metadata: 추가 메타데이터
+
+        Returns:
+            List[str]: 생성된 구독 ID 리스트
+        """
+        sub_ids = []
+        for code in codes:
+            sub_ids.append(
+                self.subscribe(SubscriptionType.MEMBER_TRADE, code, handler, **metadata)
+            )
+        return sub_ids
+
+    def subscribe_futures(
+        self,
+        code: str,
+        handler: Optional[Callable] = None,
+        with_orderbook: bool = False,
+        **metadata,
+    ) -> List[str]:
+        """
+        선물 실시간 구독 (편의 메서드)
+
+        Args:
+            code: 선물 종목코드
+            handler: 데이터 수신 핸들러
+            with_orderbook: 호가 데이터도 함께 구독
+            **metadata: 추가 메타데이터
+
+        Returns:
+            List[str]: 생성된 구독 ID 리스트
+        """
+        sub_ids = []
+        sub_ids.append(
+            self.subscribe(SubscriptionType.FUTURES_TRADE, code, handler, **metadata)
+        )
+        if with_orderbook:
+            sub_ids.append(
+                self.subscribe(
+                    SubscriptionType.FUTURES_ASK_BID, code, handler, **metadata
+                )
+            )
+        return sub_ids
+
+    def subscribe_options(
+        self,
+        code: str,
+        handler: Optional[Callable] = None,
+        with_orderbook: bool = False,
+        **metadata,
+    ) -> List[str]:
+        """
+        옵션 실시간 구독 (편의 메서드)
+
+        Args:
+            code: 옵션 종목코드
+            handler: 데이터 수신 핸들러
+            with_orderbook: 호가 데이터도 함께 구독
+            **metadata: 추가 메타데이터
+
+        Returns:
+            List[str]: 생성된 구독 ID 리스트
+        """
+        sub_ids = []
+        sub_ids.append(
+            self.subscribe(SubscriptionType.OPTION_TRADE, code, handler, **metadata)
+        )
+        if with_orderbook:
+            sub_ids.append(
+                self.subscribe(
+                    SubscriptionType.OPTION_ASK_BID, code, handler, **metadata
+                )
+            )
+        return sub_ids
+
+    def unsubscribe_stock(self, code: str, include_nxt: bool = True) -> None:
+        """
+        종목 관련 모든 구독 해제 (편의 메서드)
+
+        Args:
+            code: 종목코드
+            include_nxt: NXT 시장 구독도 함께 해제할지 여부 (기본값: True)
+        """
+        # KRX 시장 타입
+        stock_types = [
+            SubscriptionType.STOCK_TRADE,
+            SubscriptionType.STOCK_ASK_BID,
+            SubscriptionType.STOCK_EXPECTED,
+            SubscriptionType.PROGRAM_TRADE,
+            SubscriptionType.MEMBER_TRADE,
+        ]
+
+        # NXT 시장 타입 추가
+        if include_nxt:
+            stock_types.extend([
+                SubscriptionType.STOCK_TRADE_NXT,
+                SubscriptionType.STOCK_ASK_BID_NXT,
+                SubscriptionType.STOCK_EXPECTED_NXT,
+                SubscriptionType.PROGRAM_TRADE_NXT,
+                SubscriptionType.MEMBER_TRADE_NXT,
+            ])
+
+        for sub_type in stock_types:
+            sub_id = f"{sub_type.value}_{code}"
+            if sub_id in self.subscriptions:
+                self.unsubscribe(sub_id)
+
+    def unsubscribe_stock_nxt(self, code: str) -> None:
+        """
+        NXT 시장 종목 관련 모든 구독 해제 (편의 메서드)
+
+        Args:
+            code: 종목코드
+        """
+        nxt_types = [
+            SubscriptionType.STOCK_TRADE_NXT,
+            SubscriptionType.STOCK_ASK_BID_NXT,
+            SubscriptionType.STOCK_EXPECTED_NXT,
+            SubscriptionType.PROGRAM_TRADE_NXT,
+            SubscriptionType.MEMBER_TRADE_NXT,
+        ]
+        for sub_type in nxt_types:
+            sub_id = f"{sub_type.value}_{code}"
+            if sub_id in self.subscriptions:
+                self.unsubscribe(sub_id)
+
+    def unsubscribe_all(self) -> None:
+        """
+        모든 구독 해제
+        """
+        for sub_id in list(self.subscriptions.keys()):
+            self.unsubscribe(sub_id)
+
+
+# ============================================================================
+# 데이터 파싱 헬퍼 (Data Parsing Helpers)
+# ============================================================================
+
+
+class RealtimeDataParser:
+    """
+    실시간 데이터 파싱 헬퍼
+
+    웹소켓으로 수신된 실시간 데이터를 구조화된 딕셔너리로 변환합니다.
+    """
+
+    # 국내주식 체결 데이터 필드 (H0STCNT0)
+    STOCK_TRADE_FIELDS = [
+        "mksc_shrn_iscd",  # 유가증권 단축 종목코드
+        "stck_cntg_hour",  # 주식 체결 시간
+        "stck_prpr",  # 주식 현재가
+        "prdy_vrss_sign",  # 전일 대비 부호
+        "prdy_vrss",  # 전일 대비
+        "prdy_ctrt",  # 전일 대비율
+        "wghn_avrg_stck_prc",  # 가중 평균 주식 가격
+        "stck_oprc",  # 주식 시가
+        "stck_hgpr",  # 주식 최고가
+        "stck_lwpr",  # 주식 최저가
+        "askp1",  # 매도호가1
+        "bidp1",  # 매수호가1
+        "cntg_vol",  # 체결 거래량
+        "acml_vol",  # 누적 거래량
+        "acml_tr_pbmn",  # 누적 거래 대금
+        "seln_cntg_csnu",  # 매도 체결 건수
+        "shnu_cntg_csnu",  # 매수 체결 건수
+        "ntby_cntg_csnu",  # 순매수 체결 건수
+        "cttr",  # 체결강도
+        "seln_cntg_smtn",  # 총 매도 수량
+        "shnu_cntg_smtn",  # 총 매수 수량
+        "ccld_dvsn",  # 체결구분 (1:매수, 3:장전, 5:매도)
+        "shnu_rate",  # 매수비율
+        "prdy_vol_vrss_acml_vol_rate",  # 전일 거래량 대비 등락율
+        "oprc_hour",  # 시가 시간
+        "oprc_vrss_prpr_sign",  # 시가대비구분
+        "oprc_vrss_prpr",  # 시가대비
+        "hgpr_hour",  # 최고가 시간
+        "hgpr_vrss_prpr_sign",  # 고가대비구분
+        "hgpr_vrss_prpr",  # 고가대비
+        "lwpr_hour",  # 최저가 시간
+        "lwpr_vrss_prpr_sign",  # 저가대비구분
+        "lwpr_vrss_prpr",  # 저가대비
+        "bsop_date",  # 영업 일자
+        "new_mkop_cls_code",  # 신 장운영 구분 코드
+        "trht_yn",  # 거래정지 여부
+        "askp_rsqn1",  # 매도호가 잔량1
+        "bidp_rsqn1",  # 매수호가 잔량1
+        "total_askp_rsqn",  # 총 매도호가 잔량
+        "total_bidp_rsqn",  # 총 매수호가 잔량
+        "vol_tnrt",  # 거래량 회전율
+        "prdy_smns_hour_acml_vol",  # 전일 동시간 누적 거래량
+        "prdy_smns_hour_acml_vol_rate",  # 전일 동시간 누적 거래량 비율
+        "hour_cls_code",  # 시간 구분 코드
+        "mrkt_trtm_cls_code",  # 임의종료구분코드
+        "vi_stnd_prc",  # VI 기준가
+    ]
+
+    # 국내주식 호가 데이터 필드 (H0STASP0)
+    STOCK_ORDERBOOK_FIELDS = [
+        "mksc_shrn_iscd",  # 유가증권 단축 종목코드
+        "bsop_hour",  # 영업 시간
+        "hour_cls_code",  # 시간 구분 코드
+        # 매도호가 1~10
+        "askp1",
+        "askp2",
+        "askp3",
+        "askp4",
+        "askp5",
+        "askp6",
+        "askp7",
+        "askp8",
+        "askp9",
+        "askp10",
+        # 매수호가 1~10
+        "bidp1",
+        "bidp2",
+        "bidp3",
+        "bidp4",
+        "bidp5",
+        "bidp6",
+        "bidp7",
+        "bidp8",
+        "bidp9",
+        "bidp10",
+        # 매도호가 잔량 1~10
+        "askp_rsqn1",
+        "askp_rsqn2",
+        "askp_rsqn3",
+        "askp_rsqn4",
+        "askp_rsqn5",
+        "askp_rsqn6",
+        "askp_rsqn7",
+        "askp_rsqn8",
+        "askp_rsqn9",
+        "askp_rsqn10",
+        # 매수호가 잔량 1~10
+        "bidp_rsqn1",
+        "bidp_rsqn2",
+        "bidp_rsqn3",
+        "bidp_rsqn4",
+        "bidp_rsqn5",
+        "bidp_rsqn6",
+        "bidp_rsqn7",
+        "bidp_rsqn8",
+        "bidp_rsqn9",
+        "bidp_rsqn10",
+        "total_askp_rsqn",  # 총 매도호가 잔량
+        "total_bidp_rsqn",  # 총 매수호가 잔량
+        "ovtm_total_askp_rsqn",  # 시간외 총 매도호가 잔량
+        "ovtm_total_bidp_rsqn",  # 시간외 총 매수호가 잔량
+        "antc_cnpr",  # 예상 체결가
+        "antc_cnqn",  # 예상 체결량
+        "antc_vol",  # 예상 거래량
+        "antc_cntg_vrss",  # 예상 체결 대비
+        "antc_cntg_vrss_sign",  # 예상 체결 대비 부호
+        "antc_cntg_prdy_ctrt",  # 예상 체결 전일 대비율
+        "acml_vol",  # 누적 거래량
+        "total_askp_rsqn_icdc",  # 총 매도호가 잔량 증감
+        "total_bidp_rsqn_icdc",  # 총 매수호가 잔량 증감
+        "ovtm_total_askp_icdc",  # 시간외 총 매도호가 증감
+        "ovtm_total_bidp_icdc",  # 시간외 총 매수호가 증감
+        "stck_deal_cls_code",  # 주식 매매 구분 코드
+    ]
+
+    # 지수 데이터 필드 (H0IF1000)
+    INDEX_FIELDS = [
+        "bsop_hour",  # 영업 시간
+        "bstp_nmix_prpr",  # 업종 지수 현재가
+        "bstp_nmix_prdy_vrss",  # 업종 지수 전일 대비
+        "prdy_vrss_sign",  # 전일 대비 부호
+        "bstp_nmix_prdy_ctrt",  # 업종 지수 전일 대비율
+        "acml_vol",  # 누적 거래량
+        "acml_tr_pbmn",  # 누적 거래 대금
+        "bstp_nmix_oprc",  # 업종 지수 시가
+        "bstp_nmix_hgpr",  # 업종 지수 최고가
+        "bstp_nmix_lwpr",  # 업종 지수 최저가
+        "ascn_issu_cnt",  # 상승 종목수
+        "uplm_issu_cnt",  # 상한 종목수
+        "stnr_issu_cnt",  # 보합 종목수
+        "down_issu_cnt",  # 하락 종목수
+        "lslm_issu_cnt",  # 하한 종목수
+    ]
+
+    # 프로그램매매 데이터 필드 (H0GSCNT0)
+    PROGRAM_TRADE_FIELDS = [
+        "mksc_shrn_iscd",  # 유가증권 단축 종목코드
+        "bsop_hour",  # 영업 시간
+        "seln_cntg_qty",  # 매도 체결 수량
+        "seln_cntg_amt",  # 매도 체결 금액
+        "shnu_cntg_qty",  # 매수 체결 수량
+        "shnu_cntg_amt",  # 매수 체결 금액
+        "ntby_cntg_qty",  # 순매수 체결 수량
+        "ntby_cntg_amt",  # 순매수 체결 금액
+        "seln_hoka_rsqn",  # 매도 호가 잔량
+        "shnu_hoka_rsqn",  # 매수 호가 잔량
+        "ntby_hoka_rsqn",  # 순매수 호가 잔량
+    ]
+
+    # 회원사별 매매동향 필드 (H0MBCNT0)
+    MEMBER_TRADE_FIELDS = [
+        "mksc_shrn_iscd",  # 유가증권 단축 종목코드
+        "bsop_hour",  # 영업 시간
+        "glob_ntby_qty",  # 글로벌 순매수 수량
+        "glob_ntby_tr_pbmn",  # 글로벌 순매수 거래대금
+        "glob_seln_qty",  # 글로벌 매도 수량
+        "glob_shnu_qty",  # 글로벌 매수 수량
+        "sscr_ntby_qty",  # 투신 순매수 수량
+        "sscr_ntby_tr_pbmn",  # 투신 순매수 거래대금
+        "sscr_seln_qty",  # 투신 매도 수량
+        "sscr_shnu_qty",  # 투신 매수 수량
+        "frgn_ntby_qty",  # 외국인 순매수 수량
+        "frgn_ntby_tr_pbmn",  # 외국인 순매수 거래대금
+        "frgn_seln_qty",  # 외국인 매도 수량
+        "frgn_shnu_qty",  # 외국인 매수 수량
+        "orgn_ntby_qty",  # 기관계 순매수 수량
+        "orgn_ntby_tr_pbmn",  # 기관계 순매수 거래대금
+        "orgn_seln_qty",  # 기관계 매도 수량
+        "orgn_shnu_qty",  # 기관계 매수 수량
+    ]
+
+    # 지수 예상체결 필드 (H0UPANC0)
+    INDEX_EXPECTED_FIELDS = [
+        "bsop_hour",  # 영업 시간
+        "bstp_nmix_sdpr",  # 업종 지수 기준가
+        "bstp_nmix_antc_cnpr",  # 업종 지수 예상 체결가
+        "bstp_nmix_antc_cntg_vrss",  # 업종 지수 예상 체결 대비
+        "antc_cntg_vrss_sign",  # 예상 체결 대비 부호
+        "bstp_nmix_antc_cntg_ctrt",  # 업종 지수 예상 체결 대비율
+        "antc_vol",  # 예상 거래량
+    ]
+
+    # 종목 예상체결 필드 (H0UNANC0)
+    STOCK_EXPECTED_FIELDS = [
+        "mksc_shrn_iscd",  # 유가증권 단축 종목코드
+        "bsop_hour",  # 영업 시간
+        "antc_cnpr",  # 예상 체결가
+        "antc_cntg_vrss",  # 예상 체결 대비
+        "antc_cntg_vrss_sign",  # 예상 체결 대비 부호
+        "antc_cntg_prdy_ctrt",  # 예상 체결 전일 대비율
+        "antc_vol",  # 예상 거래량
+        "stck_sdpr",  # 주식 기준가
+    ]
+
+    # ========================================================================
+    # NXT 시장 전용 필드
+    # ========================================================================
+
+    # NXT 장운영정보 필드 (H0NXMKO0)
+    MARKET_OPERATION_NXT_FIELDS = [
+        "mksc_shrn_iscd",  # 종목코드
+        "trht_yn",  # 거래정지 여부
+        "tr_susp_reas_cntt",  # 거래 정지 사유 내용
+        "mkop_cls_code",  # 장운영 구분 코드
+        "antc_mkop_cls_code",  # 예상 장운영 구분 코드
+        "mrkt_trtm_cls_code",  # 임의연장구분코드
+        "divi_app_cls_code",  # 동시호가배분처리구분코드
+        "iscd_stat_cls_code",  # 종목상태구분코드
+        "vi_cls_code",  # VI적용구분코드
+        "ovtm_vi_cls_code",  # 시간외단일가VI적용구분코드
+        "exch_cls_code",  # 거래소 구분코드
+    ]
+
+    # NXT 프로그램매매 필드 (H0NXPGM0)
+    PROGRAM_TRADE_NXT_FIELDS = [
+        "mksc_shrn_iscd",  # 유가증권 단축 종목코드
+        "stck_cntg_hour",  # 주식 체결 시간
+        "seln_cnqn",  # 매도 체결량
+        "seln_tr_pbmn",  # 매도 거래 대금
+        "shnu_cnqn",  # 매수 체결량
+        "shnu_tr_pbmn",  # 매수 거래 대금
+        "ntby_cnqn",  # 순매수 체결량
+        "ntby_tr_pbmn",  # 순매수 거래 대금
+        "seln_rsqn",  # 매도호가잔량
+        "shnu_rsqn",  # 매수호가잔량
+        "whol_ntby_qty",  # 전체순매수호가잔량
+    ]
+
+    @classmethod
+    def parse(cls, sub_type: SubscriptionType, values: List[str]) -> Dict[str, Any]:
+        """
+        실시간 데이터 파싱
+
+        Args:
+            sub_type: 구독 타입
+            values: 수신된 데이터 값 리스트 (^로 분리된)
+
+        Returns:
+            Dict[str, Any]: 파싱된 데이터 딕셔너리
+        """
+        field_map = {
+            # KRX 시장
+            SubscriptionType.STOCK_TRADE: cls.STOCK_TRADE_FIELDS,
+            SubscriptionType.STOCK_ASK_BID: cls.STOCK_ORDERBOOK_FIELDS,
+            SubscriptionType.STOCK_EXPECTED: cls.STOCK_EXPECTED_FIELDS,
+            SubscriptionType.INDEX: cls.INDEX_FIELDS,
+            SubscriptionType.INDEX_EXPECTED: cls.INDEX_EXPECTED_FIELDS,
+            SubscriptionType.PROGRAM_TRADE: cls.PROGRAM_TRADE_FIELDS,
+            SubscriptionType.MEMBER_TRADE: cls.MEMBER_TRADE_FIELDS,
+            # NXT 시장 (체결가, 호가, 예상체결은 KRX와 동일한 필드 구조)
+            SubscriptionType.STOCK_TRADE_NXT: cls.STOCK_TRADE_FIELDS,
+            SubscriptionType.STOCK_ASK_BID_NXT: cls.STOCK_ORDERBOOK_FIELDS,
+            SubscriptionType.STOCK_EXPECTED_NXT: cls.STOCK_EXPECTED_FIELDS,
+            SubscriptionType.PROGRAM_TRADE_NXT: cls.PROGRAM_TRADE_NXT_FIELDS,
+            SubscriptionType.MARKET_OPERATION_NXT: cls.MARKET_OPERATION_NXT_FIELDS,
+            SubscriptionType.MEMBER_TRADE_NXT: cls.MEMBER_TRADE_FIELDS,  # KRX와 동일
+        }
+
+        fields = field_map.get(sub_type)
+        if not fields:
+            # 알 수 없는 타입은 인덱스로 반환
+            return {f"field_{i}": v for i, v in enumerate(values)}
+
+        result = {}
+        for i, field_name in enumerate(fields):
+            if i < len(values):
+                result[field_name] = cls._convert_value(values[i], field_name)
+        return result
+
+    @classmethod
+    def _convert_value(cls, value: str, field: str) -> Any:
+        """
+        필드 값 타입 변환
+
+        Args:
+            value: 원본 문자열 값
+            field: 필드명
+
+        Returns:
+            변환된 값
+        """
+        if not value:
+            return None
+
+        # 가격/수량 관련 필드는 숫자로 변환
+        numeric_keywords = [
+            "prpr",
+            "pric",
+            "vol",
+            "qty",
+            "amt",
+            "rsqn",
+            "smtn",
+            "csnu",
+            "ctrt",
+            "rate",
+            "pbmn",
+            "cnpr",
+            "cnqn",
+            "hgpr",
+            "lwpr",
+            "oprc",
+            "vrss",
+            "nmix",
+            "icdc",
+        ]
+
+        for keyword in numeric_keywords:
+            if keyword in field:
+                try:
+                    # 소수점 포함 여부에 따라 int/float 변환
+                    if "." in value:
+                        return float(value)
+                    return int(value)
+                except ValueError:
+                    return value
+
+        return value
+
+    @classmethod
+    def parse_stock_trade(cls, values: List[str]) -> Dict[str, Any]:
+        """국내주식 체결 데이터 파싱"""
+        return cls.parse(SubscriptionType.STOCK_TRADE, values)
+
+    @classmethod
+    def parse_stock_orderbook(cls, values: List[str]) -> Dict[str, Any]:
+        """국내주식 호가 데이터 파싱"""
+        return cls.parse(SubscriptionType.STOCK_ASK_BID, values)
+
+    @classmethod
+    def parse_index(cls, values: List[str]) -> Dict[str, Any]:
+        """지수 데이터 파싱"""
+        return cls.parse(SubscriptionType.INDEX, values)
+
+    @classmethod
+    def parse_program_trade(cls, values: List[str]) -> Dict[str, Any]:
+        """프로그램매매 데이터 파싱"""
+        return cls.parse(SubscriptionType.PROGRAM_TRADE, values)
+
+    @classmethod
+    def parse_member_trade(cls, values: List[str]) -> Dict[str, Any]:
+        """회원사 매매동향 데이터 파싱"""
+        return cls.parse(SubscriptionType.MEMBER_TRADE, values)
+
+    @classmethod
+    def parse_stock_expected(cls, values: List[str]) -> Dict[str, Any]:
+        """종목 예상체결 데이터 파싱"""
+        return cls.parse(SubscriptionType.STOCK_EXPECTED, values)
+
+    @classmethod
+    def parse_index_expected(cls, values: List[str]) -> Dict[str, Any]:
+        """지수 예상체결 데이터 파싱"""
+        return cls.parse(SubscriptionType.INDEX_EXPECTED, values)
+
+
+# ============================================================================
+# 최신 데이터 저장소 (Latest Data Store)
+# ============================================================================
+
+
+class RealtimeDataStore:
+    """
+    실시간 데이터 저장소
+
+    웹소켓으로 수신된 최신 데이터를 종목별/타입별로 저장하고
+    조회할 수 있는 인메모리 저장소입니다.
+
+    Example:
+        >>> store = RealtimeDataStore()
+        >>> store.update(SubscriptionType.STOCK_TRADE, "005930", {"stck_prpr": 70000})
+        >>> store.get("005930", SubscriptionType.STOCK_TRADE)
+        {"stck_prpr": 70000, "_updated_at": datetime(...)}
+    """
+
+    def __init__(self, max_history: int = 100):
+        """
+        저장소 초기화
+
+        Args:
+            max_history: 각 종목/타입별 최대 히스토리 보관 수
+        """
+        self.max_history = max_history
+
+        # 최신 데이터 저장 (종목코드 -> 타입 -> 데이터)
+        self._latest: Dict[str, Dict[SubscriptionType, Dict[str, Any]]] = {}
+
+        # 히스토리 저장 (종목코드 -> 타입 -> [데이터 리스트])
+        self._history: Dict[str, Dict[SubscriptionType, List[Dict[str, Any]]]] = {}
+
+        # 통계
+        self._stats = {
+            "total_updates": 0,
+            "codes_tracked": 0,
+            "last_update_time": None,
+        }
+
+    def update(
+        self,
+        sub_type: SubscriptionType,
+        code: str,
+        data: Dict[str, Any],
+        keep_history: bool = False,
+    ) -> None:
+        """
+        데이터 업데이트
+
+        Args:
+            sub_type: 구독 타입
+            code: 종목/지수 코드
+            data: 수신된 데이터
+            keep_history: 히스토리 보관 여부
+        """
+        now = datetime.now()
+
+        # 타임스탬프 추가
+        data_with_timestamp = {**data, "_updated_at": now}
+
+        # 최신 데이터 저장
+        if code not in self._latest:
+            self._latest[code] = {}
+            self._stats["codes_tracked"] += 1
+        self._latest[code][sub_type] = data_with_timestamp
+
+        # 히스토리 저장
+        if keep_history:
+            if code not in self._history:
+                self._history[code] = {}
+            if sub_type not in self._history[code]:
+                self._history[code][sub_type] = []
+
+            self._history[code][sub_type].append(data_with_timestamp)
+
+            # 최대 히스토리 수 유지
+            if len(self._history[code][sub_type]) > self.max_history:
+                self._history[code][sub_type].pop(0)
+
+        # 통계 업데이트
+        self._stats["total_updates"] += 1
+        self._stats["last_update_time"] = now
+
+    def get(
+        self,
+        code: str,
+        sub_type: Optional[SubscriptionType] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        최신 데이터 조회
+
+        Args:
+            code: 종목/지수 코드
+            sub_type: 구독 타입 (None이면 모든 타입 반환)
+
+        Returns:
+            Dict[str, Any]: 최신 데이터
+        """
+        if code not in self._latest:
+            return None
+
+        if sub_type is None:
+            return self._latest[code].copy()
+
+        return self._latest[code].get(sub_type)
+
+    def get_trade(self, code: str) -> Optional[Dict[str, Any]]:
+        """종목 체결 데이터 조회"""
+        return self.get(code, SubscriptionType.STOCK_TRADE)
+
+    def get_orderbook(self, code: str) -> Optional[Dict[str, Any]]:
+        """종목 호가 데이터 조회"""
+        return self.get(code, SubscriptionType.STOCK_ASK_BID)
+
+    def get_expected(self, code: str) -> Optional[Dict[str, Any]]:
+        """종목 예상체결 데이터 조회"""
+        return self.get(code, SubscriptionType.STOCK_EXPECTED)
+
+    def get_index(self, code: str) -> Optional[Dict[str, Any]]:
+        """지수 데이터 조회"""
+        return self.get(code, SubscriptionType.INDEX)
+
+    def get_program_trade(self, code: str) -> Optional[Dict[str, Any]]:
+        """프로그램매매 데이터 조회"""
+        return self.get(code, SubscriptionType.PROGRAM_TRADE)
+
+    def get_member_trade(self, code: str) -> Optional[Dict[str, Any]]:
+        """회원사 매매동향 데이터 조회"""
+        return self.get(code, SubscriptionType.MEMBER_TRADE)
+
+    def get_history(
+        self,
+        code: str,
+        sub_type: SubscriptionType,
+        limit: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        히스토리 데이터 조회
+
+        Args:
+            code: 종목/지수 코드
+            sub_type: 구독 타입
+            limit: 최근 N개만 반환 (None이면 전체)
+
+        Returns:
+            List[Dict[str, Any]]: 히스토리 데이터 리스트 (최신순)
+        """
+        if code not in self._history:
+            return []
+        if sub_type not in self._history[code]:
+            return []
+
+        history = self._history[code][sub_type]
+        if limit:
+            return list(reversed(history[-limit:]))
+        return list(reversed(history))
+
+    def get_all_codes(self) -> List[str]:
+        """모든 추적 중인 종목코드 반환"""
+        return list(self._latest.keys())
+
+    def get_stats(self) -> Dict[str, Any]:
+        """저장소 통계 반환"""
+        return self._stats.copy()
+
+    def clear(self, code: Optional[str] = None) -> None:
+        """
+        데이터 삭제
+
+        Args:
+            code: 특정 종목코드만 삭제 (None이면 전체 삭제)
+        """
+        if code:
+            self._latest.pop(code, None)
+            self._history.pop(code, None)
+        else:
+            self._latest.clear()
+            self._history.clear()
+            self._stats["codes_tracked"] = 0
+
+
+class WSAgentWithStore(WSAgent):
+    """
+    데이터 저장소가 포함된 WebSocket Agent
+
+    WSAgent의 모든 기능에 더해 수신된 데이터를 자동으로
+    RealtimeDataStore에 저장합니다.
+
+    Example:
+        >>> agent = WSAgentWithStore(approval_key="...")
+        >>> agent.subscribe_stock("005930", with_orderbook=True)
+        >>> await agent.connect()
+        >>> # 데이터 수신 후
+        >>> trade = agent.store.get_trade("005930")
+    """
+
+    def __init__(
+        self,
+        approval_key: str,
+        keep_history: bool = False,
+        max_history: int = 100,
+        **kwargs,
+    ):
+        """
+        WSAgentWithStore 초기화
+
+        Args:
+            approval_key: 웹소켓 승인키
+            keep_history: 히스토리 보관 여부
+            max_history: 최대 히스토리 보관 수
+            **kwargs: WSAgent 추가 인자
+        """
+        super().__init__(approval_key, **kwargs)
+        self.store = RealtimeDataStore(max_history=max_history)
+        self.keep_history = keep_history
+
+        # 자동 저장을 위한 기본 핸들러 등록
+        self._setup_auto_store_handlers()
+
+    def _setup_auto_store_handlers(self) -> None:
+        """자동 저장 핸들러 설정"""
+
+        def create_store_handler(sub_type: SubscriptionType):
+            def handler(data: Any, metadata: Dict):
+                # 리스트 데이터(바이너리 메시지)인 경우 파싱
+                if isinstance(data, list):
+                    code = data[0] if data else metadata.get("tr_key", "")
+                    parsed = RealtimeDataParser.parse(sub_type, data)
+                else:
+                    # JSON 메시지는 그대로 사용
+                    code = metadata.get("tr_key", "")
+                    parsed = data if isinstance(data, dict) else {"raw": data}
+
+                if code:
+                    self.store.update(sub_type, code, parsed, self.keep_history)
+
+            return handler
+
+        # 모든 타입에 대해 핸들러 등록
+        for sub_type in SubscriptionType:
+            self.register_handler(sub_type, create_store_handler(sub_type))

@@ -336,7 +336,7 @@ class AccountAPI(BaseAPI):
         try:
             return self._make_request_dict(
                 endpoint="/uapi/domestic-stock/v1/trading/order-rvsecncl",
-                tr_id="TTTC0803U",
+                tr_id="TTTC0013U",  # 정정/취소 TR (구: TTTC0803U)
                 params={
                     "CANO": self.account["CANO"],
                     "ACNT_PRDT_CD": self.account["ACNT_PRDT_CD"],
@@ -351,7 +351,7 @@ class AccountAPI(BaseAPI):
                 method="POST",  # 주문 API는 POST 메서드 사용
             )
         except Exception as e:
-            logging.error(f"정정/취소 주문 ��패: {e}")
+            logging.error(f"정정/취소 주문 실패: {e}")
             return None
 
     def inquire_psbl_rvsecncl(self) -> Optional[Dict]:
@@ -1353,11 +1353,9 @@ class AccountAPI(BaseAPI):
             >>> result = api.order_cash("005930", 10, 0, "BUY", "03", "SOR")
         """
         try:
-            # TR_ID 결정 (실거래용)
-            if buy_sell.upper() == "SELL":
-                tr_id = "TTTC0801U"  # 실거래 매도
-            else:
-                tr_id = "TTTC0802U"  # 실거래 매수
+            # TR_ID 결정 (현금 주문은 KRX/NXT 모두 같은 TR ID 사용, EXCD 파라미터로 구분)
+            # 매도: TTTC0011U, 매수: TTTC0012U
+            tr_id = "TTTC0011U" if buy_sell.upper() == "SELL" else "TTTC0012U"
 
             # 파라미터 구성
             params = {
@@ -1369,9 +1367,9 @@ class AccountAPI(BaseAPI):
                 "ORD_UNPR": str(price),
             }
 
-            # SOR 또는 NXT 선택 시 거래소 구분 추가
+            # NXT/SOR 선택 시 거래소 구분 추가
             if exchange != "KRX":
-                params["EXCD"] = exchange
+                params["EXCG_ID_DVSN_CD"] = exchange
 
             return self._make_request_dict(
                 endpoint="/uapi/domestic-stock/v1/trading/order-cash",
@@ -1544,9 +1542,9 @@ class AccountAPI(BaseAPI):
                 "LOAN_DT": loan_dt,
             }
 
-            # SOR 선택 시 거래소 구분 추가
+            # NXT/SOR 선택 시 거래소 구분 추가
             if exchange != "KRX":
-                params["EXCD"] = exchange
+                params["EXCG_ID_DVSN_CD"] = exchange
 
             return self._make_request_dict(
                 endpoint="/uapi/domestic-stock/v1/trading/order-credit",

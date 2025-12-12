@@ -2,6 +2,117 @@
 
 모든 주목할 만한 변경사항이 이 파일에 문서화됩니다.
 
+## [1.3.5] - 2025-12-12
+
+### 🆕 신규 기능
+
+#### NXT(대체거래시스템) WebSocket 실시간 구독 지원
+
+한국거래소 대체거래시스템(NXT) 실시간 데이터 구독 기능을 추가했습니다.
+
+**추가된 구독 타입 (6개):**
+
+| 타입 | TR_ID | 설명 |
+|------|-------|------|
+| `STOCK_TRADE_NXT` | H0NXCNT0 | NXT 실시간 체결가 |
+| `STOCK_ASK_BID_NXT` | H0NXASP0 | NXT 실시간 호가 |
+| `STOCK_EXPECTED_NXT` | H0NXANC0 | NXT 실시간 예상체결 |
+| `PROGRAM_TRADE_NXT` | H0NXPGM0 | NXT 프로그램매매 |
+| `MARKET_OPERATION_NXT` | H0NXMKO0 | NXT 장운영정보 |
+| `MEMBER_TRADE_NXT` | H0NXMBC0 | NXT 회원사매매 |
+
+**편의 메서드:**
+```python
+# 단일 종목 NXT 구독 (다양한 옵션)
+ws_agent.subscribe_stock_nxt(
+    "005930",
+    with_orderbook=True,    # 호가 포함
+    with_expected=True,     # 예상체결 포함
+    with_program=True,      # 프로그램매매 포함
+    with_member=True,       # 회원사매매 포함
+)
+
+# 복수 종목 NXT 구독
+ws_agent.subscribe_stocks_nxt(["005930", "035420", "000660"])
+
+# NXT 장운영정보 구독
+ws_agent.subscribe_market_operation_nxt()
+
+# NXT 전용 구독 해제
+ws_agent.unsubscribe_stock_nxt("005930")
+```
+
+**KRX/NXT 동시 구독:**
+```python
+# KRX (기존)
+ws_agent.subscribe_stock("005930")
+
+# NXT (신규)
+ws_agent.subscribe_stock_nxt("005930")
+
+# 두 구독이 독립적으로 공존 가능
+```
+
+**파서 지원:**
+- `MARKET_OPERATION_NXT_FIELDS`: 11개 필드 정의
+- `PROGRAM_TRADE_NXT_FIELDS`: 11개 필드 정의
+- 모든 NXT 타입에 대한 `RealtimeDataParser.parse()` 지원
+
+**단위 테스트:**
+- 27개 테스트 추가 (`tests/unit/test_ws_agent_nxt.py`)
+- 구독 타입, 구독/해제 메서드, 파서 검증
+
+### 🔧 개선사항
+
+#### PROGRAM_TRADE TR_ID 수정
+- 기존: `H0GSCNT0` (잘못된 값)
+- 수정: `H0STPGM0` (올바른 KRX 프로그램매매 TR_ID)
+
+#### SubscriptionType enum 확장
+- 새로운 타입 추가: `STOCK_EXPECTED`, `INDEX_EXPECTED`, `MEMBER_TRADE`
+- docstring 상세화: 모든 구독 타입에 대한 설명 추가
+
+### 🐛 버그 수정
+
+#### websockets.exceptions import 안정화
+- `websockets.exceptions.ConnectionClosed` 접근 시 일부 환경에서 `AttributeError` 발생하는 문제 수정
+- 명시적 import로 변경: `from websockets.exceptions import ConnectionClosed`
+
+#### 구식 주문 TR ID 업데이트
+`account/api.py`의 구식 TR ID를 신규 TR ID로 업데이트:
+
+| 주문 유형 | 구식 TR | 신규 TR |
+|----------|--------|--------|
+| 현금 매도 | TTTC0801U | TTTC0011U |
+| 현금 매수 | TTTC0802U | TTTC0012U |
+| 정정/취소 | TTTC0803U | TTTC0013U |
+
+---
+
+## [1.3.4] - 2025-12-11
+
+### 🐛 버그 수정
+
+#### 분봉 조회 API 엔드포인트 수정
+
+`price_api.py`의 분봉 조회 메서드들이 잘못된 엔드포인트/TR ID를 사용하던 문제 수정:
+
+| 메서드 | 수정 전 | 수정 후 |
+|--------|---------|---------|
+| `get_minute_price` | TR: `FHKST01010300` | TR: `FHKST03010200` |
+| `get_daily_minute_price` | `INQUIRE_TIME_ITEMCHARTPRICE` | `INQUIRE_TIME_DAILYCHARTPRICE` |
+| `get_daily_minute_price` | TR: `FHKST01010300` | TR: `FHKST03010230` |
+
+**수정 내용:**
+- `get_minute_price()`: 주식당일분봉조회 API로 올바르게 연결
+  - 엔드포인트: `/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice`
+  - TR ID: `FHKST03010200`
+- `get_daily_minute_price()`: 일별분봉시세조회 API로 올바르게 연결
+  - 엔드포인트: `/uapi/domestic-stock/v1/quotations/inquire-time-dailychartprice`
+  - TR ID: `FHKST03010230`
+
+---
+
 ## [1.3.3] - 2025-12-10
 
 ### 🆕 신규 기능
@@ -29,6 +140,21 @@ result = agent.stock.get_index_daily_price("2001", period="M")
 - `2001`: KOSPI200
 
 **TR ID:** FHPUP02120000
+
+### ⚠️ Deprecation
+
+#### 레거시 WebSocket 클라이언트 Deprecated
+- `pykis/websocket/client.py` (KISWebSocketClient) - deprecated
+- `pykis/websocket/enhanced_client.py` (EnhancedKISWebSocketClient) - deprecated
+- **권장**: `WSAgent` 사용 (`pykis/websocket/ws_agent.py`)
+
+```python
+# 기존 (deprecated)
+from pykis.websocket import KISWebSocketClient
+
+# 권장 (신규)
+ws_client = agent.websocket(stock_codes=["005930"])
+```
 
 ---
 
@@ -100,6 +226,52 @@ await receive_task
 
 #### DirectAPIUsageWarning 제거
 - `_from_agent` 플래그 전달로 불필요한 경고 메시지 제거
+
+#### 업종 코드 문서화 및 유틸리티 추가
+- KOSPI/KOSDAQ 전체 업종 코드를 docstring에 추가
+- `pykis/utils/sector_codes.py` - 업종 코드 MST 파일 다운로드/파싱 유틸리티
+
+**KOSPI 업종 코드 (일부):**
+- `0001`: 종합(KOSPI)
+- `0002`: 대형주
+- `0003`: 중형주
+- `0004`: 소형주
+
+**KOSDAQ 업종 코드 (일부):**
+- `1001`: 종합(KOSDAQ)
+- `2001`: 코스닥 대형주
+- `2002`: 코스닥 중형주
+
+### 🐛 버그 수정
+
+#### 주문 API account_api 사용 수정
+- `order_stock_cash()`, `order_stock_credit()` 메서드가 올바르게 `account_api`를 사용하도록 수정
+
+---
+
+### 🤖 MCP 서버 (pykis-mcp-server)
+
+#### FastMCP 프레임워크 마이그레이션
+- 기존 MCP 구현을 FastMCP 프레임워크로 전면 재작성
+- 더 안정적이고 효율적인 서버 구조
+
+#### 58개 MCP 도구 구현
+- PyKIS의 모든 주요 API 엔드포인트를 MCP 도구로 노출
+- 시세 조회, 주문, 계좌 조회, 투자자 동향 등 전 기능 지원
+
+#### 도구 오케스트레이션 시스템
+- `get_tool_registry()` - 사용 가능한 도구 목록 및 관계 조회
+- `plan_query_execution()` - 자연어 쿼리 분석 및 실행 계획 생성
+- `suggest_tool_combination()` - 목표 달성을 위한 도구 조합 제안
+
+#### 4개 복합 분석 도구 추가
+- `analyze_broker_accumulation()` - 특정 증권사 기간별 매집 종목 분석
+- `analyze_foreign_institutional_flow()` - 외국인/기관 동시 순매수 종목 분석
+- `detect_volume_spike()` - 거래량 급등 종목 탐지
+- `find_price_momentum()` - 가격 모멘텀 종목 탐색
+
+#### 분봉 조회 도구 개선
+- `inquire_minute_price()` - 일별분봉시세조회 우선 사용하도록 개선
 
 ---
 
