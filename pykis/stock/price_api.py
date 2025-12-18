@@ -1291,3 +1291,178 @@ class StockPriceAPI(BaseAPI):
                 "fid_input_iscd": input_iscd,
             },
         )
+
+    def get_stock_financial(self, code: str) -> Optional[Dict[str, Any]]:
+        """
+        종목 재무비율 조회 (분기별 재무지표 30개 항목)
+
+        주식의 분기별 재무비율 정보를 조회합니다. 최근 30개 분기 데이터를 반환합니다.
+
+        Args:
+            code: 종목코드 6자리 (예: "005930")
+
+        Returns:
+            Optional[Dict[str, Any]]: 재무비율 데이터
+                - rt_cd: 응답 코드 ("0" = 성공)
+                - msg1: 응답 메시지
+                - output: 분기별 재무비율 리스트 (최근 30개 분기)
+                    - stac_yymm: 결산년월 (YYYYMM)
+                    - grs: 매출총이익률 (%)
+                    - bsop_prfi_inrt: 영업이익률 (%)
+                    - ntin_inrt: 순이익률 (%)
+                    - roe_val: ROE (자기자본이익률, %)
+                    - eps: EPS (주당순이익, 원)
+                    - sps: SPS (주당매출액, 원)
+                    - bps: BPS (주당순자산, 원)
+                    - rsrv_rate: 유보율 (%)
+                    - lblt_rate: 부채비율 (%)
+
+        Example:
+            >>> financial = agent.stock.get_stock_financial("005930")
+            >>> if financial and financial.get('rt_cd') == '0':
+            ...     latest = financial['output'][0]  # 최신 분기
+            ...     print(f"결산년월: {latest['stac_yymm']}")
+            ...     print(f"ROE: {latest['roe_val']}%")
+            ...     print(f"EPS: {latest['eps']}원")
+            ...     print(f"영업이익률: {latest['bsop_prfi_inrt']}%")
+
+        Note:
+            - 분기별 데이터를 배열로 반환 (최신 순)
+            - 정기 공시 기반 데이터 (분기 결산 발표 후 업데이트)
+            - output[0]이 가장 최근 분기 데이터
+        """
+        return self._make_request_dict(
+            endpoint=API_ENDPOINTS["FINANCIAL_RATIO"],
+            tr_id="FHKST66430300",
+            params={
+                "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_INPUT_ISCD": code,
+                "FID_DIV_CLS_CODE": "1",  # 1=분기별 재무비율
+            },
+        )
+
+    def get_stock_basic(self, code: str) -> Optional[Dict[str, Any]]:
+        """
+        종목 기본 정보 조회
+
+        주식의 기본 정보(상장주식수, 시가총액, 액면가 등)를 조회합니다.
+
+        Args:
+            code: 종목코드 6자리 (예: "005930")
+
+        Returns:
+            Optional[Dict[str, Any]]: 기본 정보 데이터
+                - rt_cd: 응답 코드 ("0" = 성공)
+                - msg1: 응답 메시지
+                - output: 기본 정보
+                    - lstg_stqt: 상장 주식수
+                    - stck_prpr: 주식 현재가
+                    - hts_avls: 시가총액
+                    - per: PER
+                    - pbr: PBR
+                    - stac_month: 결산월
+                    - face_value: 액면가
+                    - 기타 기본 정보
+
+        Example:
+            >>> basic = agent.stock.get_stock_basic("005930")
+            >>> if basic and basic.get('rt_cd') == '0':
+            ...     print(f"상장주식수: {basic['output']['lstg_stqt']}")
+            ...     print(f"시가총액: {basic['output']['hts_avls']}")
+
+        Note:
+            - 종목의 메타데이터 성격의 정보 제공
+            - 상장주식수는 정기적으로 업데이트
+        """
+        return self._make_request_dict(
+            endpoint=API_ENDPOINTS["SEARCH_STOCK_INFO"],
+            tr_id="CTPF1002R",
+            params={"PRDT_TYPE_CD": "300", "PDNO": code},
+        )
+
+    def get_stock_member(self, ticker: str, retries: int = 10) -> Optional[Dict]:
+        """
+        주식 회원사(증권사) 정보 조회
+
+        특정 종목의 회원사별 매매 동향을 조회합니다.
+
+        Args:
+            ticker: 종목코드 6자리 (예: "005930")
+            retries: 재시도 횟수 (기본값: 10)
+
+        Returns:
+            Optional[Dict]: 회원사 정보 데이터
+                - rt_cd: 응답 코드 ("0" = 성공)
+                - msg1: 응답 메시지
+                - output: 회원사별 매매 정보 리스트
+                    - mbcr_name: 회원사명
+                    - askp_rsqn: 매도 잔량
+                    - bidp_rsqn: 매수 잔량
+                    - ntby_qty: 순매수 수량
+                    - 기타 회원사 매매 정보
+
+        Example:
+            >>> member = agent.stock.get_stock_member("005930")
+            >>> if member and member.get('rt_cd') == '0':
+            ...     for m in member['output']:
+            ...         print(f"{m['mbcr_name']}: 순매수 {m['ntby_qty']}")
+
+        Note:
+            - API 응답이 불안정할 수 있어 재시도 로직 포함
+            - 실패 시 최대 retries 횟수만큼 재시도
+            - 회원사 데이터는 실시간성 정보
+        """
+        import logging
+
+        for attempt in range(retries):
+            try:
+                response = self._make_request_dict(
+                    endpoint=API_ENDPOINTS["INQUIRE_MEMBER"],
+                    tr_id="FHKST01010600",
+                    params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": ticker},
+                )
+
+                if response and response.get("rt_cd") == "0":
+                    return response
+                elif response and response.get("rt_cd") != "0":
+                    logging.warning(
+                        f"주식 회원사 조회 실패 (시도 {attempt+1}/{retries}): {response.get('msg1', '알 수 없는 오류')}"
+                    )
+                    if attempt < retries - 1:
+                        continue
+                    else:
+                        return response
+                else:
+                    logging.error(f"주식 회원사 조회 응답 없음 (시도 {attempt+1}/{retries})")
+                    if attempt < retries - 1:
+                        continue
+                    else:
+                        return None
+
+            except Exception as e:
+                logging.error(f"주식 회원사 조회 예외 발생 (시도 {attempt+1}/{retries}): {e}")
+                if attempt < retries - 1:
+                    continue
+                else:
+                    return None
+
+        return None
+
+    def get_member(self, ticker: str, retries: int = 10) -> Optional[Dict]:
+        """
+        주식 회원사 정보 조회 (get_stock_member 별칭)
+
+        get_stock_member와 동일한 기능을 제공합니다.
+        하위 호환성을 위해 유지됩니다.
+
+        Args:
+            ticker: 종목코드 6자리 (예: "005930")
+            retries: 재시도 횟수 (기본값: 10)
+
+        Returns:
+            Optional[Dict]: 회원사 정보 데이터
+
+        See Also:
+            get_stock_member: 동일 기능의 메인 메서드
+        """
+        return self.get_stock_member(ticker, retries)

@@ -2,6 +2,49 @@
 
 모든 주목할 만한 변경사항이 이 파일에 문서화됩니다.
 
+## [1.3.6] - 2025-12-18
+
+### 🐛 버그 수정
+
+#### StockPriceAPI에 누락된 재무/기본정보 메서드 추가
+
+신형 facade 구조(`StockPriceAPI`)에서 누락되었던 재무정보 및 기본정보 조회 메서드를 추가했습니다.
+
+**추가된 메서드 (3개):**
+
+1. **`get_stock_financial(code)`** - 분기별 재무비율 조회
+   - 최근 30개 분기 재무지표 반환
+   - ROE, EPS, BPS, 영업이익률, 순이익률, 유보율, 부채비율 등 10개 필드
+   - TR_ID: `FHKST66430300`
+   ```python
+   financial = agent.get_stock_financial("005930")
+   latest = financial['output'][0]  # 최신 분기
+   print(f"ROE: {latest['roe_val']}%, EPS: {latest['eps']}원")
+   ```
+
+2. **`get_stock_basic(code)`** - 종목 기본정보 조회
+   - 상장주식수, 시가총액, 액면가 등 67개 필드
+   - TR_ID: `CTPF1002R`
+   ```python
+   basic = agent.get_stock_basic("005930")
+   print(f"시가총액: {basic['output']['hts_avls']}")
+   ```
+
+3. **`get_stock_member(ticker)`** - 회원사 정보 조회
+   - 증권사별 매매 동향
+   - TR_ID: `FHKST01010600`
+   - `get_member()` 별칭 함께 제공
+   ```python
+   member = agent.get_stock_member("005930")
+   ```
+
+**변경 이유:**
+- legacy `api.py`에만 존재하던 메서드가 신형 facade 구조에서 누락
+- `Agent` → `StockAPI` facade → `StockPriceAPI` delegation 체인에서 `AttributeError` 발생
+- `__getattr__` delegation을 통해 자동으로 모든 메서드 접근 가능
+
+**관련 이슈:** [링크 추가 예정]
+
 ## [1.3.5] - 2025-12-12
 
 ### 🆕 신규 기능
