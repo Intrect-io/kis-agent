@@ -1292,6 +1292,67 @@ class StockPriceAPI(BaseAPI):
             },
         )
 
+    def get_future_orderbook(
+        self, code: str, market_div_code: str = "F"
+    ) -> Optional[Dict[str, Any]]:
+        """
+        선물옵션 호가창 조회 (미결제약정 정보 포함)
+
+        KOSPI200 선물/옵션의 매도/매수 호가 10단계와 미결제약정 정보를 조회합니다.
+        현물/선물 포지션 분석 시 호가 분포와 미결제약정 변화를 분석할 수 있습니다.
+
+        Args:
+            code (str): 선물옵션 종목코드
+                - 지수선물: 6자리 (예: "101W09" - KOSPI200 2025년 9월물)
+                - 주식선물: 6자리 (예: "005930F09")
+                - 옵션: 9자리 (예: "201W09370" - 콜옵션 행사가 370)
+            market_div_code (str, optional): 시장 분류 코드. Defaults to "F".
+                - "F": 지수선물 (KOSPI200 선물)
+                - "JF": 주식선물 (개별종목 선물)
+                - "O": 옵션 (KOSPI200 옵션)
+                - "JO": 주식옵션
+
+        Returns:
+            Optional[Dict[str, Any]]: 선물옵션 호가 데이터
+                - rt_cd: 응답 코드 ("0" = 성공)
+                - msg1: 응답 메시지
+                - output1: 호가 요약 정보 (객체)
+                    - 현재가, 거래량 등 요약 정보
+                    - 미결제약정 관련 필드 (API 응답 구조에 따라 다름)
+                - output2: 호가 상세 정보 (객체)
+                    - 매도호가 1~10단계 (askp1~askp10)
+                    - 매수호가 1~10단계 (bidp1~bidp10)
+                    - 각 호가별 잔량 정보
+                    - 총 매도/매수 호가 잔량
+
+        Example:
+            >>> # KOSPI200 선물 호가창 조회
+            >>> orderbook = agent.stock.get_future_orderbook("101W09", "F")
+            >>> if orderbook and orderbook.get('rt_cd') == '0':
+            ...     output1 = orderbook['output1']
+            ...     output2 = orderbook['output2']
+            ...     print(f"매도1호가: {output2.get('askp1')}")
+            ...     print(f"매수1호가: {output2.get('bidp1')}")
+
+            >>> # 옵션 호가창 조회
+            >>> opt_orderbook = agent.stock.get_future_orderbook("201W09370", "O")
+
+        Note:
+            - TR ID: FHMIF10010000
+            - 실시간 호가 데이터는 WebSocket `subscribe_futures(with_orderbook=True)` 사용
+            - 미결제약정(Open Interest) 데이터는 output1 또는 output2에 포함 가능
+            - 호가 조회는 시장 개장 시간에만 유효한 데이터 제공
+            - 선물 종목코드는 `get_kospi200_futures_code()`로 자동 생성 가능
+        """
+        return self._make_request_dict(
+            endpoint=API_ENDPOINTS["FUTUREOPTION_INQUIRE_ASKING_PRICE"],
+            tr_id="FHMIF10010000",
+            params={
+                "FID_COND_MRKT_DIV_CODE": market_div_code,
+                "FID_INPUT_ISCD": code,
+            },
+        )
+
     def get_stock_financial(self, code: str) -> Optional[Dict[str, Any]]:
         """
         종목 재무비율 조회 (분기별 재무지표 30개 항목)

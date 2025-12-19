@@ -756,6 +756,69 @@ class TestStockPriceAPIAdditionalMethods(unittest.TestCase):
         self.assertEqual(params["fid_cond_mrkt_div_code"], "O")
         self.assertEqual(params["fid_input_iscd"], "201T12370")
 
+    def test_get_future_orderbook_default(self):
+        """선물 호가창 조회 - 기본값 (지수선물)"""
+        expected_response = {
+            "rt_cd": "0",
+            "msg1": "정상처리 되었습니다.",
+            "output1": {
+                "fuop_name": "KOSPI200 F 202509",
+                "futs_prpr": "365.25",
+                "prdy_vrss": "1.50",
+            },
+            "output2": {
+                "askp1": "365.30",
+                "bidp1": "365.20",
+                "askp_rsqn1": "100",
+                "bidp_rsqn1": "150",
+            },
+        }
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.get_future_orderbook("101W09")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_COND_MRKT_DIV_CODE"], "F")
+        self.assertEqual(params["FID_INPUT_ISCD"], "101W09")
+
+    def test_get_future_orderbook_option(self):
+        """선물 호가창 조회 - 옵션"""
+        expected_response = {
+            "rt_cd": "0",
+            "msg1": "정상처리 되었습니다.",
+            "output1": {"fuop_name": "KOSPI200 C 202509 370"},
+            "output2": {"askp1": "5.50", "bidp1": "5.45"},
+        }
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.get_future_orderbook("201W09370", market_div_code="O")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_COND_MRKT_DIV_CODE"], "O")
+        self.assertEqual(params["FID_INPUT_ISCD"], "201W09370")
+
+    def test_get_future_orderbook_stock_futures(self):
+        """선물 호가창 조회 - 주식선물"""
+        expected_response = {
+            "rt_cd": "0",
+            "msg1": "정상처리 되었습니다.",
+            "output1": {"fuop_name": "삼성전자 F 202509"},
+            "output2": {"askp1": "75000", "bidp1": "74900"},
+        }
+        self.mock_client.make_request.return_value = expected_response
+
+        result = self.api.get_future_orderbook("005930F09", market_div_code="JF")
+
+        self.assertEqual(result, expected_response)
+        call_args = self.mock_client.make_request.call_args
+        params = call_args[1]["params"]
+        self.assertEqual(params["FID_COND_MRKT_DIV_CODE"], "JF")
+        self.assertEqual(params["FID_INPUT_ISCD"], "005930F09")
+
 
 if __name__ == "__main__":
     unittest.main()
