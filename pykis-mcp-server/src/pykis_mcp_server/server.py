@@ -72,15 +72,19 @@ def get_agent() -> Agent:
 
 
 # Import tools after server instance is created
-from .tools import (  # noqa: E402
-    stock_tools,
-    account_tools,
-    order_tools,
-    investor_tools,
-    utility_tools,
-    rate_limiter_tools,
-    orchestration_tools,
-)
+# CONSOLIDATED VERSION: Uses 18 high-level tools instead of 100+ individual tools
+from .tools import consolidated_tools  # noqa: F401, E402
+
+# Legacy individual tool modules (commented out, kept for reference)
+# from .tools import (  # noqa: E402
+#     stock_tools,
+#     account_tools,
+#     order_tools,
+#     investor_tools,
+#     utility_tools,
+#     rate_limiter_tools,
+#     orchestration_tools,
+# )
 
 
 def main():
