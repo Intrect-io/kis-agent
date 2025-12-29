@@ -162,4 +162,10 @@ opencode.json
 .env_pykis
 
 # GitHub instructions (development only)
-.github/instructions/ 
+.github/instructions/
+
+# Trash (temporary files for deletion)
+trash/
+
+# Task Master AI
+.taskmaster/ 
