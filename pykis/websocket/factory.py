@@ -37,7 +37,7 @@ from .data_processor import DataProcessor
 from .event_manager import EventManager
 from .message_handlers import MessageHandlerRegistry
 from .refactored_client import RefactoredWebSocketClient
-from .ws_agent import WSAgent, WSAgentWithStore
+from .ws_agent import WSAgentWithStore
 
 logger = logging.getLogger(__name__)
 
