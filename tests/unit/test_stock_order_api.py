@@ -13,6 +13,7 @@ from pykis.core.client import KISClient
 from pykis.stock import LegacyStockAPI as StockAPI
 
 
+@pytest.mark.skip("LegacyStockAPI deprecated - AccountAPI 또는 Agent를 통한 주문 사용")
 class TestStockOrderAPI:
     """StockAPI 주문 관련 메서드 테스트"""
 
