@@ -1,9 +1,9 @@
 """PyKIS MCP Server - Main server implementation"""
-import asyncio
+
 import logging
 from typing import Optional
-from fastmcp import FastMCP
 
+from fastmcp import FastMCP
 from pykis import Agent
 
 from .config import MCPServerConfig
@@ -13,13 +13,15 @@ from .errors import ConfigurationError
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - [%(funcName)s:%(lineno)d] - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger("pykis-mcp-server")
 
 # Set log levels for different components
 logging.getLogger("pykis").setLevel(logging.WARNING)  # Reduce noise from PyKIS library
-logging.getLogger("pykis.core.rate_limiter").setLevel(logging.INFO)  # Important for monitoring
+logging.getLogger("pykis.core.rate_limiter").setLevel(
+    logging.INFO
+)  # Important for monitoring
 
 # Global server and agent instances
 server = FastMCP("pykis-mcp-server")

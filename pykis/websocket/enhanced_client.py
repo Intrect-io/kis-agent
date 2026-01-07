@@ -27,6 +27,7 @@
     ws.add_handler(SubscriptionType.STOCK_TRADE, my_handler)
     await ws.connect()
 """
+
 import json
 import logging
 import os

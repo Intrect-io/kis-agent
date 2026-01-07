@@ -1,7 +1,9 @@
 """Investor & program trading MCP tools"""
+
 from typing import Any, Dict
+
+from ..errors import InvalidParameterError, validate_api_response
 from ..server import get_agent, server
-from ..errors import validate_api_response, InvalidParameterError
 
 
 @server.tool()
@@ -69,7 +71,9 @@ async def get_stock_member(code: str) -> Dict[str, Any]:
 
 
 @server.tool()
-async def get_member_transaction(code: str, start_date: str, end_date: str) -> Dict[str, Any]:
+async def get_member_transaction(
+    code: str, start_date: str, end_date: str
+) -> Dict[str, Any]:
     """증권사 기간별 거래"""
     if not code or len(code) != 6:
         raise InvalidParameterError("code", "종목코드는 6자리여야 합니다")
@@ -99,7 +103,9 @@ async def get_program_trade_daily_summary(code: str, date: str = "") -> Dict[str
 
 
 @server.tool()
-async def get_program_trade_market_daily(start_date: str, end_date: str) -> Dict[str, Any]:
+async def get_program_trade_market_daily(
+    start_date: str, end_date: str
+) -> Dict[str, Any]:
     """시장 프로그램 매매"""
     agent = get_agent()
     result = agent.get_program_trade_market_daily(start_date, end_date)
@@ -224,9 +230,7 @@ async def get_investor_trend_estimate(
 
 
 @server.tool()
-async def get_investor_program_trade_today(
-    market: str = "0"
-) -> Dict[str, Any]:
+async def get_investor_program_trade_today(market: str = "0") -> Dict[str, Any]:
     """당일 투자자 프로그램 매매 조회
 
     Args:
@@ -242,9 +246,7 @@ async def get_investor_program_trade_today(
 
 @server.tool()
 async def analyze_broker_accumulation(
-    broker_name: str,
-    days: int = 7,
-    top_n: int = 10
+    broker_name: str, days: int = 7, top_n: int = 10
 ) -> Dict[str, Any]:
     """특정 증권사의 기간별 매집 종목 분석
 
@@ -283,7 +285,7 @@ async def analyze_broker_accumulation(
         return {
             "success": False,
             "message": "거래량 상위 종목 조회 실패",
-            "error_code": "VOLUME_RANK_FAILED"
+            "error_code": "VOLUME_RANK_FAILED",
         }
 
     # 상위 50개 종목에 대해 증권사별 거래 분석
@@ -311,13 +313,15 @@ async def analyze_broker_accumulation(
                     net_amount = int(member.get("ntby_tr_pbmn", 0))
 
                     if net_buy > 0:  # 순매수인 경우만
-                        accumulation_data.append({
-                            "code": code,
-                            "name": name,
-                            "net_buy_volume": net_buy,
-                            "net_buy_amount": net_amount,
-                            "broker_detail": member_name
-                        })
+                        accumulation_data.append(
+                            {
+                                "code": code,
+                                "name": name,
+                                "net_buy_volume": net_buy,
+                                "net_buy_amount": net_amount,
+                                "broker_detail": member_name,
+                            }
+                        )
                     break
         except Exception:
             continue
@@ -332,14 +336,13 @@ async def analyze_broker_accumulation(
         "days": days,
         "analyzed_stocks": len(stocks),
         "top_accumulated": accumulation_data[:top_n],
-        "analysis_date": datetime.now().isoformat()
+        "analysis_date": datetime.now().isoformat(),
     }
 
 
 @server.tool()
 async def analyze_foreign_institutional_flow(
-    days: int = 5,
-    top_n: int = 20
+    days: int = 5, top_n: int = 20
 ) -> Dict[str, Any]:
     """외국인/기관 동시 순매수 종목 분석
 
@@ -386,7 +389,9 @@ async def analyze_foreign_institutional_flow(
 
         try:
             # 투자자별 매매동향 조회
-            investor_data = agent.get_investor_trade_by_stock_daily(code, start_str, end_str)
+            investor_data = agent.get_investor_trade_by_stock_daily(
+                code, start_str, end_str
+            )
             if not investor_data or investor_data.get("rt_cd") != "0":
                 continue
 
@@ -404,16 +409,20 @@ async def analyze_foreign_institutional_flow(
                 price_data = agent.get_stock_price(code)
                 price_change = 0
                 if price_data and price_data.get("rt_cd") == "0":
-                    price_change = float(price_data.get("output", {}).get("prdy_ctrt", 0))
+                    price_change = float(
+                        price_data.get("output", {}).get("prdy_ctrt", 0)
+                    )
 
-                consensus_data.append({
-                    "code": code,
-                    "name": name,
-                    "foreign_net_buy": foreign_net,
-                    "institution_net_buy": institution_net,
-                    "total_net_buy": foreign_net + institution_net,
-                    "price_change": price_change
-                })
+                consensus_data.append(
+                    {
+                        "code": code,
+                        "name": name,
+                        "foreign_net_buy": foreign_net,
+                        "institution_net_buy": institution_net,
+                        "total_net_buy": foreign_net + institution_net,
+                        "price_change": price_change,
+                    }
+                )
         except Exception:
             continue
 
@@ -426,14 +435,13 @@ async def analyze_foreign_institutional_flow(
         "days": days,
         "analyzed_stocks": len(stocks),
         "consensus_buys": consensus_data[:top_n],
-        "analysis_date": datetime.now().isoformat()
+        "analysis_date": datetime.now().isoformat(),
     }
 
 
 @server.tool()
 async def detect_volume_spike(
-    threshold: float = 3.0,
-    top_n: int = 20
+    threshold: float = 3.0, top_n: int = 20
 ) -> Dict[str, Any]:
     """거래량 급등 종목 탐지
 
@@ -493,14 +501,16 @@ async def detect_volume_spike(
             if volume_ratio >= threshold:
                 price_change = float(stock.get("prdy_ctrt", 0))
 
-                spike_data.append({
-                    "code": code,
-                    "name": name,
-                    "current_volume": current_volume,
-                    "avg_volume": int(avg_volume),
-                    "volume_ratio": round(volume_ratio, 2),
-                    "price_change": price_change
-                })
+                spike_data.append(
+                    {
+                        "code": code,
+                        "name": name,
+                        "current_volume": current_volume,
+                        "avg_volume": int(avg_volume),
+                        "volume_ratio": round(volume_ratio, 2),
+                        "price_change": price_change,
+                    }
+                )
         except Exception:
             continue
 
@@ -512,15 +522,13 @@ async def detect_volume_spike(
         "threshold": threshold,
         "analyzed_stocks": len(stocks),
         "volume_spikes": spike_data[:top_n],
-        "analysis_date": __import__("datetime").datetime.now().isoformat()
+        "analysis_date": __import__("datetime").datetime.now().isoformat(),
     }
 
 
 @server.tool()
 async def find_price_momentum(
-    period: int = 5,
-    min_change: float = 5.0,
-    top_n: int = 20
+    period: int = 5, min_change: float = 5.0, top_n: int = 20
 ) -> Dict[str, Any]:
     """가격 모멘텀 종목 탐색
 
@@ -577,19 +585,27 @@ async def find_price_momentum(
             if candles:
                 start_price = float(candles[-1].get("stck_oprc", 0))
                 end_price = float(candles[0].get("stck_clpr", 0))
-                period_return = ((end_price - start_price) / start_price * 100) if start_price > 0 else 0
+                period_return = (
+                    ((end_price - start_price) / start_price * 100)
+                    if start_price > 0
+                    else 0
+                )
             else:
                 period_return = 0
 
             if period_return >= min_change and up_days >= period * 0.6:
-                momentum_data.append({
-                    "code": code,
-                    "name": name,
-                    "period_return": round(period_return, 2),
-                    "up_days": up_days,
-                    "total_days": period,
-                    "current_price": int(candles[0].get("stck_clpr", 0)) if candles else 0
-                })
+                momentum_data.append(
+                    {
+                        "code": code,
+                        "name": name,
+                        "period_return": round(period_return, 2),
+                        "up_days": up_days,
+                        "total_days": period,
+                        "current_price": (
+                            int(candles[0].get("stck_clpr", 0)) if candles else 0
+                        ),
+                    }
+                )
         except Exception:
             continue
 
@@ -602,7 +618,7 @@ async def find_price_momentum(
         "min_change": min_change,
         "analyzed_stocks": len(stocks),
         "momentum_stocks": momentum_data[:top_n],
-        "analysis_date": __import__("datetime").datetime.now().isoformat()
+        "analysis_date": __import__("datetime").datetime.now().isoformat(),
     }
 
 
@@ -664,14 +680,18 @@ async def analyze_market_breadth() -> Dict[str, Any]:
             "advancing": advancing,
             "declining": declining,
             "unchanged": unchanged,
-            "total": total
+            "total": total,
         },
         "advance_ratio": round(advance_ratio, 2),
         "volume_leaders": {
             "advancing": volume_advancing,
             "declining": volume_declining,
-            "ratio": round(volume_advancing / 50 * 100, 2) if volume_advancing + volume_declining > 0 else 0
+            "ratio": (
+                round(volume_advancing / 50 * 100, 2)
+                if volume_advancing + volume_declining > 0
+                else 0
+            ),
         },
         "market_sentiment": sentiment,
-        "analysis_date": __import__("datetime").datetime.now().isoformat()
+        "analysis_date": __import__("datetime").datetime.now().isoformat(),
     }

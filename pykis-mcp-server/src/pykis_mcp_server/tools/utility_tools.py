@@ -409,12 +409,14 @@ async def show_method_usage(method_name: str) -> Dict[str, Any]:
 
         param_info = {
             "name": param_name,
-            "type": str(param.annotation)
-            if param.annotation != inspect.Parameter.empty
-            else "Any",
-            "default": str(param.default)
-            if param.default != inspect.Parameter.empty
-            else None,
+            "type": (
+                str(param.annotation)
+                if param.annotation != inspect.Parameter.empty
+                else "Any"
+            ),
+            "default": (
+                str(param.default) if param.default != inspect.Parameter.empty else None
+            ),
             "required": param.default == inspect.Parameter.empty,
         }
         params.append(param_info)
@@ -425,7 +427,9 @@ async def show_method_usage(method_name: str) -> Dict[str, Any]:
         "signature": f"{method_name}{sig}",
         "parameters": params,
         "documentation": doc,
-        "return_type": str(sig.return_annotation)
-        if sig.return_annotation != inspect.Signature.empty
-        else "Any",
+        "return_type": (
+            str(sig.return_annotation)
+            if sig.return_annotation != inspect.Signature.empty
+            else "Any"
+        ),
     }

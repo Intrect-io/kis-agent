@@ -3,14 +3,14 @@
 실제 MCP 서버 환경에서 통합 도구의 기능을 검증합니다.
 AsyncMock을 사용하여 Agent 응답을 모킹합니다.
 """
-import pytest
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
-import sys
+
 import os
-import asyncio
+import sys
+
+import pytest
 
 # Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
 class TestServerToolRegistration:
@@ -23,11 +23,24 @@ class TestServerToolRegistration:
         tools = server._tool_manager._tools
 
         consolidated_names = [
-            'stock_quote', 'stock_chart', 'index_data', 'market_ranking',
-            'investor_flow', 'broker_trading', 'program_trading', 'account_query',
-            'order_execute', 'order_manage', 'stock_info', 'overtime_trading',
-            'derivatives', 'interest_stocks', 'utility', 'data_management',
-            'rate_limiter', 'method_discovery'
+            "stock_quote",
+            "stock_chart",
+            "index_data",
+            "market_ranking",
+            "investor_flow",
+            "broker_trading",
+            "program_trading",
+            "account_query",
+            "order_execute",
+            "order_manage",
+            "stock_info",
+            "overtime_trading",
+            "derivatives",
+            "interest_stocks",
+            "utility",
+            "data_management",
+            "rate_limiter",
+            "method_discovery",
         ]
 
         for name in consolidated_names:
@@ -52,16 +65,23 @@ class TestServerToolRegistration:
 
         # query_type 파라미터가 있는 도구들
         query_type_tools = [
-            'stock_quote', 'stock_chart', 'index_data', 'market_ranking',
-            'investor_flow', 'broker_trading', 'program_trading', 'account_query'
+            "stock_quote",
+            "stock_chart",
+            "index_data",
+            "market_ranking",
+            "investor_flow",
+            "broker_trading",
+            "program_trading",
+            "account_query",
         ]
 
         for name in query_type_tools:
             tool = tools[name]
             desc = tool.description
             # 설명에 query_type 또는 조회 유형이 포함되어 있어야 함
-            assert 'query_type' in desc or '조회 유형' in desc or '유형' in desc, \
-                f"Tool {name} missing query_type in description"
+            assert (
+                "query_type" in desc or "조회 유형" in desc or "유형" in desc
+            ), f"Tool {name} missing query_type in description"
 
 
 class TestConsolidatedToolParameters:
@@ -71,36 +91,36 @@ class TestConsolidatedToolParameters:
         """stock_quote 파라미터 확인"""
         from pykis_mcp_server.server import server
 
-        tool = server._tool_manager._tools['stock_quote']
+        tool = server._tool_manager._tools["stock_quote"]
         params = tool.parameters
 
-        assert 'code' in params['properties']
-        assert 'query_type' in params['properties']
-        assert 'market' in params['properties']
-        assert 'hour' in params['properties']
+        assert "code" in params["properties"]
+        assert "query_type" in params["properties"]
+        assert "market" in params["properties"]
+        assert "hour" in params["properties"]
 
     def test_stock_chart_parameters(self):
         """stock_chart 파라미터 확인"""
         from pykis_mcp_server.server import server
 
-        tool = server._tool_manager._tools['stock_chart']
+        tool = server._tool_manager._tools["stock_chart"]
         params = tool.parameters
 
-        assert 'code' in params['properties']
-        assert 'timeframe' in params['properties']
-        assert 'date' in params['properties']
+        assert "code" in params["properties"]
+        assert "timeframe" in params["properties"]
+        assert "date" in params["properties"]
 
     def test_order_execute_parameters(self):
         """order_execute 파라미터 확인"""
         from pykis_mcp_server.server import server
 
-        tool = server._tool_manager._tools['order_execute']
+        tool = server._tool_manager._tools["order_execute"]
         params = tool.parameters
 
-        assert 'code' in params['properties']
-        assert 'action' in params['properties']
-        assert 'quantity' in params['properties']
-        assert 'price' in params['properties']
+        assert "code" in params["properties"]
+        assert "action" in params["properties"]
+        assert "quantity" in params["properties"]
+        assert "price" in params["properties"]
 
 
 class TestValidationLogic:
@@ -108,7 +128,6 @@ class TestValidationLogic:
 
     def test_code_validation_rules(self):
         """종목코드 검증 규칙"""
-        from pykis_mcp_server.errors import InvalidParameterError
 
         # 정상 케이스
         valid_codes = ["005930", "035720", "000660"]
@@ -125,7 +144,14 @@ class TestValidationLogic:
 
     def test_query_type_validation(self):
         """query_type 검증 규칙"""
-        valid_stock_quote_types = ["price", "detail", "detail2", "orderbook", "execution", "time_execution"]
+        valid_stock_quote_types = [
+            "price",
+            "detail",
+            "detail2",
+            "orderbook",
+            "execution",
+            "time_execution",
+        ]
         valid_stock_chart_types = ["minute", "daily", "daily_30", "weekly", "monthly"]
 
         assert "invalid" not in valid_stock_quote_types
@@ -144,10 +170,10 @@ class TestBackwardCompatibility:
 
         # 주요 기존 도구들
         legacy_tools = [
-            'get_stock_price',
-            'get_account_balance',
-            'get_volume_rank',
-            'get_stock_investor',
+            "get_stock_price",
+            "get_account_balance",
+            "get_volume_rank",
+            "get_stock_investor",
         ]
 
         for name in legacy_tools:
@@ -160,10 +186,10 @@ class TestBackwardCompatibility:
         tools = server._tool_manager._tools
 
         # 통합 도구
-        assert 'stock_quote' in tools
+        assert "stock_quote" in tools
 
         # 기존 도구 (하위 호환성)
-        assert 'get_stock_price' in tools
+        assert "get_stock_price" in tools
 
 
 class TestToolCategorization:
@@ -171,9 +197,10 @@ class TestToolCategorization:
 
     def test_price_related_tools(self):
         """시세 관련 도구 분류"""
-        price_tools = ['stock_quote', 'stock_chart', 'index_data']
+        price_tools = ["stock_quote", "stock_chart", "index_data"]
 
         from pykis_mcp_server.server import server
+
         tools = server._tool_manager._tools
 
         for name in price_tools:
@@ -181,9 +208,10 @@ class TestToolCategorization:
 
     def test_trading_related_tools(self):
         """거래 관련 도구 분류"""
-        trading_tools = ['order_execute', 'order_manage']
+        trading_tools = ["order_execute", "order_manage"]
 
         from pykis_mcp_server.server import server
+
         tools = server._tool_manager._tools
 
         for name in trading_tools:
@@ -191,9 +219,15 @@ class TestToolCategorization:
 
     def test_analytics_related_tools(self):
         """분석 관련 도구 분류"""
-        analytics_tools = ['investor_flow', 'broker_trading', 'program_trading', 'market_ranking']
+        analytics_tools = [
+            "investor_flow",
+            "broker_trading",
+            "program_trading",
+            "market_ranking",
+        ]
 
         from pykis_mcp_server.server import server
+
         tools = server._tool_manager._tools
 
         for name in analytics_tools:
@@ -201,9 +235,10 @@ class TestToolCategorization:
 
     def test_account_related_tools(self):
         """계좌 관련 도구 분류"""
-        account_tools = ['account_query']
+        account_tools = ["account_query"]
 
         from pykis_mcp_server.server import server
+
         tools = server._tool_manager._tools
 
         for name in account_tools:
@@ -216,14 +251,26 @@ class TestToolFunctionSignatures:
     def test_all_tools_are_async(self):
         """모든 통합 도구가 async 함수인지 확인"""
         from pykis_mcp_server.tools import consolidated_tools
-        import asyncio
 
         tools_to_check = [
-            'stock_quote', 'stock_chart', 'index_data', 'market_ranking',
-            'investor_flow', 'broker_trading', 'program_trading', 'account_query',
-            'order_execute', 'order_manage', 'stock_info', 'overtime_trading',
-            'derivatives', 'interest_stocks', 'utility', 'data_management',
-            'rate_limiter', 'method_discovery'
+            "stock_quote",
+            "stock_chart",
+            "index_data",
+            "market_ranking",
+            "investor_flow",
+            "broker_trading",
+            "program_trading",
+            "account_query",
+            "order_execute",
+            "order_manage",
+            "stock_info",
+            "overtime_trading",
+            "derivatives",
+            "interest_stocks",
+            "utility",
+            "data_management",
+            "rate_limiter",
+            "method_discovery",
         ]
 
         # 모든 도구가 모듈에 존재하는지 확인
@@ -245,22 +292,22 @@ class TestConsolidationMetrics:
     def test_category_coverage(self):
         """카테고리 커버리지 확인"""
         categories = {
-            'price': ['stock_quote', 'stock_chart'],
-            'index': ['index_data'],
-            'ranking': ['market_ranking'],
-            'investor': ['investor_flow'],
-            'broker': ['broker_trading'],
-            'program': ['program_trading'],
-            'account': ['account_query'],
-            'order': ['order_execute', 'order_manage'],
-            'info': ['stock_info'],
-            'overtime': ['overtime_trading'],
-            'derivatives': ['derivatives'],
-            'interest': ['interest_stocks'],
-            'utility': ['utility'],
-            'data': ['data_management'],
-            'rate_limiter': ['rate_limiter'],
-            'discovery': ['method_discovery'],
+            "price": ["stock_quote", "stock_chart"],
+            "index": ["index_data"],
+            "ranking": ["market_ranking"],
+            "investor": ["investor_flow"],
+            "broker": ["broker_trading"],
+            "program": ["program_trading"],
+            "account": ["account_query"],
+            "order": ["order_execute", "order_manage"],
+            "info": ["stock_info"],
+            "overtime": ["overtime_trading"],
+            "derivatives": ["derivatives"],
+            "interest": ["interest_stocks"],
+            "utility": ["utility"],
+            "data": ["data_management"],
+            "rate_limiter": ["rate_limiter"],
+            "discovery": ["method_discovery"],
         }
 
         total_tools = sum(len(tools) for tools in categories.values())
@@ -275,11 +322,24 @@ class TestDocumentationQuality:
         from pykis_mcp_server.server import server
 
         consolidated_names = [
-            'stock_quote', 'stock_chart', 'index_data', 'market_ranking',
-            'investor_flow', 'broker_trading', 'program_trading', 'account_query',
-            'order_execute', 'order_manage', 'stock_info', 'overtime_trading',
-            'derivatives', 'interest_stocks', 'utility', 'data_management',
-            'rate_limiter', 'method_discovery'
+            "stock_quote",
+            "stock_chart",
+            "index_data",
+            "market_ranking",
+            "investor_flow",
+            "broker_trading",
+            "program_trading",
+            "account_query",
+            "order_execute",
+            "order_manage",
+            "stock_info",
+            "overtime_trading",
+            "derivatives",
+            "interest_stocks",
+            "utility",
+            "data_management",
+            "rate_limiter",
+            "method_discovery",
         ]
 
         tools = server._tool_manager._tools
@@ -296,13 +356,13 @@ class TestDocumentationQuality:
         tools = server._tool_manager._tools
 
         # 샘플 도구들의 설명 확인
-        sample_tools = ['stock_quote', 'account_query', 'order_execute']
+        sample_tools = ["stock_quote", "account_query", "order_execute"]
 
         for name in sample_tools:
             tool = tools[name]
             desc = tool.description
             # 한글 포함 여부 확인
-            has_korean = any('\uac00' <= char <= '\ud7a3' for char in desc)
+            has_korean = any("\uac00" <= char <= "\ud7a3" for char in desc)
             assert has_korean, f"Tool {name} description not in Korean"
 
 

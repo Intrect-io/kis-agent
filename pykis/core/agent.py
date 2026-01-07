@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from ..account.api import AccountAPI
+from ..overseas import OverseasStockAPI
 from ..program.trade import ProgramTradeAPI
 from ..stock import (
     StockAPI,  # [변경 이유] 레거시가 아닌 패키지 파사드 StockAPI 사용으로 중복/충돌 제거
@@ -272,6 +273,39 @@ class Agent(TechnicalAnalysisMixin, MethodDiscoveryMixin, BaseExceptionHandler):
         self.interest_api = InterestStockAPI(
             self.client, self.account_info, _from_agent=True
         )
+        self.overseas_api = OverseasStockAPI(
+            self.client, self.account_info, _from_agent=True
+        )
+
+    @property
+    def overseas(self) -> OverseasStockAPI:
+        """
+        해외주식 API 파사드
+
+        해외주식 거래에 필요한 모든 API를 통합된 인터페이스로 제공합니다.
+
+        지원 거래소:
+        - 미국: NAS (NASDAQ), NYS (NYSE), AMS (AMEX)
+        - 아시아: HKS (홍콩), TSE (도쿄), SHS (상해), SZS (심천), HSX (호치민), HNX (하노이)
+
+        Returns:
+            OverseasStockAPI: 해외주식 API 파사드
+
+        Example:
+            >>> from pykis import Agent
+            >>> agent = Agent(...)
+            >>>
+            >>> # 시세 조회
+            >>> price = agent.overseas.get_price(excd="NAS", symb="AAPL")
+            >>> print(f"AAPL: ${price['output']['last']}")
+            >>>
+            >>> # 일봉 조회
+            >>> daily = agent.overseas.get_daily_price(excd="NAS", symb="TSLA")
+            >>>
+            >>> # 호가 조회
+            >>> orderbook = agent.overseas.get_orderbook(excd="NYS", symb="MSFT")
+        """
+        return self.overseas_api
 
     def websocket(
         self,

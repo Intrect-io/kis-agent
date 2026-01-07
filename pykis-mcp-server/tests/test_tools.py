@@ -1,6 +1,6 @@
 """Tests for MCP tools"""
+
 import pytest
-from unittest.mock import Mock, patch
 
 
 class TestErrorHandling:
@@ -29,24 +29,16 @@ class TestErrorHandling:
         """Test validate_api_response with successful response"""
         from pykis_mcp_server.errors import validate_api_response
 
-        result = {
-            "rt_cd": "0",
-            "msg1": "Success",
-            "output": {"data": "test"}
-        }
+        result = {"rt_cd": "0", "msg1": "Success", "output": {"data": "test"}}
 
         validated = validate_api_response(result, "Test operation")
         assert validated == result
 
     def test_validate_api_response_failure(self):
         """Test validate_api_response with failed response"""
-        from pykis_mcp_server.errors import validate_api_response, APIError
+        from pykis_mcp_server.errors import APIError, validate_api_response
 
-        result = {
-            "rt_cd": "40",
-            "msg1": "Invalid request",
-            "msg_cd": "EGW00001"
-        }
+        result = {"rt_cd": "40", "msg1": "Invalid request", "msg_cd": "EGW00001"}
 
         with pytest.raises(APIError) as exc_info:
             validate_api_response(result, "Test operation")
@@ -55,7 +47,7 @@ class TestErrorHandling:
 
     def test_validate_api_response_none(self):
         """Test validate_api_response with None response"""
-        from pykis_mcp_server.errors import validate_api_response, APIError
+        from pykis_mcp_server.errors import APIError, validate_api_response
 
         with pytest.raises(APIError) as exc_info:
             validate_api_response(None, "Test operation")
@@ -109,12 +101,12 @@ class TestToolRegistration:
         """Test that all tool modules are imported"""
         from pykis_mcp_server import tools
 
-        assert hasattr(tools, 'stock_tools')
-        assert hasattr(tools, 'account_tools')
-        assert hasattr(tools, 'order_tools')
-        assert hasattr(tools, 'investor_tools')
-        assert hasattr(tools, 'utility_tools')
-        assert hasattr(tools, 'rate_limiter_tools')
+        assert hasattr(tools, "stock_tools")
+        assert hasattr(tools, "account_tools")
+        assert hasattr(tools, "order_tools")
+        assert hasattr(tools, "investor_tools")
+        assert hasattr(tools, "utility_tools")
+        assert hasattr(tools, "rate_limiter_tools")
 
     def test_server_has_tools_registered(self):
         """Test that server has tools registered"""
@@ -122,7 +114,7 @@ class TestToolRegistration:
 
         # Server should have tools registered
         assert server is not None
-        assert hasattr(server, '_request_handlers')
+        assert hasattr(server, "_request_handlers")
 
 
 class TestRetryableErrors:
@@ -148,8 +140,9 @@ class TestErrorCodeMappings:
 
     def test_get_error_code(self):
         """Test error code mapping"""
-        from pykis_mcp_server.errors import get_error_code
         from mcp.types import ErrorCode
+
+        from pykis_mcp_server.errors import get_error_code
 
         # Success should return no error
         assert get_error_code("0") is None
