@@ -129,31 +129,22 @@ class StockPriceAPI(BaseAPI):
         )
 
     def get_minute_price(self, code: str, hour: str = "153000") -> Optional[Dict]:
-        """분봉 시세 조회 (rt_cd 메타데이터가 포함된)"""
-        return self._make_request_dict(
-            endpoint=API_ENDPOINTS["INQUIRE_TIME_ITEMCHARTPRICE"],
-            tr_id="FHKST01010300",
-            params={
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_ISCD": code,
-                "FID_INPUT_HOUR_1": hour,
-            },
-        )
+        """[DEPRECATED] 당일 분봉은 get_intraday_price(code), 특정일은 get_daily_minute_price(code, date) 사용"""
+        import warnings
 
-    def get_daily_minute_price(
+        warnings.warn(
+            "get_minute_price()는 deprecated 되었습니다. "
+            "당일 분봉은 get_intraday_price(code), "
+            "특정일 분봉은 get_daily_minute_price(code, date)를 사용하세요.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_intraday_price(code)
+
+    def _fetch_minute_price_page(
         self, code: str, date: str, hour: str = "153000"
     ) -> Optional[Dict]:
-        """
-        일별분봉시세조회 - 과거일자 분봉 데이터 조회 (rt_cd 메타데이터 포함)
-
-        Args:
-            code: 종목코드 (6자리)
-            date: 조회일자 (YYYYMMDD)
-            hour: 조회 시간 (HHMMSS, 기본값: 153000)
-
-        Returns:
-            분봉 시세 데이터 (output1: 종목정보, output2: 분봉 리스트)
-        """
+        """[Private] 분봉 단일 페이지 조회 (최대 120건). 외부에서는 get_daily_minute_price() 사용."""
         return self._make_request_dict(
             endpoint=API_ENDPOINTS["INQUIRE_TIME_DAILYCHARTPRICE"],
             tr_id="FHKST03010230",
@@ -167,6 +158,54 @@ class StockPriceAPI(BaseAPI):
                 "FID_FAKE_TICK_INCU_YN": "",
             },
         )
+
+    def get_daily_minute_price(self, code: str, date: str) -> Optional[Dict]:
+        """특정일 전체 분봉시세조회. output2에 ~390건 분봉 (내부 4회 API 호출, 중복제거)."""
+        import logging
+
+        # 4번 호출할 시간 기준점 (HHMMSS)
+        time_points = ["090000", "110000", "130000", "153000"]
+
+        all_minute_data = []
+        output1_data = None
+
+        for hour in time_points:
+            try:
+                result = self._fetch_minute_price_page(code, date, hour)
+
+                if result and result.get("rt_cd") == "0":
+                    if output1_data is None:
+                        output1_data = result.get("output1", {})
+
+                    minute_data = result.get("output2", [])
+                    if minute_data:
+                        all_minute_data.extend(minute_data)
+
+            except Exception as e:
+                logging.warning(f"분봉 조회 중 오류 ({date} {hour}): {e}")
+                continue
+
+        # 시간 역순 정렬 (최신이 앞)
+        all_minute_data.sort(
+            key=lambda x: x.get("stck_cntg_hour", "000000"), reverse=True
+        )
+
+        # 중복 제거
+        seen_hours = set()
+        unique_data = []
+        for item in all_minute_data:
+            hour_key = item.get("stck_cntg_hour", "")
+            if hour_key not in seen_hours:
+                seen_hours.add(hour_key)
+                unique_data.append(item)
+
+        return {
+            "output1": output1_data or {},
+            "output2": unique_data,
+            "rt_cd": "0",
+            "msg_cd": "MCA00000",
+            "msg1": f"분봉 데이터 수집 완료 ({date}, 총 {len(unique_data)}건)",
+        }
 
     def inquire_time_itemconclusion(
         self, code: str, hour: str = "153000", market: str = "J"
@@ -1018,70 +1057,12 @@ class StockPriceAPI(BaseAPI):
         """
         return self.inquire_ccnl(code, market="J")
 
-    def get_intraday_price(self, code: str, date: str) -> Optional[Dict]:
-        """
-        하루 전체 분봉시세조회 - 4번 호출로 하루 전체 분봉 데이터 수집
+    def get_intraday_price(self, code: str) -> Optional[Dict]:
+        """당일 전체 분봉시세조회. get_daily_minute_price(code, today) wrapper."""
+        from datetime import datetime
 
-        Args:
-            code (str): 종목코드 (6자리)
-            date (str): 조회 날짜 (YYYYMMDD 형식)
-
-        Returns:
-            Optional[Dict]: 하루 전체 분봉시세 데이터
-
-        Note:
-            - 9시부터 15시30분까지 전체 분봉 데이터 수집
-            - 4번의 API 호출로 최대 480건 분봉 수집
-            - 시간 순서로 정렬되어 반환
-        """
-        import logging
-
-        # 4번 호출할 시간 기준점 설정 (HHMMSS 형식)
-        time_points = ["090000", "110000", "130000", "153000"]
-
-        all_minute_data = []
-        output1_data = None
-
-        for hour in time_points:
-            try:
-                result = self.get_daily_minute_price(code, date, hour)
-
-                if result and result.get("rt_cd") == "0":
-                    # 첫 번째 호출에서 output1 데이터 저장
-                    if output1_data is None:
-                        output1_data = result.get("output1", {})
-
-                    # output2의 분봉 데이터 수집
-                    minute_data = result.get("output2", [])
-                    if minute_data:
-                        all_minute_data.extend(minute_data)
-
-            except Exception as e:
-                logging.warning(f"시간 {hour} 분봉 조회 중 오류 발생: {e}")
-                continue
-
-        # 시간 순서로 정렬 (최신 시간이 앞에 오도록)
-        all_minute_data.sort(
-            key=lambda x: x.get("stck_cntg_hour", "000000"), reverse=True
-        )
-
-        # 중복 제거 (같은 시간의 분봉이 있을 경우)
-        seen_hours = set()
-        unique_minute_data = []
-        for data in all_minute_data:
-            hour_key = data.get("stck_cntg_hour", "")
-            if hour_key not in seen_hours:
-                seen_hours.add(hour_key)
-                unique_minute_data.append(data)
-
-        # 최종 결과 반환
-        return {
-            "output1": output1_data or {},
-            "output2": unique_minute_data,
-            "rt_cd": "0",
-            "msg_cd": "MCA00000",
-            "msg1": f"하루 전체 분봉 데이터 수집 완료 (총 {len(unique_minute_data)}건)",
-        }
+        today = datetime.now().strftime("%Y%m%d")
+        return self.get_daily_minute_price(code, today)
 
     def get_index_timeprice(
         self,

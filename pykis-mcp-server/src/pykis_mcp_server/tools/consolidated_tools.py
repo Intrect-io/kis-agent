@@ -93,7 +93,7 @@ async def stock_chart(
     Args:
         code: 종목코드 6자리
         timeframe: 차트 유형
-            - minute: 분봉 데이터 (date가 있으면 특정일, 없으면 당일)
+            - minute: 분봉 데이터 (date가 있으면 특정일, 없으면 당일) - 하루 전체 분봉
             - daily: 일봉 데이터
             - daily_30: 최근 30일 일봉
             - weekly: 주봉 데이터
@@ -102,7 +102,7 @@ async def stock_chart(
         period: 기간구분 (D=일, W=주, M=월)
         start_date: 시작일자 (YYYYMMDD)
         end_date: 종료일자 (YYYYMMDD)
-        hour: 시각 (HHMMSS, 분봉 조회 시)
+        hour: [미사용] 분봉은 내부 페이지네이션으로 하루 전체 조회
 
     Returns:
         Dict: 차트 데이터 (timeframe에 따라 다름)
@@ -118,11 +118,11 @@ async def stock_chart(
 
     if timeframe == "minute":
         if date:
-            # 특정일 분봉
-            result = agent.get_daily_minute_price(code, date, hour)
+            # 특정일 전체 분봉 (내부 페이지네이션)
+            result = agent.get_daily_minute_price(code, date)
             return validate_api_response(result, f"분봉 조회 ({date})")
         else:
-            # 당일 분봉
+            # 당일 전체 분봉
             result = agent.get_intraday_price(code)
             return validate_api_response(result, "당일 분봉 조회")
     elif timeframe == "daily":

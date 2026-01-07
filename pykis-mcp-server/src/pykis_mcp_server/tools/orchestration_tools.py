@@ -1,4 +1,5 @@
 """Tool orchestration and planning for meta-queries"""
+
 from typing import Any, Dict, List
 
 from ..server import server
@@ -11,140 +12,135 @@ TOOL_REGISTRY = {
         "description": "상승률 상위 종목 조회",
         "outputs": ["stock_codes", "stock_names", "change_rates"],
         "inputs": [],
-        "use_case": "어떤 종목이 오늘 많이 올랐는지"
+        "use_case": "어떤 종목이 오늘 많이 올랐는지",
     },
     "get_volume_rank": {
         "category": "market_scan",
         "description": "거래량 상위 종목 조회",
         "outputs": ["stock_codes", "stock_names", "volumes"],
         "inputs": [],
-        "use_case": "거래량이 많은 종목이 뭔지"
+        "use_case": "거래량이 많은 종목이 뭔지",
     },
     "get_market_fluctuation": {
         "category": "market_scan",
         "description": "시장 등락 현황",
         "outputs": ["advancing_count", "declining_count", "market_status"],
         "inputs": [],
-        "use_case": "오늘 시장 상황이 어떤지"
+        "use_case": "오늘 시장 상황이 어떤지",
     },
-
     # === 개별 종목 분석 ===
     "get_stock_price": {
         "category": "stock_analysis",
         "description": "종목 현재가 조회",
         "outputs": ["price", "change_rate", "volume"],
         "inputs": ["stock_code"],
-        "use_case": "특정 종목의 현재가"
+        "use_case": "특정 종목의 현재가",
     },
     "get_stock_investor": {
         "category": "investor_flow",
         "description": "종목별 투자자 매매동향",
         "outputs": ["foreign_net", "institution_net", "individual_net"],
         "inputs": ["stock_code"],
-        "use_case": "특정 종목의 투자자별 매매현황"
+        "use_case": "특정 종목의 투자자별 매매현황",
     },
     "get_stock_member": {
         "category": "broker_analysis",
         "description": "종목별 증권사 매매동향",
         "outputs": ["broker_trades", "broker_names", "net_buy_amounts"],
         "inputs": ["stock_code"],
-        "use_case": "특정 종목을 어떤 증권사가 매매했는지"
+        "use_case": "특정 종목을 어떤 증권사가 매매했는지",
     },
     "get_member_transaction": {
         "category": "broker_analysis",
         "description": "증권사별 기간 거래 내역",
         "outputs": ["broker_period_trades"],
         "inputs": ["stock_code", "start_date", "end_date"],
-        "use_case": "특정 기간 동안 증권사별 거래"
+        "use_case": "특정 기간 동안 증권사별 거래",
     },
-
     # === 투자자 흐름 분석 ===
     "get_investor_trade_by_stock_daily": {
         "category": "investor_flow",
         "description": "종목별 투자자 일별 매매동향",
         "outputs": ["daily_foreign_net", "daily_institution_net"],
         "inputs": ["stock_code", "start_date", "end_date"],
-        "use_case": "특정 기간 외국인/기관 매매"
+        "use_case": "특정 기간 외국인/기관 매매",
     },
     "get_frgnmem_pchs_trend": {
         "category": "investor_flow",
         "description": "외국인 매수 추세",
         "outputs": ["foreign_buy_trend"],
         "inputs": ["stock_code"],
-        "use_case": "외국인이 매수하고 있는지"
+        "use_case": "외국인이 매수하고 있는지",
     },
-
     # === 프로그램 매매 ===
     "get_program_trade_by_stock": {
         "category": "program_trading",
         "description": "종목별 프로그램 매매",
         "outputs": ["program_buy", "program_sell", "program_net"],
         "inputs": ["stock_code"],
-        "use_case": "프로그램 매매 현황"
+        "use_case": "프로그램 매매 현황",
     },
-
     # === 가격 데이터 ===
     "inquire_daily_price": {
         "category": "price_data",
         "description": "일봉 데이터",
         "outputs": ["daily_prices", "daily_volumes"],
         "inputs": ["stock_code"],
-        "use_case": "일별 가격 데이터"
+        "use_case": "일별 가격 데이터",
     },
     "inquire_minute_price": {
         "category": "price_data",
-        "description": "분봉시세조회 (일별분봉 우선)",
+        "description": "분봉시세조회 (일별분봉 - 하루 전체)",
         "outputs": ["minute_prices", "minute_volumes"],
-        "inputs": ["stock_code"],
+        "inputs": ["stock_code", "date"],
         "use_case": "분봉 데이터, 분별 가격 데이터, 분봉시세조회",
         "priority": 1,
-        "note": "get_daily_minute_price를 내부적으로 호출하여 최대 120건 조회"
+        "note": "get_daily_minute_price를 내부적으로 호출하여 하루 전체 분봉 조회 (~390건, 내부 페이지네이션)",
     },
     "get_minute_price": {
         "category": "price_data",
-        "description": "당일 분봉 데이터 (레거시)",
+        "description": "[DEPRECATED] 당일 분봉 데이터",
         "outputs": ["minute_prices", "minute_volumes"],
         "inputs": ["stock_code"],
         "use_case": "당일 분별 가격 데이터",
-        "priority": 2,
-        "note": "inquire_minute_price 사용 권장"
+        "priority": 99,  # deprecated - 낮은 우선순위
+        "note": "DEPRECATED: get_intraday_price(당일 전체) 또는 get_daily_minute_price(특정일) 사용",
     },
-
     # === 복합 분석 도구 ===
     "analyze_broker_accumulation": {
         "category": "composite_analysis",
         "description": "증권사 매집 분석",
         "outputs": ["accumulated_stocks", "net_buy_amounts"],
         "inputs": ["broker_name", "days"],
-        "use_case": "특정 증권사가 많이 매집한 종목"
+        "use_case": "특정 증권사가 많이 매집한 종목",
     },
     "analyze_foreign_institutional_flow": {
         "category": "composite_analysis",
         "description": "외국인/기관 동시 순매수 분석",
         "outputs": ["consensus_stocks"],
         "inputs": ["days"],
-        "use_case": "외국인과 기관이 동시에 사는 종목"
+        "use_case": "외국인과 기관이 동시에 사는 종목",
     },
     "detect_volume_spike": {
         "category": "composite_analysis",
         "description": "거래량 급등 탐지",
         "outputs": ["volume_spike_stocks"],
         "inputs": ["threshold"],
-        "use_case": "거래량이 갑자기 늘어난 종목"
+        "use_case": "거래량이 갑자기 늘어난 종목",
     },
     "find_price_momentum": {
         "category": "composite_analysis",
         "description": "가격 모멘텀 탐색",
         "outputs": ["momentum_stocks"],
         "inputs": ["period", "min_change"],
-        "use_case": "지속적으로 상승하는 종목"
+        "use_case": "지속적으로 상승하는 종목",
     },
     "analyze_market_breadth": {
         "category": "composite_analysis",
         "description": "시장 폭 분석",
         "outputs": ["market_sentiment", "advance_ratio"],
         "inputs": [],
-        "use_case": "시장 전체 건강도"
+        "use_case": "시장 전체 건강도",
     },
 }
 
@@ -154,33 +150,49 @@ TOOL_CHAINS = {
         "description": "특정 증권사의 매집 종목 분석",
         "steps": [
             {"tool": "get_volume_rank", "purpose": "분석 대상 종목 선정"},
-            {"tool": "get_member_transaction", "purpose": "각 종목의 증권사별 거래 조회", "loop": True},
+            {
+                "tool": "get_member_transaction",
+                "purpose": "각 종목의 증권사별 거래 조회",
+                "loop": True,
+            },
         ],
-        "keywords": ["증권사", "매집", "순매수"]
+        "keywords": ["증권사", "매집", "순매수"],
     },
     "foreign_institutional_consensus": {
         "description": "외국인/기관 동시 매수 종목",
         "steps": [
             {"tool": "get_volume_rank", "purpose": "분석 대상 종목 선정"},
-            {"tool": "get_investor_trade_by_stock_daily", "purpose": "투자자별 매매 조회", "loop": True},
+            {
+                "tool": "get_investor_trade_by_stock_daily",
+                "purpose": "투자자별 매매 조회",
+                "loop": True,
+            },
         ],
-        "keywords": ["외국인", "기관", "동시", "순매수"]
+        "keywords": ["외국인", "기관", "동시", "순매수"],
     },
     "volume_breakout_detection": {
         "description": "거래량 돌파 종목 탐지",
         "steps": [
             {"tool": "get_volume_rank", "purpose": "거래량 상위 종목 조회"},
-            {"tool": "inquire_daily_price", "purpose": "20일 평균 거래량 계산", "loop": True},
+            {
+                "tool": "inquire_daily_price",
+                "purpose": "20일 평균 거래량 계산",
+                "loop": True,
+            },
         ],
-        "keywords": ["거래량", "급등", "돌파", "평균"]
+        "keywords": ["거래량", "급등", "돌파", "평균"],
     },
     "momentum_screening": {
         "description": "모멘텀 종목 스크리닝",
         "steps": [
             {"tool": "get_top_gainers", "purpose": "상승 종목 조회"},
-            {"tool": "inquire_daily_price", "purpose": "기간 수익률 계산", "loop": True},
+            {
+                "tool": "inquire_daily_price",
+                "purpose": "기간 수익률 계산",
+                "loop": True,
+            },
         ],
-        "keywords": ["모멘텀", "상승", "추세", "수익률"]
+        "keywords": ["모멘텀", "상승", "추세", "수익률"],
     },
     "stock_comprehensive_analysis": {
         "description": "종목 종합 분석",
@@ -190,7 +202,7 @@ TOOL_CHAINS = {
             {"tool": "get_stock_member", "purpose": "증권사 동향 확인"},
             {"tool": "get_program_trade_by_stock", "purpose": "프로그램 매매 확인"},
         ],
-        "keywords": ["종합", "분석", "전체", "상세"]
+        "keywords": ["종합", "분석", "전체", "상세"],
     },
 }
 
@@ -221,7 +233,7 @@ async def get_tool_registry() -> Dict[str, Any]:
         "tools": TOOL_REGISTRY,
         "chains": TOOL_CHAINS,
         "categories": categories,
-        "usage_hint": "쿼리에 맞는 도구 체인을 선택하거나 개별 도구를 조합하세요"
+        "usage_hint": "쿼리에 맞는 도구 체인을 선택하거나 개별 도구를 조합하세요",
     }
 
 
@@ -250,11 +262,13 @@ async def plan_query_execution(query: str) -> Dict[str, Any]:
         if tool_info["category"] == "composite_analysis":
             use_case = tool_info.get("use_case", "").lower()
             if any(keyword in query_lower for keyword in use_case.split()):
-                direct_tools.append({
-                    "tool": tool_name,
-                    "description": tool_info["description"],
-                    "inputs": tool_info["inputs"]
-                })
+                direct_tools.append(
+                    {
+                        "tool": tool_name,
+                        "description": tool_info["description"],
+                        "inputs": tool_info["inputs"],
+                    }
+                )
 
     # 2. 키워드 기반 체인 매칭
     matched_chains = []
@@ -262,12 +276,14 @@ async def plan_query_execution(query: str) -> Dict[str, Any]:
         keywords = chain_info.get("keywords", [])
         match_count = sum(1 for kw in keywords if kw in query_lower)
         if match_count > 0:
-            matched_chains.append({
-                "chain": chain_name,
-                "description": chain_info["description"],
-                "match_score": match_count,
-                "steps": chain_info["steps"]
-            })
+            matched_chains.append(
+                {
+                    "chain": chain_name,
+                    "description": chain_info["description"],
+                    "match_score": match_count,
+                    "steps": chain_info["steps"],
+                }
+            )
 
     # 매칭 점수로 정렬
     matched_chains.sort(key=lambda x: x["match_score"], reverse=True)
@@ -290,51 +306,58 @@ async def plan_query_execution(query: str) -> Dict[str, Any]:
     for tool_name, tool_info in TOOL_REGISTRY.items():
         tool_outputs = tool_info.get("outputs", [])
         if any(output in tool_outputs for output in required_outputs):
-            suggested_tools.append({
-                "tool": tool_name,
-                "category": tool_info["category"],
-                "provides": [o for o in tool_outputs if o in required_outputs]
-            })
+            suggested_tools.append(
+                {
+                    "tool": tool_name,
+                    "category": tool_info["category"],
+                    "provides": [o for o in tool_outputs if o in required_outputs],
+                }
+            )
 
     # 4. 실행 계획 생성
     execution_plan = {
         "query": query,
         "analysis": {
             "detected_entities": {
-                "broker": "증권사" in query_lower or any(name in query_lower for name in ["모건", "골드만", "jp", "메릴린치"]),
+                "broker": "증권사" in query_lower
+                or any(
+                    name in query_lower for name in ["모건", "골드만", "jp", "메릴린치"]
+                ),
                 "foreign": "외국인" in query_lower,
                 "institution": "기관" in query_lower,
-                "period": any(term in query_lower for term in ["일", "주", "월", "기간"]),
+                "period": any(
+                    term in query_lower for term in ["일", "주", "월", "기간"]
+                ),
                 "volume": "거래량" in query_lower,
-                "price": "가격" in query_lower or "수익률" in query_lower
+                "price": "가격" in query_lower or "수익률" in query_lower,
             }
         },
         "direct_tools": direct_tools[:3] if direct_tools else None,
         "recommended_chain": matched_chains[0] if matched_chains else None,
         "alternative_chains": matched_chains[1:3] if len(matched_chains) > 1 else None,
         "individual_tools": suggested_tools[:5],
-        "execution_hint": ""
+        "execution_hint": "",
     }
 
     # 실행 힌트 생성
     if direct_tools:
-        execution_plan["execution_hint"] = f"'{direct_tools[0]['tool']}' 도구를 직접 호출하면 결과를 얻을 수 있습니다."
+        execution_plan["execution_hint"] = (
+            f"'{direct_tools[0]['tool']}' 도구를 직접 호출하면 결과를 얻을 수 있습니다."
+        )
     elif matched_chains:
         chain = matched_chains[0]
-        execution_plan["execution_hint"] = f"'{chain['chain']}' 체인을 따라 {len(chain['steps'])}단계로 실행하세요."
+        execution_plan["execution_hint"] = (
+            f"'{chain['chain']}' 체인을 따라 {len(chain['steps'])}단계로 실행하세요."
+        )
     else:
         execution_plan["execution_hint"] = "개별 도구를 조합하여 실행하세요."
 
-    return {
-        "success": True,
-        "plan": execution_plan
-    }
+    return {"success": True, "plan": execution_plan}
 
 
 @server.tool()
 async def suggest_tool_combination(
-    goal: str,
-    available_data: List[str] = None
+    goal: str, available_data: List[str] = None
 ) -> Dict[str, Any]:
     """목표 달성을 위한 도구 조합 제안
 
@@ -367,19 +390,20 @@ async def suggest_tool_combination(
             new_outputs = tool_outputs - available_set
 
             if new_outputs:  # 새로운 출력을 제공하는 경우만
-                executable_tools.append({
-                    "tool": tool_name,
-                    "category": tool_info["category"],
-                    "description": tool_info["description"],
-                    "new_outputs": list(new_outputs),
-                    "priority": len(new_outputs)
-                })
+                executable_tools.append(
+                    {
+                        "tool": tool_name,
+                        "category": tool_info["category"],
+                        "description": tool_info["description"],
+                        "new_outputs": list(new_outputs),
+                        "priority": len(new_outputs),
+                    }
+                )
         else:
             missing_inputs = required_inputs - available_set
-            pending_tools.append({
-                "tool": tool_name,
-                "missing_inputs": list(missing_inputs)
-            })
+            pending_tools.append(
+                {"tool": tool_name, "missing_inputs": list(missing_inputs)}
+            )
 
     # 우선순위로 정렬
     executable_tools.sort(key=lambda x: x["priority"], reverse=True)
@@ -390,5 +414,9 @@ async def suggest_tool_combination(
         "current_data": available_data,
         "next_tools": executable_tools[:5],
         "pending_tools": pending_tools[:5],
-        "suggestion": executable_tools[0]["tool"] if executable_tools else "더 많은 기본 데이터가 필요합니다"
+        "suggestion": (
+            executable_tools[0]["tool"]
+            if executable_tools
+            else "더 많은 기본 데이터가 필요합니다"
+        ),
     }

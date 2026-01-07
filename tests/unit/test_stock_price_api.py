@@ -145,45 +145,51 @@ class TestStockPriceAPI(unittest.TestCase):
             method="GET",
         )
 
-    def test_get_minute_price_default_hour(self):
-        """분봉 시세 조회 - 기본 시간"""
+    def test_get_minute_price_deprecated_warning(self):
+        """[DEPRECATED] get_minute_price - deprecation 경고 발생 확인"""
+        import warnings
+
+        # get_intraday_price가 호출될 때 반환할 응답 설정
         expected_response = {
             "rt_cd": "0",
-            "msg1": "성공",
-            "output": [
-                {"stck_cntg_hour": "153000", "stck_prpr": "70000"},
-                {"stck_cntg_hour": "152900", "stck_prpr": "69900"},
-            ],
+            "msg_cd": "MCA00000",
+            "msg1": "하루 전체 분봉 데이터 수집 완료 (총 0건)",
+            "output1": {},
+            "output2": [],
         }
         self.mock_client.make_request.return_value = expected_response
 
-        result = self.api.get_minute_price("005930")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.api.get_minute_price("005930")
 
-        self.assertEqual(result, expected_response)
-        self.mock_client.make_request.assert_called_once_with(
-            endpoint=API_ENDPOINTS["INQUIRE_TIME_ITEMCHARTPRICE"],
-            tr_id="FHKST01010300",
-            params={
-                "FID_COND_MRKT_DIV_CODE": "J",
-                "FID_INPUT_ISCD": "005930",
-                "FID_INPUT_HOUR_1": "153000",
-            },
-            method="GET",
-        )
+            # deprecation 경고 발생 확인
+            self.assertTrue(
+                any(issubclass(warning.category, DeprecationWarning) for warning in w),
+                "DeprecationWarning이 발생해야 합니다",
+            )
 
-    def test_get_minute_price_custom_hour(self):
-        """분봉 시세 조회 - 커스텀 시간"""
-        expected_response = {"rt_cd": "0", "msg1": "성공", "output": []}
-        self.mock_client.make_request.return_value = expected_response
+        # get_intraday_price 응답 구조 확인 (output1, output2)
+        self.assertIn("output1", result)
+        self.assertIn("output2", result)
 
-        result = self.api.get_minute_price("005930", hour="120000")
+    def test_get_minute_price_forwards_to_intraday(self):
+        """[DEPRECATED] get_minute_price - get_intraday_price로 포워딩 확인"""
+        import warnings
 
-        self.assertEqual(result, expected_response)
+        # get_intraday_price 내부에서 4번의 API 호출이 발생함
+        self.mock_client.make_request.return_value = {
+            "rt_cd": "0",
+            "output1": {"test": "data"},
+            "output2": [{"stck_cntg_hour": "153000"}],
+        }
 
-        # 파라미터가 올바르게 설정되었는지 확인
-        call_args = self.mock_client.make_request.call_args
-        params = call_args[1]["params"]
-        self.assertEqual(params["FID_INPUT_HOUR_1"], "120000")
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            result = self.api.get_minute_price("005930", hour="120000")
+
+        # hour 파라미터는 무시되고 get_intraday_price 구조로 반환
+        self.assertIn("output2", result)
 
     @unittest.skip("API 메서드 시그니처 변경 - 추후 수정 필요")
     def test_get_daily_minute_price_success(self):
@@ -216,20 +222,38 @@ class TestStockPriceAPI(unittest.TestCase):
             method="GET",
         )
 
-    def test_get_daily_minute_price_custom_hour(self):
-        """특정일 분봉 시세 조회 - 커스텀 시간"""
-        expected_response = {"rt_cd": "0", "msg1": "성공", "output": []}
-        self.mock_client.make_request.return_value = expected_response
+    def test_get_daily_minute_price_full_day(self):
+        """특정일 분봉 시세 조회 - 하루 전체 데이터 (내부 페이지네이션)"""
+        # 4개의 시간대별 응답 모킹 (090000, 110000, 130000, 153000)
+        responses = [
+            {
+                "rt_cd": "0",
+                "output1": {"stck_prpr": "70000"},
+                "output2": [{"stck_cntg_hour": "090000"}],
+            },
+            {
+                "rt_cd": "0",
+                "output1": {"stck_prpr": "70100"},
+                "output2": [{"stck_cntg_hour": "110000"}],
+            },
+            {
+                "rt_cd": "0",
+                "output1": {"stck_prpr": "70200"},
+                "output2": [{"stck_cntg_hour": "130000"}],
+            },
+            {
+                "rt_cd": "0",
+                "output1": {"stck_prpr": "70300"},
+                "output2": [{"stck_cntg_hour": "153000"}],
+            },
+        ]
+        self.mock_client.make_request.side_effect = responses
 
-        result = self.api.get_daily_minute_price("005930", "20231215", hour="090000")
+        result = self.api.get_daily_minute_price("005930", "20231215")
 
-        self.assertEqual(result, expected_response)
-
-        # 파라미터가 올바르게 설정되었는지 확인
-        call_args = self.mock_client.make_request.call_args
-        params = call_args[1]["params"]
-        self.assertEqual(params["FID_INPUT_DATE_1"], "20231215")
-        self.assertEqual(params["FID_INPUT_HOUR_1"], "090000")
+        self.assertEqual(result["rt_cd"], "0")
+        self.assertEqual(len(result["output2"]), 4)  # 4개 시간대 데이터
+        self.assertEqual(self.mock_client.make_request.call_count, 4)  # 4번 호출
 
     def test_error_response_handling(self):
         """에러 응답 처리"""
@@ -696,14 +720,14 @@ class TestStockPriceAPIAdditionalMethods(unittest.TestCase):
         ]
         self.mock_client.make_request.side_effect = responses
 
-        result = self.api.get_intraday_price("005930", "20240101")
+        result = self.api.get_intraday_price("005930")
 
         self.assertEqual(result["rt_cd"], "0")
         self.assertEqual(len(result["output2"]), 6)  # 중복 없이 6건
         self.assertEqual(self.mock_client.make_request.call_count, 4)  # 4번 호출
 
     def test_get_intraday_price_with_api_error(self):
-        """하루 전체 분봉 조회 - API 오류 시에도 계속 진행"""
+        """당일 전체 분봉 조회 - API 오류 시에도 계속 진행"""
         responses = [
             {"rt_cd": "0", "output1": {}, "output2": [{"stck_cntg_hour": "090000"}]},
             {"rt_cd": "1", "msg1": "error"},  # 오류 응답
@@ -712,7 +736,7 @@ class TestStockPriceAPIAdditionalMethods(unittest.TestCase):
         ]
         self.mock_client.make_request.side_effect = responses
 
-        result = self.api.get_intraday_price("005930", "20240101")
+        result = self.api.get_intraday_price("005930")
 
         # 오류에도 불구하고 수집된 데이터 반환
         self.assertEqual(result["rt_cd"], "0")

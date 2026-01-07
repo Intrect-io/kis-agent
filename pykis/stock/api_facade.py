@@ -93,14 +93,28 @@ class StockAPI(BaseAPI):
         return self.price_api.get_orderbook_raw(code)
 
     def get_minute_price(self, code: str, hour: str = "153000") -> Optional[Dict]:
-        """분봉 시세 조회"""
-        return self.price_api.get_minute_price(code, hour)
+        """
+        [DEPRECATED] 분봉 시세 조회 (120개 이하)
 
-    def get_daily_minute_price(
-        self, code: str, date: str, hour: str = "153000"
-    ) -> Optional[Dict]:
-        """특정일 분봉 시세 조회"""
-        return self.price_api.get_daily_minute_price(code, date, hour)
+        .. deprecated::
+            이 메서드는 deprecated 되었습니다.
+            당일 분봉은 get_intraday_price(code)를 사용하세요.
+            특정일 분봉은 get_daily_minute_price(code, date)를 사용하세요.
+        """
+        import warnings
+
+        warnings.warn(
+            "get_minute_price()는 deprecated 되었습니다. "
+            "당일 분봉은 get_intraday_price(code), "
+            "특정일 분봉은 get_daily_minute_price(code, date)를 사용하세요.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.get_intraday_price(code)
+
+    def get_daily_minute_price(self, code: str, date: str) -> Optional[Dict]:
+        """특정일 전체 분봉 시세 조회 (내부 페이지네이션)"""
+        return self.price_api.get_daily_minute_price(code, date)
 
     def inquire_price(self, code: str, market: str = "J") -> Optional[Dict]:
         """주식현재가 시세 조회 (추가 정보 포함)
@@ -458,18 +472,16 @@ class StockAPI(BaseAPI):
             exclude_cls,
         )
 
-    def get_intraday_price(self, code: str, date: str = "") -> Optional[Dict]:
-        """주식 당일 분봉 데이터 조회
+    def get_intraday_price(self, code: str) -> Optional[Dict]:
+        """당일 전체 분봉 데이터 조회
 
         Args:
             code: 종목코드 6자리
-            date: 조회 날짜 (YYYYMMDD 형식, 기본값: 오늘)
-        """
-        from datetime import datetime
 
-        if not date:
-            date = datetime.now().strftime("%Y%m%d")
-        return self.price_api.get_intraday_price(code, date)
+        Note:
+            특정일 분봉은 get_daily_minute_price(code, date)를 사용하세요.
+        """
+        return self.price_api.get_intraday_price(code)
 
     def get_stock_ccnl(self, code: str, retries: int = 10) -> Optional[Dict]:
         """주식현재가 체결 조회

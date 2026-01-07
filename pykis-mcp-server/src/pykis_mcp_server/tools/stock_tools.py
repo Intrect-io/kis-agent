@@ -1,4 +1,5 @@
 """Stock price and market data MCP tools"""
+
 from datetime import datetime
 from typing import Any, Dict, Optional
 
@@ -188,36 +189,53 @@ async def inquire_time_itemconclusion(
 
 @server.tool()
 async def get_minute_price(code: str, time_code: str = "093000") -> Dict[str, Any]:
-    """분봉 데이터 조회
+    """[DEPRECATED] 분봉 데이터 조회 - get_intraday_price 또는 get_daily_minute_price 사용 권장
+
+    .. deprecated::
+        이 도구는 deprecated 되었습니다.
+        - 당일 전체 분봉: get_intraday_price(code)
+        - 과거 특정일 분봉: get_daily_minute_price(code, date, hour)
 
     Args:
         code: 종목코드 6자리
-        time_code: 시간코드 (HHMMSS, 기본값: 093000)
+        time_code: 시간코드 (HHMMSS) - 무시됨, 당일 전체 분봉으로 포워딩
 
     Returns:
-        Dict: 분봉 데이터
+        Dict: 당일 전체 분봉 데이터 (get_intraday_price로 포워딩)
     """
+    import warnings
+
+    warnings.warn(
+        "get_minute_price()는 deprecated 되었습니다. "
+        "당일 전체 분봉은 get_intraday_price(), "
+        "과거 특정일 분봉은 get_daily_minute_price()를 사용하세요.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     if not code or len(code) != 6:
         raise InvalidParameterError("code", "종목코드는 6자리여야 합니다")
 
     agent = get_agent()
-    result = agent.get_minute_price(code, time_code)
-    return validate_api_response(result, "분봉 데이터 조회")
+    # deprecated: get_intraday_price로 포워딩
+    result = agent.get_intraday_price(code)
+    return validate_api_response(
+        result, "당일 분봉 조회 (deprecated → get_intraday_price)"
+    )
 
 
 @server.tool()
-async def get_daily_minute_price(
-    code: str, date: str, hour: str = "153000"
-) -> Dict[str, Any]:
-    """특정일 분봉 데이터 조회
+async def get_daily_minute_price(code: str, date: str) -> Dict[str, Any]:
+    """특정일 전체 분봉 데이터 조회 (내부 페이지네이션)
 
     Args:
         code: 종목코드 6자리
         date: 날짜 (YYYYMMDD)
-        hour: 시각 (HHMMSS, 기본값: 153000)
 
     Returns:
-        Dict: 분봉 데이터 (최대 120건)
+        Dict: 하루 전체 분봉 데이터 (~390건)
+            - output1: 종목 기본정보
+            - output2: 분봉 리스트 (09:00~15:30)
     """
     if not code or len(code) != 6:
         raise InvalidParameterError("code", "종목코드는 6자리여야 합니다")
@@ -225,39 +243,34 @@ async def get_daily_minute_price(
         raise InvalidParameterError("date", "날짜는 YYYYMMDD 형식이어야 합니다")
 
     agent = get_agent()
-    result = agent.get_daily_minute_price(code, date, hour)
-    return validate_api_response(result, "특정일 분봉 데이터 조회")
+    result = agent.get_daily_minute_price(code, date)
+    return validate_api_response(result, "특정일 전체 분봉 조회")
 
 
 @server.tool()
-async def inquire_minute_price(
-    code: str, date: Optional[str] = None, hour: str = "153000"
-) -> Dict[str, Any]:
-    """분봉시세조회 (일별분봉시세조회 우선)
+async def inquire_minute_price(code: str, date: Optional[str] = None) -> Dict[str, Any]:
+    """분봉시세조회 - 하루 전체 분봉 데이터 조회
 
-    분봉 데이터를 조회합니다. date 파라미터가 제공되면 특정일 분봉(get_daily_minute_price)을,
-    그렇지 않으면 당일 분봉(get_minute_price)을 조회합니다.
-
-    **권장**: 일별분봉시세조회(get_daily_minute_price)를 우선 사용합니다.
-    날짜를 지정하면 최대 120건의 분봉 데이터를 조회할 수 있습니다.
+    지정된 날짜의 전체 분봉 데이터를 조회합니다 (09:00~15:30).
+    내부적으로 페이지네이션하여 하루 전체 데이터를 수집합니다.
 
     Args:
         code: 종목코드 6자리 (예: "005930")
         date: 날짜 (YYYYMMDD, 선택). 미입력 시 오늘 날짜 사용
-        hour: 시각 (HHMMSS, 기본값: 153000)
 
     Returns:
-        Dict: 분봉 데이터 (최대 120건)
-            - output: 분봉 시세 리스트
-            - output[].stck_bsop_date: 영업일자
-            - output[].stck_cntg_hour: 체결시각
-            - output[].stck_prpr: 현재가
-            - output[].cntg_vol: 체결거래량
+        Dict: 하루 전체 분봉 데이터 (~390건)
+            - output1: 종목 기본정보
+            - output2: 분봉 리스트
+                - output2[].stck_bsop_date: 영업일자
+                - output2[].stck_cntg_hour: 체결시각
+                - output2[].stck_prpr: 현재가
+                - output2[].cntg_vol: 체결거래량
     """
     if not code or len(code) != 6:
         raise InvalidParameterError("code", "종목코드는 6자리여야 합니다")
 
-    # date가 없으면 오늘 날짜 사용 (일별분봉시세조회 우선)
+    # date가 없으면 오늘 날짜 사용
     if not date:
         date = datetime.now().strftime("%Y%m%d")
 
@@ -265,7 +278,7 @@ async def inquire_minute_price(
         raise InvalidParameterError("date", "날짜는 YYYYMMDD 형식이어야 합니다")
 
     agent = get_agent()
-    result = agent.get_daily_minute_price(code, date, hour)
+    result = agent.get_daily_minute_price(code, date)
     return validate_api_response(result, "분봉시세조회")
 
 
@@ -310,9 +323,7 @@ async def fetch_minute_data(
 
 
 @server.tool()
-async def calculate_support_resistance(
-    code: str, date: str = ""
-) -> Dict[str, Any]:
+async def calculate_support_resistance(code: str, date: str = "") -> Dict[str, Any]:
     """지지/저항선 계산
 
     Args:
@@ -503,9 +514,7 @@ async def get_market_rankings(volume: int = 5000000) -> Dict[str, Any]:
 
 @server.tool()
 async def get_fluctuation_rank(
-    market: str = "0",
-    sign: str = "0",
-    cls_code: str = "0"
+    market: str = "0", sign: str = "0", cls_code: str = "0"
 ) -> Dict[str, Any]:
     """등락률 순위 상세 조회
 
@@ -524,9 +533,7 @@ async def get_fluctuation_rank(
 
 @server.tool()
 async def get_volume_rank(
-    market: str = "0",
-    sign: str = "0",
-    cls_code: str = "0"
+    market: str = "0", sign: str = "0", cls_code: str = "0"
 ) -> Dict[str, Any]:
     """거래량 순위 조회
 
@@ -545,9 +552,7 @@ async def get_volume_rank(
 
 @server.tool()
 async def get_volume_power_rank(
-    market: str = "0",
-    sign: str = "0",
-    cls_code: str = "0"
+    market: str = "0", sign: str = "0", cls_code: str = "0"
 ) -> Dict[str, Any]:
     """체결강도 순위 조회
 
