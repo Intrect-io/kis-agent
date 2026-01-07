@@ -103,47 +103,66 @@ class TestStockAPIFacade(unittest.TestCase):
         self.api.price_api.get_orderbook_raw.assert_called_once_with("005930")
 
     def test_get_minute_price_delegation(self):
-        """get_minute_price 메서드 위임 테스트"""
+        """get_minute_price 메서드 위임 테스트 (deprecated → get_intraday_price로 위임)"""
         expected_result = {"rt_cd": "0", "output": [{"stck_cntg_hour": "153000"}]}
-        self.api.price_api.get_minute_price = Mock(return_value=expected_result)
+        # get_minute_price는 deprecated되어 get_intraday_price로 위임됨
+        self.api.price_api.get_intraday_price = Mock(return_value=expected_result)
 
-        result = self.api.get_minute_price("005930", hour="120000")
+        import warnings
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.api.get_minute_price("005930", hour="120000")
+            # DeprecationWarning이 발생해야 함
+            self.assertTrue(len(w) >= 1)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
 
         self.assertEqual(result, expected_result)
-        self.api.price_api.get_minute_price.assert_called_once_with("005930", "120000")
+        # hour 파라미터는 무시되고 get_intraday_price(code)로 위임됨
+        self.api.price_api.get_intraday_price.assert_called_once_with("005930")
 
     def test_get_minute_price_default_hour(self):
-        """get_minute_price 기본 시간 테스트"""
+        """get_minute_price 기본 시간 테스트 (deprecated → get_intraday_price로 위임)"""
         expected_result = {"rt_cd": "0", "output": []}
-        self.api.price_api.get_minute_price = Mock(return_value=expected_result)
+        # get_minute_price는 deprecated되어 get_intraday_price로 위임됨
+        self.api.price_api.get_intraday_price = Mock(return_value=expected_result)
 
-        result = self.api.get_minute_price("005930")
+        import warnings
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = self.api.get_minute_price("005930")
+            # DeprecationWarning이 발생해야 함
+            self.assertTrue(len(w) >= 1)
+            self.assertTrue(issubclass(w[0].category, DeprecationWarning))
 
         self.assertEqual(result, expected_result)
-        self.api.price_api.get_minute_price.assert_called_once_with("005930", "153000")
+        self.api.price_api.get_intraday_price.assert_called_once_with("005930")
 
     def test_get_daily_minute_price_delegation(self):
         """get_daily_minute_price 메서드 위임 테스트"""
         expected_result = {"rt_cd": "0", "output": [{"stck_bsop_date": "20231215"}]}
         self.api.price_api.get_daily_minute_price = Mock(return_value=expected_result)
 
-        result = self.api.get_daily_minute_price("005930", "20231215", hour="090000")
+        # facade는 (code, date) 2개 파라미터만 전달
+        result = self.api.get_daily_minute_price("005930", "20231215")
 
         self.assertEqual(result, expected_result)
         self.api.price_api.get_daily_minute_price.assert_called_once_with(
-            "005930", "20231215", "090000"
+            "005930", "20231215"
         )
 
     def test_get_daily_minute_price_default_hour(self):
-        """get_daily_minute_price 기본 시간 테스트"""
+        """get_daily_minute_price 기본 시간 테스트 - 동일 동작 확인"""
         expected_result = {"rt_cd": "0", "output": []}
         self.api.price_api.get_daily_minute_price = Mock(return_value=expected_result)
 
         result = self.api.get_daily_minute_price("005930", "20231215")
 
         self.assertEqual(result, expected_result)
+        # facade는 (code, date) 2개 파라미터만 전달 (hour는 내부 페이지네이션에서 처리)
         self.api.price_api.get_daily_minute_price.assert_called_once_with(
-            "005930", "20231215", "153000"
+            "005930", "20231215"
         )
 
     def test_get_market_fluctuation_delegation(self):
@@ -508,12 +527,11 @@ class TestStockAPIFacade(unittest.TestCase):
         expected_result = {"rt_cd": "0", "output": [{"stck_cntg_hour": "090100"}]}
         self.api.price_api.get_intraday_price = Mock(return_value=expected_result)
 
-        result = self.api.get_intraday_price("005930", "20231215")
+        # facade의 get_intraday_price는 code만 받음 (당일 분봉 조회)
+        result = self.api.get_intraday_price("005930")
 
         self.assertEqual(result, expected_result)
-        self.api.price_api.get_intraday_price.assert_called_once_with(
-            "005930", "20231215"
-        )
+        self.api.price_api.get_intraday_price.assert_called_once_with("005930")
 
     def test_get_stock_ccnl_delegation(self):
         """get_stock_ccnl 메서드 위임 테스트"""
