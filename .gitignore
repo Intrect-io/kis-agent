@@ -171,3 +171,4 @@ trash/
 # Task Master AI
 .taskmaster/ 
 .claude/
+coverage.json

@@ -395,27 +395,21 @@ class RealtimeDataStore:
         return self._latest[code].get(sub_type)
 
     def get_trade(self, code: str) -> Optional[Dict[str, Any]]:
-
         return self.get(code, SubscriptionType.STOCK_TRADE)
 
     def get_orderbook(self, code: str) -> Optional[Dict[str, Any]]:
-
         return self.get(code, SubscriptionType.STOCK_ASK_BID)
 
     def get_expected(self, code: str) -> Optional[Dict[str, Any]]:
-
         return self.get(code, SubscriptionType.STOCK_EXPECTED)
 
     def get_index(self, code: str) -> Optional[Dict[str, Any]]:
-
         return self.get(code, SubscriptionType.INDEX)
 
     def get_program_trade(self, code: str) -> Optional[Dict[str, Any]]:
-
         return self.get(code, SubscriptionType.PROGRAM_TRADE)
 
     def get_member_trade(self, code: str) -> Optional[Dict[str, Any]]:
-
         return self.get(code, SubscriptionType.MEMBER_TRADE)
 
     def get_history(

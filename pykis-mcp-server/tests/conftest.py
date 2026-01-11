@@ -1,7 +1,8 @@
 """PyTest configuration and fixtures"""
-import os
-import pytest
+
 from unittest.mock import MagicMock
+
+import pytest
 
 
 @pytest.fixture

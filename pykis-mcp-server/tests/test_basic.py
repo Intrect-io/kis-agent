@@ -1,5 +1,4 @@
 """Basic tests for project structure and imports"""
-import pytest
 
 
 def test_package_import():
@@ -21,9 +20,9 @@ def test_server_module_exists():
     from pykis_mcp_server import server
 
     assert server is not None
-    assert hasattr(server, 'server')
-    assert hasattr(server, 'get_agent')
-    assert hasattr(server, 'get_config')
+    assert hasattr(server, "server")
+    assert hasattr(server, "get_agent")
+    assert hasattr(server, "get_config")
 
 
 def test_mock_env_vars(mock_env_vars):

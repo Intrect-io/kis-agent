@@ -10,9 +10,11 @@ PyKIS Response Types Package
 - stock: 주식 시세, 호가, 분봉 등 Stock API 응답
 - account: 계좌 잔고, 체결내역 등 Account API 응답
 - order: 주문 실행, 정정/취소 등 Order API 응답
+- overseas: 해외주식 시세, 호가, 차트 등 Overseas Stock API 응답
 
 사용 예시:
     from pykis.responses.stock import StockPriceResponse
+    from pykis.responses.overseas import OverseasPriceResponse
 
     def get_stock_price(code: str) -> StockPriceResponse:
         # API 호출 로직
@@ -62,6 +64,67 @@ from .order import (
     OrderResvRvsecnclResponse,
     OrderRvsecnclOutput,
     OrderRvsecnclResponse,
+)
+
+# Overseas Stock-related responses
+from .overseas import (
+    OverseasBalanceOutput1Item,
+    OverseasBalanceOutput2,
+    OverseasBalanceResponse,
+    OverseasBuyableAmountOutput,
+    OverseasBuyableAmountResponse,
+    OverseasCancelOrderOutput,
+    OverseasCancelOrderResponse,
+    OverseasCcnlOutput1,
+    OverseasCcnlOutput2,
+    OverseasCcnlResponse,
+    OverseasDailyPriceOutput1,
+    OverseasDailyPriceOutput2,
+    OverseasDailyPriceResponse,
+    OverseasForeignMarginOutput,
+    OverseasForeignMarginResponse,
+    OverseasHolidayOutput,
+    OverseasHolidayResponse,
+    OverseasMinutePriceOutput1,
+    OverseasMinutePriceOutput2,
+    OverseasMinutePriceResponse,
+    OverseasModifyOrderOutput,
+    OverseasModifyOrderResponse,
+    OverseasNewsOutput,
+    OverseasNewsResponse,
+    OverseasOrderbookOutput1,
+    OverseasOrderbookOutput2,
+    OverseasOrderbookResponse,
+    OverseasOrderHistoryOutput,
+    OverseasOrderHistoryResponse,
+    OverseasOrderOutput,
+    OverseasOrderResponse,
+    OverseasPeriodProfitOutput1Item,
+    OverseasPeriodProfitOutput2,
+    OverseasPeriodProfitResponse,
+    OverseasPresentBalanceOutput1Item,
+    OverseasPresentBalanceOutput2,
+    OverseasPresentBalanceResponse,
+    OverseasPriceDetailOutput,
+    OverseasPriceDetailResponse,
+    OverseasPriceOutput,
+    OverseasPriceResponse,
+    # Ranking API
+    OverseasRankingOutput1,
+    OverseasRankingOutput2Item,
+    OverseasRankingResponse,
+    OverseasReserveOrderCancelOutput,
+    OverseasReserveOrderCancelResponse,
+    OverseasReserveOrderCreateOutput,
+    OverseasReserveOrderCreateResponse,
+    OverseasReserveOrderModifyOutput,
+    OverseasReserveOrderModifyResponse,
+    OverseasReserveOrderOutput,
+    OverseasReserveOrderResponse,
+    OverseasStockInfoOutput,
+    OverseasStockInfoResponse,
+    OverseasUnfilledOrderOutput,
+    OverseasUnfilledOrderResponse,
 )
 
 # Stock-related responses
@@ -143,6 +206,66 @@ __all__ = [
     "OrderResvRvsecnclOutput",
     "OrderResvCcnlResponse",
     "OrderResvCcnlItem",
+    # Overseas Stock
+    "OverseasPriceOutput",
+    "OverseasPriceResponse",
+    "OverseasPriceDetailOutput",
+    "OverseasPriceDetailResponse",
+    "OverseasDailyPriceOutput1",
+    "OverseasDailyPriceOutput2",
+    "OverseasDailyPriceResponse",
+    "OverseasMinutePriceOutput1",
+    "OverseasMinutePriceOutput2",
+    "OverseasMinutePriceResponse",
+    "OverseasOrderbookOutput1",
+    "OverseasOrderbookOutput2",
+    "OverseasOrderbookResponse",
+    "OverseasStockInfoOutput",
+    "OverseasStockInfoResponse",
+    "OverseasCcnlOutput1",
+    "OverseasCcnlOutput2",
+    "OverseasCcnlResponse",
+    "OverseasHolidayOutput",
+    "OverseasHolidayResponse",
+    "OverseasNewsOutput",
+    "OverseasNewsResponse",
+    # Overseas Account
+    "OverseasBalanceOutput1Item",
+    "OverseasBalanceOutput2",
+    "OverseasBalanceResponse",
+    "OverseasOrderHistoryOutput",
+    "OverseasOrderHistoryResponse",
+    "OverseasUnfilledOrderOutput",
+    "OverseasUnfilledOrderResponse",
+    "OverseasBuyableAmountOutput",
+    "OverseasBuyableAmountResponse",
+    "OverseasPresentBalanceOutput1Item",
+    "OverseasPresentBalanceOutput2",
+    "OverseasPresentBalanceResponse",
+    "OverseasPeriodProfitOutput1Item",
+    "OverseasPeriodProfitOutput2",
+    "OverseasPeriodProfitResponse",
+    "OverseasReserveOrderOutput",
+    "OverseasReserveOrderResponse",
+    "OverseasForeignMarginOutput",
+    "OverseasForeignMarginResponse",
+    # Overseas Order
+    "OverseasOrderOutput",
+    "OverseasOrderResponse",
+    "OverseasModifyOrderOutput",
+    "OverseasModifyOrderResponse",
+    "OverseasCancelOrderOutput",
+    "OverseasCancelOrderResponse",
+    "OverseasReserveOrderCreateOutput",
+    "OverseasReserveOrderCreateResponse",
+    "OverseasReserveOrderModifyOutput",
+    "OverseasReserveOrderModifyResponse",
+    "OverseasReserveOrderCancelOutput",
+    "OverseasReserveOrderCancelResponse",
+    # Overseas Ranking
+    "OverseasRankingOutput1",
+    "OverseasRankingOutput2Item",
+    "OverseasRankingResponse",
 ]
 
 __version__ = "1.3.5"

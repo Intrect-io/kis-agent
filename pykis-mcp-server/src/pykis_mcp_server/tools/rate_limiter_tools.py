@@ -1,7 +1,9 @@
 """Rate Limiter and system management MCP tools"""
+
 from typing import Any, Dict, Optional
-from ..server import get_agent, server
+
 from ..errors import InvalidParameterError
+from ..server import get_agent, server
 
 
 @server.tool()
@@ -21,11 +23,11 @@ async def get_rate_limiter_status() -> Dict[str, Any]:
     """
     agent = get_agent()
 
-    if not hasattr(agent, 'client') or not agent.client:
+    if not hasattr(agent, "client") or not agent.client:
         return {
             "success": False,
             "message": "Agent client가 초기화되지 않았습니다",
-            "error_code": "CLIENT_NOT_INITIALIZED"
+            "error_code": "CLIENT_NOT_INITIALIZED",
         }
 
     if not agent.client.enable_rate_limiter or not agent.client.rate_limiter:
@@ -33,7 +35,7 @@ async def get_rate_limiter_status() -> Dict[str, Any]:
             "success": False,
             "message": "Rate limiter가 비활성화되어 있습니다",
             "error_code": "RATE_LIMITER_DISABLED",
-            "enabled": False
+            "enabled": False,
         }
 
     status = agent.client.rate_limiter.get_current_rate()
@@ -45,9 +47,19 @@ async def get_rate_limiter_status() -> Dict[str, Any]:
         "utilization": {
             "second": f"{status['requests_per_second']}/{status['limit_per_second']}",
             "minute": f"{status['requests_per_minute']}/{status['limit_per_minute']}",
-            "second_percent": round(status['requests_per_second'] / max(1, status['limit_per_second']) * 100, 2),
-            "minute_percent": round(status['requests_per_minute'] / max(1, status['limit_per_minute']) * 100, 2)
-        }
+            "second_percent": round(
+                status["requests_per_second"]
+                / max(1, status["limit_per_second"])
+                * 100,
+                2,
+            ),
+            "minute_percent": round(
+                status["requests_per_minute"]
+                / max(1, status["limit_per_minute"])
+                * 100,
+                2,
+            ),
+        },
     }
 
 
@@ -62,18 +74,18 @@ async def reset_rate_limiter() -> Dict[str, Any]:
     """
     agent = get_agent()
 
-    if not hasattr(agent, 'client') or not agent.client:
+    if not hasattr(agent, "client") or not agent.client:
         return {
             "success": False,
             "message": "Agent client가 초기화되지 않았습니다",
-            "error_code": "CLIENT_NOT_INITIALIZED"
+            "error_code": "CLIENT_NOT_INITIALIZED",
         }
 
     if not agent.client.enable_rate_limiter or not agent.client.rate_limiter:
         return {
             "success": False,
             "message": "Rate limiter가 비활성화되어 있습니다",
-            "error_code": "RATE_LIMITER_DISABLED"
+            "error_code": "RATE_LIMITER_DISABLED",
         }
 
     agent.client.rate_limiter.reset()
@@ -81,7 +93,7 @@ async def reset_rate_limiter() -> Dict[str, Any]:
     return {
         "success": True,
         "message": "Rate limiter가 초기화되었습니다",
-        "status": agent.client.rate_limiter.get_current_rate()
+        "status": agent.client.rate_limiter.get_current_rate(),
     }
 
 
@@ -89,7 +101,7 @@ async def reset_rate_limiter() -> Dict[str, Any]:
 async def set_rate_limits(
     requests_per_second: Optional[int] = None,
     requests_per_minute: Optional[int] = None,
-    min_interval_ms: Optional[int] = None
+    min_interval_ms: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Rate Limiter 제한 값 설정
 
@@ -105,37 +117,40 @@ async def set_rate_limits(
     """
     agent = get_agent()
 
-    if not hasattr(agent, 'client') or not agent.client:
+    if not hasattr(agent, "client") or not agent.client:
         return {
             "success": False,
             "message": "Agent client가 초기화되지 않았습니다",
-            "error_code": "CLIENT_NOT_INITIALIZED"
+            "error_code": "CLIENT_NOT_INITIALIZED",
         }
 
     if not agent.client.enable_rate_limiter or not agent.client.rate_limiter:
         return {
             "success": False,
             "message": "Rate limiter가 비활성화되어 있습니다",
-            "error_code": "RATE_LIMITER_DISABLED"
+            "error_code": "RATE_LIMITER_DISABLED",
         }
 
     # Validate parameters
-    if requests_per_second is not None and (requests_per_second <= 0 or requests_per_second > 20):
+    if requests_per_second is not None and (
+        requests_per_second <= 0 or requests_per_second > 20
+    ):
         raise InvalidParameterError(
             "requests_per_second",
-            "초당 요청 수는 1-20 사이여야 합니다 (API 제한: 최대 20회/초)"
+            "초당 요청 수는 1-20 사이여야 합니다 (API 제한: 최대 20회/초)",
         )
 
-    if requests_per_minute is not None and (requests_per_minute <= 0 or requests_per_minute > 1000):
+    if requests_per_minute is not None and (
+        requests_per_minute <= 0 or requests_per_minute > 1000
+    ):
         raise InvalidParameterError(
             "requests_per_minute",
-            "분당 요청 수는 1-1000 사이여야 합니다 (API 제한: 최대 1000회/분)"
+            "분당 요청 수는 1-1000 사이여야 합니다 (API 제한: 최대 1000회/분)",
         )
 
     if min_interval_ms is not None and (min_interval_ms < 0 or min_interval_ms > 1000):
         raise InvalidParameterError(
-            "min_interval_ms",
-            "최소 간격은 0-1000ms 사이여야 합니다"
+            "min_interval_ms", "최소 간격은 0-1000ms 사이여야 합니다"
         )
 
     # Apply changes
@@ -151,20 +166,20 @@ async def set_rate_limits(
         return {
             "success": False,
             "message": "변경할 값이 지정되지 않았습니다",
-            "error_code": "NO_CHANGES"
+            "error_code": "NO_CHANGES",
         }
 
     agent.client.rate_limiter.set_limits(
         requests_per_second=requests_per_second,
         requests_per_minute=requests_per_minute,
-        min_interval_ms=min_interval_ms
+        min_interval_ms=min_interval_ms,
     )
 
     return {
         "success": True,
         "message": "Rate limiter 설정이 변경되었습니다",
         "changes": changes,
-        "new_status": agent.client.rate_limiter.get_current_rate()
+        "new_status": agent.client.rate_limiter.get_current_rate(),
     }
 
 
@@ -183,18 +198,18 @@ async def enable_adaptive_rate_limiting(enable: bool) -> Dict[str, Any]:
     """
     agent = get_agent()
 
-    if not hasattr(agent, 'client') or not agent.client:
+    if not hasattr(agent, "client") or not agent.client:
         return {
             "success": False,
             "message": "Agent client가 초기화되지 않았습니다",
-            "error_code": "CLIENT_NOT_INITIALIZED"
+            "error_code": "CLIENT_NOT_INITIALIZED",
         }
 
     if not agent.client.enable_rate_limiter or not agent.client.rate_limiter:
         return {
             "success": False,
             "message": "Rate limiter가 비활성화되어 있습니다",
-            "error_code": "RATE_LIMITER_DISABLED"
+            "error_code": "RATE_LIMITER_DISABLED",
         }
 
     old_value = agent.client.rate_limiter.enable_adaptive
@@ -210,5 +225,5 @@ async def enable_adaptive_rate_limiting(enable: bool) -> Dict[str, Any]:
         "message": f"적응형 Rate Limiting이 {'활성화' if enable else '비활성화'}되었습니다",
         "previous_value": old_value,
         "current_value": enable,
-        "current_status": agent.client.rate_limiter.get_current_rate()
+        "current_status": agent.client.rate_limiter.get_current_rate(),
     }
