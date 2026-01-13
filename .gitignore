@@ -169,6 +169,11 @@ opencode.json
 trash/
 
 # Task Master AI
-.taskmaster/ 
+.taskmaster/
+
+# Claude Code settings (ignore personal settings, but keep project agents)
 .claude/
+!.claude/agents/
+!.claude/commands/
+
 coverage.json
