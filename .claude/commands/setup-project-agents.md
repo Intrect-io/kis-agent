@@ -177,14 +177,28 @@ tools: Read, Write, Bash
 - 복구하려면: `mv ~/.claude/agents.disabled ~/.claude/agents`
 - 프로젝트 에이전트가 전역 에이전트보다 우선순위 높음
 
-## 자동화 스크립트
+## 전역 스킬로 설치
 
-이 스킬을 다른 프로젝트에서도 사용하려면:
+이 스킬을 모든 프로젝트에서 사용하려면:
 
-1. 이 파일을 복사: `cp .claude/commands/setup-project-agents.md ../other-project/.claude/commands/`
-2. Claude에서 실행: `/setup-project-agents`
-3. 프로젝트 분석 후 자동으로 에이전트 생성
+```bash
+# 전역 스킬로 설치
+cp .claude/commands/setup-project-agents.md ~/.claude/commands/
+
+# 또는 프로젝트별로 복사
+cp .claude/commands/setup-project-agents.md ../other-project/.claude/commands/
+```
+
+설치 후 모든 Claude Code 세션에서 `/setup-project-agents` 사용 가능합니다.
+
+## 사용법
+
+```
+/setup-project-agents
+```
+
+Claude가 프로젝트를 분석하고 자동으로 3-5개의 최적화된 에이전트를 생성합니다.
 
 ---
 
-**이 스킬을 실행하면 프로젝트에 맞는 에이전트가 자동 생성됩니다.**
+**이 스킬은 프로젝트 타입(Python API, Frontend, Data Science 등)을 자동 감지하여 맞춤형 에이전트를 생성합니다.**
