@@ -2,6 +2,42 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Project Agents
+
+PyKIS uses **project-specific agents** optimized for this codebase. These agents are stored in `.claude/agents/` and are shared with the team via git.
+
+### Available Agents
+
+1. **pykis-tester** - Test coverage specialist
+   - Boost test coverage from 52% → 70%+
+   - Mock-based unit testing
+   - pytest fixtures and edge cases
+   - Usage: `pykis-tester agent를 사용해서 stock_price_api.py 커버리지를 올려줘`
+
+2. **pykis-api-designer** - API integration expert
+   - Add new Korea Investment API endpoints
+   - Generate TypedDict response models
+   - Apply Facade pattern
+   - Korean docstring generation
+   - Usage: `pykis-api-designer로 TR_ID FHKST03010100 API를 추가해줘`
+
+3. **pykis-reviewer** - Code review specialist
+   - Verify project rules (Korean docstrings, TypedDict, etc.)
+   - Performance and security checks
+   - Critical/Warning/Suggestion classification
+   - Usage: `pykis-reviewer로 최근 변경사항을 리뷰해줘`
+
+### Why Project Agents?
+
+- **Context efficiency**: Only load relevant knowledge for PyKIS
+- **Team consistency**: All developers use the same agents
+- **Customizable**: Tailored to PyKIS patterns (Facade, TypedDict, Korean docs)
+- **Version controlled**: Agents evolve with the project
+
+### Reusable Skill
+
+The `/setup-project-agents` skill can be used in other projects to automatically generate project-specific agents. See `.claude/commands/setup-project-agents.md` for details.
+
 ## Task Master AI Instructions
 **Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
 @./.taskmaster/CLAUDE.md
