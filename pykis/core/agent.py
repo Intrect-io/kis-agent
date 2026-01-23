@@ -6,6 +6,7 @@ import pandas as pd
 from ..account.api import AccountAPI
 from ..futures import Futures
 from ..overseas import OverseasStockAPI
+from ..overseas_futures import OverseasFutures
 from ..program.trade import ProgramTradeAPI
 from ..stock import (
     StockAPI,  # [변경 이유] 레거시가 아닌 패키지 파사드 StockAPI 사용으로 중복/충돌 제거
@@ -278,6 +279,9 @@ class Agent(TechnicalAnalysisMixin, MethodDiscoveryMixin, BaseExceptionHandler):
             self.client, self.account_info, _from_agent=True
         )
         self.futures_api = Futures(self.client, self.account_info, _from_agent=True)
+        self.overseas_futures_api = OverseasFutures(
+            self.client, self.account_info, _from_agent=True
+        )
 
     @property
     def overseas(self) -> OverseasStockAPI:
@@ -358,6 +362,55 @@ class Agent(TechnicalAnalysisMixin, MethodDiscoveryMixin, BaseExceptionHandler):
             ... )
         """
         return self.futures_api
+
+    @property
+    def overseas_futures(self) -> OverseasFutures:
+        """
+        해외선물옵션 API 파사드
+
+        해외선물옵션 거래에 필요한 모든 API를 통합된 인터페이스로 제공합니다.
+
+        지원 거래소:
+        - CME: Chicago Mercantile Exchange (E-mini S&P500, 나스닥100)
+        - EUREX: European Exchange (EURO STOXX 50)
+        - COMEX: Commodity Exchange (금, 은 선물)
+        - NYMEX: NY Mercantile Exchange (원유 선물)
+        - ICE: Intercontinental Exchange (달러 인덱스)
+
+        Returns:
+            OverseasFutures: 해외선물옵션 API 파사드
+
+        Example:
+            >>> from pykis import Agent
+            >>> agent = Agent(
+            ...     app_key="...",
+            ...     app_secret="...",
+            ...     account_no="12345678",
+            ...     account_code="03"  # 해외선물옵션 계좌
+            ... )
+            >>>
+            >>> # 해외선물 현재가 조회
+            >>> price = agent.overseas_futures.get_price("CNHU24")
+            >>> print(f"현재가: {price['output']['last']}")
+            >>>
+            >>> # 해외선물 호가 조회
+            >>> orderbook = agent.overseas_futures.get_futures_orderbook("CNHU24")
+            >>> print(f"매수1호가: {orderbook['output2']['bidp1']}")
+            >>>
+            >>> # 잔고 조회
+            >>> balance = agent.overseas_futures.get_balance()
+            >>> for pos in balance['output']:
+            ...     print(f"{pos['srs_cd']}: {pos['unsttl_qty']}계약")
+            >>>
+            >>> # 매수 주문
+            >>> result = agent.overseas_futures.order.buy(
+            ...     code="CNHU24",
+            ...     qty="1",
+            ...     price="100.00"
+            ... )
+            >>> print(f"주문번호: {result['output']['odno']}")
+        """
+        return self.overseas_futures_api
 
     def websocket(
         self,

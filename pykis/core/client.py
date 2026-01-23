@@ -129,12 +129,38 @@ API_ENDPOINTS = {
     "OVERSEAS_INQUIRE_BALANCE": "/uapi/overseas-stock/v1/trading/inquire-balance",  # 해외주식 잔고 (TR: TTTS3012R)
     "OVERSEAS_INQUIRE_CCNL": "/uapi/overseas-stock/v1/trading/inquire-ccnl",  # 해외주식 주문체결내역 (TR: TTTS3035R)
     "OVERSEAS_INQUIRE_PSAMOUNT": "/uapi/overseas-stock/v1/trading/inquire-psamount",  # 해외주식 매수가능금액조회 (TR: TTTS3007R)
-    # === 선물옵션 ===
-    "FUTUREOPTION_INQUIRE_PRICE": "/uapi/domestic-futureoption/v1/quotations/inquire-price",  # 선물옵션 시세 (TR: FHMIF10000000)
-    "FUTUREOPTION_INQUIRE_ASKING_PRICE": "/uapi/domestic-futureoption/v1/quotations/inquire-asking-price",  # 선물옵션 시세호가 (TR: FHMIF10010000)
-    "FUTUREOPTION_INQUIRE_BALANCE": "/uapi/domestic-futureoption/v1/trading/inquire-balance",  # 선물옵션 잔고현황 (TR: CTFO6118R)
+    # === 국내선물옵션 시세 (11개) ===
+    "FUTURES_DISPLAY_BOARD_CALLPUT": "/uapi/domestic-futureoption/v1/quotations/display-board-callput",  # 옵션 콜/풋 전광판 (TR: FHPIF05030100)
+    "FUTURES_DISPLAY_BOARD_FUTURES": "/uapi/domestic-futureoption/v1/quotations/display-board-futures",  # 선물 전광판 (TR: FHPIF05030200)
+    "FUTURES_DISPLAY_BOARD_OPTION_LIST": "/uapi/domestic-futureoption/v1/quotations/display-board-option-list",  # 옵션 목록 (TR: FHPIO056104C0)
+    "FUTURES_DISPLAY_BOARD_TOP": "/uapi/domestic-futureoption/v1/quotations/display-board-top",  # 상위 종목 (TR: FHPIF05030000)
+    "FUTURES_EXP_PRICE_TREND": "/uapi/domestic-futureoption/v1/quotations/exp-price-trend",  # 예상 가격 추이 (TR: FHPIF05110100)
+    "FUTURES_INQUIRE_PRICE": "/uapi/domestic-futureoption/v1/quotations/inquire-price",  # 현재가 조회 (TR: FHMIF10000000)
+    "FUTURES_INQUIRE_ASKING_PRICE": "/uapi/domestic-futureoption/v1/quotations/inquire-asking-price",  # 호가 조회 (TR: FHMIF10010000)
+    "FUTURES_INQUIRE_DAILY_FUOPCHARTPRICE": "/uapi/domestic-futureoption/v1/quotations/inquire-daily-fuopchartprice",  # 일별 차트 (TR: FHKIF03020100)
+    "FUTURES_INQUIRE_TIME_FUOPCHARTPRICE": "/uapi/domestic-futureoption/v1/quotations/inquire-time-fuopchartprice",  # 분봉 차트 (TR: FHKIF03020200)
+    "FUTURES_INQUIRE_CCNL_BSTIME": "/uapi/domestic-futureoption/v1/trading/inquire-ccnl-bstime",  # 시간대별 체결 (TR: CTFO5139R)
+    "FUTURES_INQUIRE_DAILY_AMOUNT_FEE": "/uapi/domestic-futureoption/v1/trading/inquire-daily-amount-fee",  # 일별 거래량/수수료 (TR: CTFO6119R)
+    # === 국내선물옵션 계좌/잔고 (6개) ===
+    "FUTURES_INQUIRE_BALANCE": "/uapi/domestic-futureoption/v1/trading/inquire-balance",  # 잔고 조회 (TR: CTFO6118R/VTFO6118R)
+    "FUTURES_INQUIRE_BALANCE_SETTLEMENT_PL": "/uapi/domestic-futureoption/v1/trading/inquire-balance-settlement-pl",  # 청산손익 (TR: CTFO6117R)
+    "FUTURES_INQUIRE_BALANCE_VALUATION_PL": "/uapi/domestic-futureoption/v1/trading/inquire-balance-valuation-pl",  # 평가손익 (TR: CTFO6159R)
+    "FUTURES_INQUIRE_DEPOSIT": "/uapi/domestic-futureoption/v1/trading/inquire-deposit",  # 예수금 (TR: CTRP6550R)
+    "FUTURES_INQUIRE_NGT_BALANCE": "/uapi/domestic-futureoption/v1/trading/inquire-ngt-balance",  # 야간 잔고 (TR: CTFN6118R)
+    "FUTURES_NGT_MARGIN_DETAIL": "/uapi/domestic-futureoption/v1/trading/ngt-margin-detail",  # 야간 증거금 (TR: CTFN7107R)
+    # === 국내선물옵션 주문/체결 (6개) ===
+    "FUTURES_INQUIRE_CCNL": "/uapi/domestic-futureoption/v1/trading/inquire-ccnl",  # 체결 내역 (TR: TTTO5201R/VTTO5201R)
+    "FUTURES_INQUIRE_NGT_CCNL": "/uapi/domestic-futureoption/v1/trading/inquire-ngt-ccnl",  # 야간 체결 (TR: STTN5201R)
+    "FUTURES_INQUIRE_PSBL_ORDER": "/uapi/domestic-futureoption/v1/trading/inquire-psbl-order",  # 주문 가능 수량 (TR: TTTO5105R/VTTO5105R)
+    "FUTURES_INQUIRE_PSBL_NGT_ORDER": "/uapi/domestic-futureoption/v1/trading/inquire-psbl-ngt-order",  # 야간 주문 가능 (TR: STTN5105R)
+    "FUTURES_ORDER": "/uapi/domestic-futureoption/v1/trading/order",  # 주문 (TR: TTTO1101U/TTTO1102U)
+    "FUTURES_ORDER_RVSECNCL": "/uapi/domestic-futureoption/v1/trading/order-rvsecncl",  # 정정/취소 (TR: TTTO1103U/TTTO1104U)
+    # === 레거시 (하위 호환성) ===
+    "FUTUREOPTION_INQUIRE_PRICE": "/uapi/domestic-futureoption/v1/quotations/inquire-price",  # → FUTURES_INQUIRE_PRICE
+    "FUTUREOPTION_INQUIRE_ASKING_PRICE": "/uapi/domestic-futureoption/v1/quotations/inquire-asking-price",  # → FUTURES_INQUIRE_ASKING_PRICE
+    "FUTUREOPTION_INQUIRE_BALANCE": "/uapi/domestic-futureoption/v1/trading/inquire-balance",  # → FUTURES_INQUIRE_BALANCE
     "INQUIRE_INDEX_PRICE": "/uapi/domestic-futureoption/v1/quotations/underlying-price",  # KOSPI 200 지수 (TR: FHMIF10100000)
-    "INQUIRE_FUTURES_PRICE": "/uapi/domestic-futureoption/v1/quotations/inquire-price",  # 선물옵션 시세 (TR: FHMIF10000000)
+    "INQUIRE_FUTURES_PRICE": "/uapi/domestic-futureoption/v1/quotations/inquire-price",  # → FUTURES_INQUIRE_PRICE
     # === ETF/ETN ===
     "ETF_INQUIRE_PRICE": "/uapi/etfetn/v1/quotations/inquire-price",  # ETF/ETN현재가 (TR: FHPST02400000)
     "ETF_NAV_COMPARISON_TREND": "/uapi/etfetn/v1/quotations/nav-comparison-trend",  # NAV 비교추이(종목) (TR: FHPST02440000)
@@ -146,6 +172,28 @@ API_ENDPOINTS = {
     # === 관심종목 ===
     "INTEREST_GROUP_LIST": "/uapi/domestic-stock/v1/quotations/intstock-grouplist",  # 관심종목 그룹 조회
     "INTEREST_STOCK_LIST": "/uapi/domestic-stock/v1/quotations/intstock-stocklist-by-group",  # 관심종목 그룹별 종목 조회
+    # === 해외선물옵션 시세 (8개) ===
+    "OVRS_FUTR_INQUIRE_PRICE": "/uapi/overseas-futureoption/v1/quotations/inquire-price",  # 해외선물종목현재가
+    "OVRS_FUTR_OPT_PRICE": "/uapi/overseas-futureoption/v1/quotations/opt-price",  # 해외옵션종목현재가
+    "OVRS_FUTR_MINUTE_CHART": "/uapi/overseas-futureoption/v1/quotations/inquire-time-futurechartprice",  # 해외선물 분봉조회
+    "OVRS_FUTR_DAILY_CCNL": "/uapi/overseas-futureoption/v1/quotations/daily-ccnl",  # 해외선물 체결추이(일간)
+    "OVRS_FUTR_ASKING_PRICE": "/uapi/overseas-futureoption/v1/quotations/inquire-asking-price",  # 해외선물 호가
+    "OVRS_FUTR_OPT_ASKING_PRICE": "/uapi/overseas-futureoption/v1/quotations/opt-asking-price",  # 해외옵션 호가
+    "OVRS_FUTR_CONTRACT_DETAIL": "/uapi/overseas-futureoption/v1/quotations/search-contract-detail",  # 해외선물 상품기본정보
+    "OVRS_FUTR_OPT_DETAIL": "/uapi/overseas-futureoption/v1/quotations/search-opt-detail",  # 해외옵션 상품기본정보
+    # === 해외선물옵션 계좌 (9개) ===
+    "OVRS_FUTR_BALANCE": "/uapi/overseas-futureoption/v1/trading/inquire-unpd",  # 미결제내역조회(잔고)
+    "OVRS_FUTR_DEPOSIT": "/uapi/overseas-futureoption/v1/trading/inquire-deposit",  # 예수금현황
+    "OVRS_FUTR_MARGIN": "/uapi/overseas-futureoption/v1/trading/margin-detail",  # 증거금상세
+    "OVRS_FUTR_PSAMOUNT": "/uapi/overseas-futureoption/v1/trading/inquire-psamount",  # 주문가능조회
+    "OVRS_FUTR_TODAY_CCLD": "/uapi/overseas-futureoption/v1/trading/inquire-ccld",  # 당일주문내역조회
+    "OVRS_FUTR_DAILY_ORDER": "/uapi/overseas-futureoption/v1/trading/inquire-daily-order",  # 일별 주문내역
+    "OVRS_FUTR_DAILY_CCLD": "/uapi/overseas-futureoption/v1/trading/inquire-daily-ccld",  # 일별 체결내역
+    "OVRS_FUTR_PERIOD_CCLD": "/uapi/overseas-futureoption/v1/trading/inquire-period-ccld",  # 기간계좌손익
+    "OVRS_FUTR_PERIOD_TRANS": "/uapi/overseas-futureoption/v1/trading/inquire-period-trans",  # 기간계좌거래내역
+    # === 해외선물옵션 주문 (2개) ===
+    "OVRS_FUTR_ORDER": "/uapi/overseas-futureoption/v1/trading/order",  # 해외선물옵션 주문
+    "OVRS_FUTR_ORDER_RVSECNCL": "/uapi/overseas-futureoption/v1/trading/order-rvsecncl",  # 정정취소주문
 }
 
 
