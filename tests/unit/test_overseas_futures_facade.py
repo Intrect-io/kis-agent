@@ -242,18 +242,20 @@ def test_overseas_futures_facade_in_agent():
     """Agent에서 OverseasFutures Facade 통합 확인"""
     from pykis.core.agent import Agent
 
-    with patch("pykis.core.auth.auth"):
-        with patch("pykis.core.auth.read_token", return_value="dummy_token"):
-            agent = Agent(
-                app_key="test_key",
-                app_secret="test_secret",
-                account_no="12345678",
-                account_code="03",
-            )
+    with (
+        patch("pykis.core.auth.auth"),
+        patch("pykis.core.auth.read_token", return_value="dummy_token"),
+    ):
+        agent = Agent(
+            app_key="test_key",
+            app_secret="test_secret",
+            account_no="12345678",
+            account_code="03",
+        )
 
-            # Agent에 overseas_futures 속성 존재 확인
-            assert hasattr(agent, "overseas_futures")
-            assert isinstance(agent.overseas_futures, OverseasFutures)
+        # Agent에 overseas_futures 속성 존재 확인
+        assert hasattr(agent, "overseas_futures")
+        assert isinstance(agent.overseas_futures, OverseasFutures)
 
 
 if __name__ == "__main__":

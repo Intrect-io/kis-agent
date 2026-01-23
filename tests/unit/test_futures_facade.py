@@ -297,18 +297,20 @@ def test_futures_facade_in_agent():
     from pykis.core.agent import Agent
 
     # Agent 초기화 시 Futures 속성 존재 확인
-    with patch("pykis.core.auth.auth"):
-        with patch("pykis.core.auth.read_token", return_value="dummy_token"):
-            agent = Agent(
-                app_key="test_key",
-                app_secret="test_secret",
-                account_no="12345678",
-                account_code="03",
-            )
+    with (
+        patch("pykis.core.auth.auth"),
+        patch("pykis.core.auth.read_token", return_value="dummy_token"),
+    ):
+        agent = Agent(
+            app_key="test_key",
+            app_secret="test_secret",
+            account_no="12345678",
+            account_code="03",
+        )
 
-            # Agent에 futures 속성 존재 확인
-            assert hasattr(agent, "futures")
-            assert isinstance(agent.futures, Futures)
+        # Agent에 futures 속성 존재 확인
+        assert hasattr(agent, "futures")
+        assert isinstance(agent.futures, Futures)
 
 
 if __name__ == "__main__":

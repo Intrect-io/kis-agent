@@ -2,6 +2,106 @@
 
 모든 주목할 만한 변경사항이 이 파일에 문서화됩니다.
 
+## [1.5.0] - 2026-01-23
+
+### 🚀 주요 변경사항
+
+#### 선물옵션 거래 완전 지원 (NEW!)
+
+PyKIS에 **국내/해외 선물옵션 거래 기능**이 추가되었습니다. KOSPI200 선물옵션과 해외선물옵션(CME, EUREX, COMEX 등)을 완전 지원합니다.
+
+**국내선물옵션 (pykis.futures):**
+
+1. **FuturesPriceAPI** - 시세 조회 (11개 메서드)
+   - 현재가, 호가, 일봉/분봉 차트
+   - 콜/풋 옵션 전광판, 선물 전광판
+
+2. **FuturesAccountAPI** - 계좌 조회 (6개 메서드)
+   - 잔고 조회 (평가/결제 손익)
+   - 예수금, 증거금 상세
+
+3. **FuturesOrderAPI** - 주문 실행 (6개 메서드)
+   - 매수/매도 주문 (시장가, 지정가)
+   - 정정/취소 주문
+   - 당일/일별 주문내역
+
+4. **FuturesCodeGenerator** - 종목코드 자동 생성
+   - 현재/차근월물 선물 코드 생성
+   - 콜/풋 옵션 코드 생성
+   - ATM 옵션 코드 자동 계산
+
+5. **FuturesHistoricalAPI** - 과거 데이터 조회
+   - 월물 자동 전환 + 페이지네이션
+   - 분봉 데이터 연속 조회
+
+**해외선물옵션 (pykis.overseas_futures):**
+
+1. **OverseasFuturesPriceAPI** - 시세 조회 (8개 메서드)
+   - 선물/옵션 현재가, 호가
+   - 분봉 차트, 체결 추이
+   - 상품 기본정보 조회
+
+2. **OverseasFuturesAccountAPI** - 계좌 조회 (9개 메서드)
+   - 미결제내역, 예수금, 증거금 상세
+   - 주문가능 조회, 당일/일별 주문내역
+   - 기간 손익, 거래내역
+
+3. **OverseasFuturesOrderAPI** - 주문 실행 (2개 메서드 + 편의 메서드)
+   - 신규 주문 (지정가, 시장가, STOP)
+   - 정정/취소 주문
+   - buy(), sell(), cancel(), modify() 편의 메서드
+
+**사용 예시:**
+```python
+from pykis import Agent
+
+agent = Agent(
+    app_key="...", app_secret="...",
+    account_no="12345678", account_code="03"  # 선물옵션 계좌
+)
+
+# === 국내선물 ===
+# 현재 월물 시세 조회 (종목코드 자동 생성)
+price = agent.futures.get_current_futures_price()
+print(f"KOSPI200 선물: {price['output']['fuop_prpr']}")
+
+# 옵션 시세 조회
+call = agent.futures.get_call_option_price(340.0)  # 콜 340
+
+# 잔고 조회
+balance = agent.futures.inquire_balance()
+
+# 주문
+result = agent.futures.order.buy("101S03", qty="1", price="0")  # 시장가 매수
+
+# === 해외선물 ===
+# 시세 조회
+price = agent.overseas_futures.get_price("CNHU24")
+
+# 잔고 조회
+balance = agent.overseas_futures.get_balance()
+
+# 매수 주문
+result = agent.overseas_futures.order.buy(
+    code="CNHU24", qty="1", price="100.00"
+)
+```
+
+**TypedDict 응답 모델 (57개):**
+- `pykis/responses/futures.py` - 국내선물 (27개)
+- `pykis/responses/overseas_futures.py` - 해외선물 (30개)
+
+**테스트 커버리지:**
+- 150개 단위 테스트 추가
+- 전체 382개 테스트 통과
+
+**문서:**
+- `docs/architecture/futures-architecture.md` - C4 아키텍처 다이어그램
+- `docs/architecture/futures-api-mapping.md` - API 엔드포인트 매핑
+- `docs/architecture/futures-response-models.md` - TypedDict 모델 문서
+
+---
+
 ## [1.4.0] - 2026-01-04
 
 ### 🚀 주요 변경사항

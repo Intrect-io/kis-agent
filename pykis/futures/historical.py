@@ -167,7 +167,7 @@ class FuturesContractCode:
             raise ValueError(f"Invalid futures code format: {code}")
 
         series_code = code[3]
-        month_str = code[4:6]
+        # month_str = code[4:6]  # 형식 검증용 (현재 미사용)
 
         if series_code not in cls.SERIES_TO_MONTH:
             raise ValueError(f"Invalid series code: {series_code}")

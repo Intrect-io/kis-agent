@@ -44,13 +44,14 @@ The `/setup-project-agents` skill can be used in other projects to automatically
 
 ## Project Overview
 
-**PyKIS** is a high-performance Python wrapper for Korea Investment & Securities (한국투자증권) OpenAPI. It provides comprehensive trading functionality for Korean stock markets (KOSPI, KOSDAQ, NXT) with intelligent caching, rate limiting, real-time WebSocket data streaming, and 57 TypedDict response models for type safety.
+**PyKIS** is a high-performance Python wrapper for Korea Investment & Securities (한국투자증권) OpenAPI. It provides comprehensive trading functionality for Korean stock markets (KOSPI, KOSDAQ, NXT), domestic futures/options (KOSPI200), and overseas futures/options with intelligent caching, rate limiting, real-time WebSocket data streaming, and TypedDict response models for type safety.
 
 ### Key Statistics
-- **232 tests** passing with 52% code coverage
-- **176 methods** with 100% type hinting
-- **57 TypedDict** response models for API responses
+- **382 tests** passing with 52% code coverage
+- **214 methods** with 100% type hinting
+- **114 TypedDict** response models for API responses
 - **Python 3.8-3.12** support with CI/CD on all versions
+- **38 new API endpoints** for futures/options trading
 
 ## Architecture Overview
 
@@ -67,6 +68,16 @@ Agent (Top-level Facade)
 ├── AccountAPI (Account balance & queries)
 ├── ProgramTradeAPI (Program trading analytics)
 ├── InterestStockAPI (Interest stock management)
+├── Futures (Domestic futures/options - pykis.futures.Futures)
+│   ├── FuturesPriceAPI (11 price/quote methods)
+│   ├── FuturesAccountAPI (6 account methods)
+│   ├── FuturesOrderAPI (6 order methods)
+│   ├── FuturesCodeGenerator (Contract code generation)
+│   └── FuturesHistoricalAPI (Historical minute bars)
+├── OverseasFutures (Overseas futures/options - pykis.overseas_futures.OverseasFutures)
+│   ├── OverseasFuturesPriceAPI (8 price methods)
+│   ├── OverseasFuturesAccountAPI (9 account methods)
+│   └── OverseasFuturesOrderAPI (2 order methods)
 └── WebSocket (Real-time data streaming)
 ```
 
@@ -90,6 +101,8 @@ All API responses use TypedDict for type safety and IDE autocomplete:
 - **pykis/responses/stock.py**: Stock price, orderbook, minute/daily price responses
 - **pykis/responses/account.py**: Account balance, order history responses
 - **pykis/responses/order.py**: Order execution, modification, cancellation responses
+- **pykis/responses/futures.py**: Domestic futures/options responses (27 TypedDicts)
+- **pykis/responses/overseas_futures.py**: Overseas futures/options responses (30 TypedDicts)
 - **pykis/responses/common.py**: BaseResponse and shared types
 
 Example:
@@ -328,8 +341,12 @@ PyKIS includes an **MCP (Model Context Protocol) server** in `pykis-mcp-server/`
 - **CHANGELOG.md**: Version history and feature changes
 - **.github/workflows/ci-cd.yml**: Complete CI/CD pipeline definition
 - **docs/architecture/websocket-architecture.md**: WebSocket system design (C4 diagrams)
+- **docs/architecture/futures-architecture.md**: Futures API architecture (C4 diagrams)
+- **docs/architecture/futures-api-mapping.md**: Futures API endpoint mapping
+- **docs/architecture/futures-response-models.md**: Futures TypedDict models
 - **docs/RATE_LIMITER_GUIDE.md**: Detailed rate limiter documentation
 - **examples/**: Usage examples for various features
+- **examples/futures_code_generator_example.py**: Futures contract code generation examples
 
 ## Testing Philosophy
 
@@ -352,6 +369,8 @@ High-priority coverage areas:
 4. **Cache TTL**: Default 5s is optimized for price data - adjust per use case
 5. **TypedDict Usage**: All new API methods should return TypedDict responses for IDE support
 6. **Test Markers**: Use `@pytest.mark.integration` and `@pytest.mark.requires_credentials` appropriately
+7. **Futures Code Format**: Use `101S03` format (product+series+month), not year-based codes
+8. **Futures Account**: Futures APIs require account_code="03" (선물옵션 계좌)
 
 ## Version Information
 
