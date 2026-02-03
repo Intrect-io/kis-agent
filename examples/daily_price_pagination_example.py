@@ -189,7 +189,7 @@ def example_data_analysis():
     ma20 = calculate_ma(close_prices, 20)
     ma60 = calculate_ma(close_prices, 60)
 
-    print(f"삼성전자 이동평균선:")
+    print("삼성전자 이동평균선:")
     print(f"  현재가: {close_prices[-1]:,}원")
     print(f"  MA5:   {ma5:,.0f}원" if ma5 else "  MA5:   계산 불가")
     print(f"  MA20:  {ma20:,.0f}원" if ma20 else "  MA20:  계산 불가")

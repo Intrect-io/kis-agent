@@ -20,7 +20,6 @@ from ..utils.sector_code import (
     get_sector_codes,
 )
 from ..websocket.client import KisWebSocket
-from .auth import auth
 from .base_exception_handler import BaseExceptionHandler, exception_handler
 from .client import KISClient
 from .config import KISConfig
