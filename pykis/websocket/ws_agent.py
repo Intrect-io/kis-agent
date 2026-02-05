@@ -621,7 +621,7 @@ class WSAgent:
                     if self._handle_subscription_response(json_data):
                         return  # 구독 응답 메시지는 여기서 처리 완료
                 except json.JSONDecodeError:
-                    pass
+                    pass  # JSON 아닌 경우 일반 메시지로 계속 처리
 
             tr_id, tr_key, parsed_data = self._parse_message(data)
 

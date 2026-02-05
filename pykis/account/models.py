@@ -97,7 +97,7 @@ class OrderExecutionItem:
             if ord_qty > 0:
                 return (ccld_qty / ord_qty) * 100
         except (ValueError, TypeError, ZeroDivisionError):
-            pass
+            return 0.0  # 숫자 변환 실패 시 기본값 반환
         return 0.0
 
     def get_order_datetime(self) -> Optional[datetime]:

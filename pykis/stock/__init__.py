@@ -3,7 +3,8 @@ Stock API 패키지 - 주식 관련 API 모음
 
 구조적 리팩토링으로 단일 책임 원칙(SRP)을 적용하여 분리:
 - StockAPI: Facade 패턴으로 통합 인터페이스 제공 (하위 호환성 유지)
-- StockPriceAPI: 시세 조회 전담
+- StockPriceAPI: 시세 조회 전담 (StockIndexAPI 상속)
+- StockIndexAPI: 지수/선물 시세 조회 전담
 - StockMarketAPI: 시장 정보 전담
 - StockInvestorAPI: 투자자 정보 전담
 - ConditionAPI: 조건검색 전담
@@ -15,6 +16,7 @@ from .api_facade import StockAPI
 
 # 기존 기능들 (하위 호환성 유지)
 from .condition import ConditionAPI
+from .index_api import StockIndexAPI
 from .interest import InterestStockAPI
 from .investor import InvestorPositionAnalyzer
 from .investor_api import StockInvestorAPI
@@ -34,7 +36,8 @@ MarketAPI = StockAPI  # 기존 별칭 유지
 
 __all__ = [
     "StockAPI",  # 메인 Facade (Strategy Pattern으로 구현)
-    "StockPriceAPI",  # 시세 전담 (SRP 적용)
+    "StockPriceAPI",  # 시세 전담 (SRP 적용, StockIndexAPI 상속)
+    "StockIndexAPI",  # 지수/선물 시세 전담 (SRP 적용)
     "StockMarketAPI",  # 시장 정보 전담 (SRP 적용)
     "StockInvestorAPI",  # 투자자 정보 전담 (SRP 적용)
     "ConditionAPI",  # 조건검색 (BaseAPI 상속)

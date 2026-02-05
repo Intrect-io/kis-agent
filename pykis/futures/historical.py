@@ -345,7 +345,7 @@ class FuturesHistoricalAPI(BaseAPI):
                     next_date = t.strftime("%Y%m%d")
                     next_time = t.strftime("%H%M%S")
                 except ValueError:
-                    pass
+                    pass  # 날짜 파싱 실패 시 기존 값 유지
             return bars, next_date, next_time
 
         return bars, None, None
