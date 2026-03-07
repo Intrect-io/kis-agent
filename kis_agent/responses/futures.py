@@ -292,7 +292,69 @@ class DisplayBoardCallPutResponse(BaseResponse):
 
 
 # ============================================================
-# 9. inquire_deposit() - 선물옵션 예수금/총자산
+# 9. inquire_balance_settlement_pl() - 선물옵션 잔고청산손익
+# ============================================================
+
+
+class FuturesBalanceSettlementPlRow(TypedDict, total=False):
+    """선물옵션 잔고청산손익 행"""
+
+    fuop_item_code: str  # 선물옵션 종목코드
+    item_name: str  # 종목명
+    futs_optn_kind_code: str  # 선물옵션종류코드 (F:선물, C:콜, P:풋)
+    sll_buy_dvsn_cd: str  # 매도매수구분코드 (1:매도, 2:매수)
+
+    # 청산 정보
+    rlz_pfls_amt: str  # 실현손익금액 (Realized Profit/Loss Amount)
+    rlz_pfls_rt: str  # 실현손익률 (%)
+    sll_qty: str  # 매도수량
+    sll_pric: str  # 매도가격
+    buy_qty: str  # 매수수량
+    buy_pric: str  # 매수가격
+
+    # 수수료 정보
+    fee: str  # 수수료
+    tl_tax: str  # 제세금
+
+
+class FuturesBalanceSettlementPlResponse(BaseResponse):
+    """선물옵션 잔고청산손익 조회 응답"""
+
+    output: List[FuturesBalanceSettlementPlRow]
+
+
+# ============================================================
+# 10. inquire_balance_valuation_pl() - 선물옵션 잔고평가손익내역
+# ============================================================
+
+
+class FuturesBalanceValuationPlRow(TypedDict, total=False):
+    """선물옵션 잔고평가손익 행"""
+
+    fuop_item_code: str  # 선물옵션 종목코드
+    item_name: str  # 종목명
+    futs_optn_kind_code: str  # 선물옵션종류코드 (F:선물, C:콜, P:풋)
+    sll_buy_dvsn_cd: str  # 매도매수구분코드 (1:매도, 2:매수)
+
+    # 평가 정보
+    evlu_amt: str  # 평가금액 (Evaluation Amount)
+    evlu_pfls_amt: str  # 평가손익금액
+    evlu_pfls_rt: str  # 평가손익률 (%)
+    hldg_qty: str  # 보유수량
+
+    # 가격 정보
+    avg_pric: str  # 평균가 (Average Price)
+    prsnt_pric: str  # 현재가 (Present Price)
+
+
+class FuturesBalanceValuationPlResponse(BaseResponse):
+    """선물옵션 잔고평가손익내역 조회 응답"""
+
+    output: List[FuturesBalanceValuationPlRow]
+
+
+# ============================================================
+# 11. inquire_deposit() - 선물옵션 예수금/총자산
 # ============================================================
 
 
@@ -315,6 +377,190 @@ class FuturesDepositResponse(BaseResponse):
 
 
 # ============================================================
+# 12. inquire_ngt_balance() - 야간 선물옵션 잔고현황
+# ============================================================
+
+
+class FuturesNgtBalanceOutput(TypedDict, total=False):
+    """야간 선물옵션 잔고 조회 output 필드"""
+
+    fuop_item_code: str  # 선물옵션 종목코드
+    item_name: str  # 종목명
+    futs_optn_kind_code: str  # 선물옵션종류코드 (F:선물, C:콜, P:풋)
+    bstp_code: str  # 업종코드
+
+    # 잔고 정보
+    ord_psbl_qty: str  # 주문가능수량 (Order Possible Quantity)
+    sll_buy_dvsn_cd: str  # 매도매수구분코드 (1:매도, 2:매수)
+    hldg_qty: str  # 보유수량 (Holding Quantity)
+
+    # 가격 정보
+    avg_pric: str  # 평균가 (Average Price)
+    prsnt_pric: str  # 현재가 (Present Price)
+    fnoat_plamt: str  # 평가손익금액 (Floating Profit/Loss Amount)
+
+
+class FuturesNgtBalanceResponse(BaseResponse):
+    """야간 선물옵션 잔고현황 조회 응답"""
+
+    output: List[FuturesNgtBalanceOutput]
+
+
+# ============================================================
+# 13. ngt_margin_detail() - 야간 선물옵션 증거금 상세
+# ============================================================
+
+
+class FuturesNgtMarginDetailOutput(TypedDict, total=False):
+    """야간 선물옵션 증거금 상세 output"""
+
+    maint_mrgn_amt: str  # 유지증거금액 (Maintenance Margin Amount)
+    ord_mrgn_amt: str  # 주문증거금액 (Order Margin Amount)
+    addp_amt: str  # 추가증거금액 (Additional Margin Amount)
+    dpsi_reqr_amt: str  # 예탁금필요금액 (Deposit Requirement Amount)
+    nass_amt: str  # 순자산금액 (Net Asset Amount)
+
+
+class FuturesNgtMarginDetailResponse(BaseResponse):
+    """야간 선물옵션 증거금 상세 조회 응답"""
+
+    output: FuturesNgtMarginDetailOutput
+
+
+# ============================================================
+# 14. inquire_ccnl() - 선물옵션 체결내역
+# ============================================================
+
+
+class FuturesCcnlRow(TypedDict, total=False):
+    """선물옵션 체결내역 행"""
+
+    ord_dt: str  # 주문일자 (YYYYMMDD)
+    ord_gno_brno: str  # 주문채번지점번호
+    odno: str  # 주문번호
+    orgn_odno: str  # 원주문번호
+    fuop_item_code: str  # 선물옵션종목코드
+    sll_buy_dvsn_cd: str  # 매도매수구분코드 (1:매도, 2:매수)
+    ord_qty: str  # 주문수량
+    ord_unpr: str  # 주문단가
+    ccld_qty: str  # 체결수량
+    ccld_unpr: str  # 체결단가
+    ccld_amt: str  # 체결금액
+    rmn_qty: str  # 잔여수량
+    rjct_qty: str  # 거부수량
+    ccld_cndt_name: str  # 체결조건명
+
+
+class FuturesCcnlResponse(BaseResponse):
+    """선물옵션 체결내역 조회 응답"""
+
+    output: List[FuturesCcnlRow]
+
+
+# ============================================================
+# 15. inquire_ngt_ccnl() - 야간 선물옵션 체결내역
+# ============================================================
+
+
+class FuturesNgtCcnlRow(TypedDict, total=False):
+    """야간 선물옵션 체결내역 행"""
+
+    ord_dt: str  # 주문일자 (YYYYMMDD)
+    odno: str  # 주문번호
+    fuop_item_code: str  # 선물옵션종목코드
+    item_name: str  # 종목명
+    sll_buy_dvsn_cd: str  # 매도매수구분코드 (1:매도, 2:매수)
+    ord_qty: str  # 주문수량
+    ord_unpr: str  # 주문단가
+    ccld_qty: str  # 체결수량
+    ccld_unpr: str  # 체결단가
+    ccld_amt: str  # 체결금액
+
+
+class FuturesNgtCcnlResponse(BaseResponse):
+    """야간 선물옵션 체결내역 조회 응답"""
+
+    output: List[FuturesNgtCcnlRow]
+
+
+# ============================================================
+# 16. inquire_psbl_order() - 선물옵션 주문가능수량
+# ============================================================
+
+
+class FuturesPsblOrderOutput(TypedDict, total=False):
+    """선물옵션 주문가능수량 조회 output"""
+
+    psbl_qty: str  # 주문가능수량 (Possible Quantity)
+    fuop_item_code: str  # 선물옵션종목코드
+    item_name: str  # 종목명
+
+
+class FuturesPsblOrderResponse(BaseResponse):
+    """선물옵션 주문가능수량 조회 응답"""
+
+    output: FuturesPsblOrderOutput
+
+
+# ============================================================
+# 17. inquire_psbl_ngt_order() - 야간 선물옵션 주문가능수량
+# ============================================================
+
+
+class FuturesPsblNgtOrderOutput(TypedDict, total=False):
+    """야간 선물옵션 주문가능수량 조회 output"""
+
+    psbl_qty: str  # 주문가능수량 (Possible Quantity)
+    fuop_item_code: str  # 선물옵션종목코드
+    item_name: str  # 종목명
+
+
+class FuturesPsblNgtOrderResponse(BaseResponse):
+    """야간 선물옵션 주문가능수량 조회 응답"""
+
+    output: FuturesPsblNgtOrderOutput
+
+
+# ============================================================
+# 18. order() - 선물옵션 신규 주문
+# ============================================================
+
+
+class FuturesOrderNewOutput(TypedDict, total=False):
+    """선물옵션 신규 주문 응답 output"""
+
+    odno: str  # 주문번호 (Order Number)
+    ord_tmd: str  # 주문시각 (Order Time, HHMMSS)
+    ord_gno_brno: str  # 주문채번지점번호
+
+
+class FuturesOrderNewResponse(BaseResponse):
+    """선물옵션 신규 주문 응답"""
+
+    output: FuturesOrderNewOutput
+
+
+# ============================================================
+# 19. order_rvsecncl() - 선물옵션 정정/취소
+# ============================================================
+
+
+class FuturesOrderRvsecnclOutput(TypedDict, total=False):
+    """선물옵션 정정/취소 응답 output"""
+
+    odno: str  # 주문번호 (Order Number)
+    ord_tmd: str  # 주문시각 (Order Time, HHMMSS)
+    rvse_cncl_dvsn_cd: str  # 정정취소구분코드 (1:정정, 2:취소)
+    orgn_odno: str  # 원주문번호 (Original Order Number)
+
+
+class FuturesOrderRvsecnclResponse(BaseResponse):
+    """선물옵션 정정/취소 응답"""
+
+    output: FuturesOrderRvsecnclOutput
+
+
+# ============================================================
 # __all__ 정의
 # ============================================================
 
@@ -328,14 +574,35 @@ __all__ = [
     # 잔고/계좌
     "FuturesBalanceOutput",
     "FuturesBalanceResponse",
+    "FuturesBalanceSettlementPlRow",
+    "FuturesBalanceSettlementPlResponse",
+    "FuturesBalanceValuationPlRow",
+    "FuturesBalanceValuationPlResponse",
     "FuturesDepositOutput",
     "FuturesDepositResponse",
+    "FuturesNgtBalanceOutput",
+    "FuturesNgtBalanceResponse",
+    "FuturesNgtMarginDetailOutput",
+    "FuturesNgtMarginDetailResponse",
+    # 체결/주문
+    "FuturesCcnlRow",
+    "FuturesCcnlResponse",
+    "FuturesNgtCcnlRow",
+    "FuturesNgtCcnlResponse",
+    "FuturesPsblOrderOutput",
+    "FuturesPsblOrderResponse",
+    "FuturesPsblNgtOrderOutput",
+    "FuturesPsblNgtOrderResponse",
+    "FuturesOrderNewOutput",
+    "FuturesOrderNewResponse",
+    "FuturesOrderRvsecnclOutput",
+    "FuturesOrderRvsecnclResponse",
     # 차트
     "FuturesDailyChartRow",
     "FuturesDailyChartResponse",
     "FuturesTimeChartRow",
     "FuturesTimeChartResponse",
-    # 주문/체결
+    # 체결 (기존)
     "FuturesOrderOutput",
     "FuturesOrderResponse",
     "FuturesConclusionRow",
