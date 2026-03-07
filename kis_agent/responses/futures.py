@@ -315,6 +315,142 @@ class FuturesDepositResponse(BaseResponse):
 
 
 # ============================================================
+# 10. display_board_futures() - 선물 전광판
+# ============================================================
+
+
+class DisplayBoardFuturesRow(TypedDict, total=False):
+    """선물 전광판 행"""
+
+    item_code: str  # 종목코드
+    item_name: str  # 종목명
+    fuop_prpr: str  # 선물옵션 현재가
+    prdy_vrss: str  # 전일대비
+    prdy_vrss_sign: str  # 전일대비부호
+    prdy_ctrt: str  # 전일대비율
+    acml_vol: str  # 누적거래량
+    acml_tr_pbmn: str  # 누적거래대금
+    fuop_oprc: str  # 시가
+    fuop_hgpr: str  # 고가
+    fuop_lwpr: str  # 저가
+
+
+class DisplayBoardFuturesResponse(BaseResponse):
+    """선물 전광판 응답"""
+
+    output: List[DisplayBoardFuturesRow]
+
+
+# ============================================================
+# 11. display_board_option_list() - 옵션 종목 목록
+# ============================================================
+
+
+class DisplayBoardOptionListRow(TypedDict, total=False):
+    """옵션 종목 목록 행"""
+
+    item_code: str  # 종목코드
+    item_name: str  # 종목명
+    fuop_kind_code: str  # 선물옵션종류코드 (C:콜, P:풋)
+    stk_prpr: str  # 주식현재가
+    strike_pric: str  # 행사가 (Strike Price)
+    exp_month: str  # 만기월
+
+
+class DisplayBoardOptionListResponse(BaseResponse):
+    """옵션 종목 목록 응답"""
+
+    output: List[DisplayBoardOptionListRow]
+
+
+# ============================================================
+# 12. display_board_top() - 선물옵션 상위 종목
+# ============================================================
+
+
+class DisplayBoardTopRow(TypedDict, total=False):
+    """상위 종목 행"""
+
+    item_code: str  # 종목코드
+    item_name: str  # 종목명
+    fuop_prpr: str  # 현재가
+    prdy_vrss: str  # 전일대비
+    prdy_vrss_sign: str  # 전일대비부호
+    prdy_ctrt: str  # 전일대비율
+    acml_vol: str  # 누적거래량
+    acml_tr_pbmn: str  # 누적거래대금
+    hts_kor_isnm: str  # 한글 종목명
+
+
+class DisplayBoardTopResponse(BaseResponse):
+    """상위 종목 응답"""
+
+    output: List[DisplayBoardTopRow]
+
+
+# ============================================================
+# 13. exp_price_trend() - 예상체결가 추이
+# ============================================================
+
+
+class ExpPriceTrendRow(TypedDict, total=False):
+    """예상체결가 추이 행"""
+
+    stck_cntg_hour: str  # 주식체결시간 (HHMMSS)
+    fuop_exp_pric: str  # 선물옵션 예상체결가
+    fuop_exp_pric_sign: str  # 부호
+    acml_vol: str  # 누적거래량
+
+
+class ExpPriceTrendResponse(BaseResponse):
+    """예상체결가 추이 응답"""
+
+    output: List[ExpPriceTrendRow]
+
+
+# ============================================================
+# 14. inquire_ccnl_bstime() - 시간대별 체결내역
+# ============================================================
+
+
+class InquireCcnlBstimeRow(TypedDict, total=False):
+    """시간대별 체결내역 행"""
+
+    stck_cntg_hour: str  # 주식체결시간 (HHMMSS)
+    fuop_prpr: str  # 선물옵션 현재가
+    prdy_vrss: str  # 전일대비
+    prdy_vrss_sign: str  # 전일대비부호
+    cntg_vol: str  # 체결거래량
+    acml_vol: str  # 누적거래량
+
+
+class InquireCcnlBstimeResponse(BaseResponse):
+    """시간대별 체결내역 응답"""
+
+    output: List[InquireCcnlBstimeRow]
+
+
+# ============================================================
+# 15. inquire_daily_amount_fee() - 기간별 약정수수료
+# ============================================================
+
+
+class InquireDailyAmountFeeRow(TypedDict, total=False):
+    """기간별 약정수수료 행"""
+
+    stck_bsop_date: str  # 주식영업일자 (YYYYMMDD)
+    acml_vol: str  # 누적거래량
+    acml_tr_pbmn: str  # 누적거래대금
+    tot_fee_amt: str  # 총수수료금액
+
+
+class InquireDailyAmountFeeResponse(BaseResponse):
+    """기간별 약정수수료 응답"""
+
+    output: List[InquireDailyAmountFeeRow]
+
+
+# ============================================================
 # __all__ 정의
 # ============================================================
 
@@ -343,4 +479,17 @@ __all__ = [
     # 전광판
     "DisplayBoardCallPutRow",
     "DisplayBoardCallPutResponse",
+    "DisplayBoardFuturesRow",
+    "DisplayBoardFuturesResponse",
+    "DisplayBoardOptionListRow",
+    "DisplayBoardOptionListResponse",
+    "DisplayBoardTopRow",
+    "DisplayBoardTopResponse",
+    # 예상체결가/시간대별체결/수수료
+    "ExpPriceTrendRow",
+    "ExpPriceTrendResponse",
+    "InquireCcnlBstimeRow",
+    "InquireCcnlBstimeResponse",
+    "InquireDailyAmountFeeRow",
+    "InquireDailyAmountFeeResponse",
 ]
