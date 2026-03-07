@@ -35,7 +35,7 @@ class Futures(BaseAPI):
 
     Attributes:
         price (FuturesPriceAPI): 시세 조회 API (11개 메서드)
-        account_api (FuturesAccountAPI): 계좌/잔고 조회 API (6개 메서드)
+        account (FuturesAccountAPI): 계좌/잔고 조회 API (6개 메서드)
         order (FuturesOrderAPI): 주문/체결 조회 API (6개 메서드)
         code (FuturesCodeGenerator): 종목코드 생성기
 
@@ -106,7 +106,7 @@ class Futures(BaseAPI):
         self.price = FuturesPriceAPI(
             client, account_info, enable_cache, cache_config, _from_agent=_from_agent
         )
-        self.account_api = FuturesAccountAPI(
+        self.account = FuturesAccountAPI(
             client, account_info, enable_cache, cache_config, _from_agent=_from_agent
         )
         self.order = FuturesOrderAPI(
@@ -200,9 +200,9 @@ class Futures(BaseAPI):
         Example:
             >>> balance = agent.futures.inquire_balance()
             >>> # 또는
-            >>> balance = agent.futures.account_api.inquire_balance()
+            >>> balance = agent.futures.account.inquire_balance()
         """
-        return self.account_api.inquire_balance()
+        return self.account.inquire_balance()
 
     def inquire_deposit(self) -> Optional[Dict]:
         """
@@ -213,7 +213,7 @@ class Futures(BaseAPI):
         Example:
             >>> deposit = agent.futures.inquire_deposit()
         """
-        return self.account_api.inquire_deposit()
+        return self.account.inquire_deposit()
 
     # ===== 종목코드 자동 생성 편의 메서드 =====
 

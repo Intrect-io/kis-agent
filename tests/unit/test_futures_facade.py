@@ -48,24 +48,24 @@ class TestFuturesFacade(unittest.TestCase):
     def test_init(self):
         """Facade 초기화 테스트"""
         self.assertEqual(self.facade.client, self.mock_client)
-        self.assertEqual(self.facade.account, self.account_info)
+        self.assertIsInstance(self.facade.account, FuturesAccountAPI)
 
     def test_sub_apis_initialized(self):
         """하위 API 초기화 확인"""
         self.assertIsInstance(self.facade.price, FuturesPriceAPI)
-        self.assertIsInstance(self.facade.account_api, FuturesAccountAPI)
+        self.assertIsInstance(self.facade.account, FuturesAccountAPI)
         self.assertIsInstance(self.facade.order, FuturesOrderAPI)
 
     def test_sub_apis_share_client(self):
         """하위 API가 동일한 클라이언트 공유"""
         self.assertEqual(self.facade.price.client, self.mock_client)
-        self.assertEqual(self.facade.account_api.client, self.mock_client)
+        self.assertEqual(self.facade.account.client, self.mock_client)
         self.assertEqual(self.facade.order.client, self.mock_client)
 
     def test_sub_apis_share_account_info(self):
         """하위 API가 동일한 계좌 정보 공유"""
         self.assertEqual(self.facade.price.account, self.account_info)
-        self.assertEqual(self.facade.account_api.account, self.account_info)
+        self.assertEqual(self.facade.account.account, self.account_info)
         self.assertEqual(self.facade.order.account, self.account_info)
 
     def test_from_agent_flag_propagation(self):
@@ -80,7 +80,7 @@ class TestFuturesFacade(unittest.TestCase):
         # 하위 API들도 _from_agent=True로 초기화되어야 함
         # (BaseAPI의 내부 동작이므로 직접 확인 불가, 초기화만 검증)
         self.assertIsInstance(facade_from_agent.price, FuturesPriceAPI)
-        self.assertIsInstance(facade_from_agent.account_api, FuturesAccountAPI)
+        self.assertIsInstance(facade_from_agent.account, FuturesAccountAPI)
         self.assertIsInstance(facade_from_agent.order, FuturesOrderAPI)
 
     def test_get_price_delegation(self):
@@ -125,12 +125,12 @@ class TestFuturesFacade(unittest.TestCase):
         }
 
         with patch.object(
-            self.facade.account_api, "inquire_balance", return_value=expected_response
+            self.facade.account, "inquire_balance", return_value=expected_response
         ):
             result = self.facade.inquire_balance()
 
             self.assertEqual(result, expected_response)
-            self.facade.account_api.inquire_balance.assert_called_once()
+            self.facade.account.inquire_balance.assert_called_once()
 
     def test_inquire_deposit_delegation(self):
         """inquire_deposit 위임 메서드 동작 확인"""
@@ -141,12 +141,12 @@ class TestFuturesFacade(unittest.TestCase):
         }
 
         with patch.object(
-            self.facade.account_api, "inquire_deposit", return_value=expected_response
+            self.facade.account, "inquire_deposit", return_value=expected_response
         ):
             result = self.facade.inquire_deposit()
 
             self.assertEqual(result, expected_response)
-            self.facade.account_api.inquire_deposit.assert_called_once()
+            self.facade.account.inquire_deposit.assert_called_once()
 
     def test_inquire_daily_fuopchartprice_delegation(self):
         """inquire_daily_fuopchartprice 위임 메서드 동작 확인"""
@@ -224,12 +224,12 @@ class TestFuturesFacade(unittest.TestCase):
 
         # account API 직접 접근
         with patch.object(
-            self.facade.account_api,
+            self.facade.account,
             "inquire_balance",
             return_value={"rt_cd": "0", "output": []},
         ):
-            self.facade.account_api.inquire_balance()
-            self.facade.account_api.inquire_balance.assert_called_once()
+            self.facade.account.inquire_balance()
+            self.facade.account.inquire_balance.assert_called_once()
 
         # order API 직접 접근
         with patch.object(
@@ -248,7 +248,7 @@ class TestFuturesFacade(unittest.TestCase):
 
         # BaseAPI의 캐시 설정이 하위 API에 전달됨
         self.assertIsInstance(facade_no_cache.price, FuturesPriceAPI)
-        self.assertIsInstance(facade_no_cache.account_api, FuturesAccountAPI)
+        self.assertIsInstance(facade_no_cache.account, FuturesAccountAPI)
         self.assertIsInstance(facade_no_cache.order, FuturesOrderAPI)
 
     def test_cache_enabled(self):
@@ -261,7 +261,7 @@ class TestFuturesFacade(unittest.TestCase):
 
         # 하위 API 정상 초기화 확인
         self.assertIsInstance(facade_with_cache.price, FuturesPriceAPI)
-        self.assertIsInstance(facade_with_cache.account_api, FuturesAccountAPI)
+        self.assertIsInstance(facade_with_cache.account, FuturesAccountAPI)
         self.assertIsInstance(facade_with_cache.order, FuturesOrderAPI)
 
 
