@@ -61,6 +61,7 @@ all = [
 
 [project.scripts]
 kis = "kis_agent.cli.main:main"
+kis-cli-bridge = "kis_agent.cli_bridge:main"
 
 [project.urls]
 Homepage = "https://github.com/unohee/kis-agent"
