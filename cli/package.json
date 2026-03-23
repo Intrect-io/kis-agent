@@ -1,0 +1,13 @@
+{
+  "name": "kis-cli",
+  "version": "1.0.0",
+  "description": "TypeScript bridge for kis-agent subprocess communication",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  }
+}
