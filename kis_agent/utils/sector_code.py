@@ -36,7 +36,7 @@ import ssl
 import tempfile
 import urllib.request
 import zipfile
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 import pandas as pd
 
@@ -117,7 +117,7 @@ def parse_sector_code_mst(mst_path: str) -> pd.DataFrame:
 
 def get_sector_codes(
     download_dir: Optional[str] = None, as_dict: bool = False
-) -> pd.DataFrame | Dict[str, str]:
+) -> Union[pd.DataFrame, Dict[str, str]]:
     """
     업종코드 마스터 데이터 조회
 

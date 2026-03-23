@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 
@@ -767,7 +767,7 @@ class Agent(TechnicalAnalysisMixin, MethodDiscoveryMixin, BaseExceptionHandler):
     def get_sector_codes(
         self,
         as_dict: bool = False,
-    ) -> pd.DataFrame | Dict[str, str]:
+    ) -> Union[pd.DataFrame, Dict[str, str]]:
         """
         업종코드 마스터 데이터를 조회합니다.
 
@@ -777,7 +777,7 @@ class Agent(TechnicalAnalysisMixin, MethodDiscoveryMixin, BaseExceptionHandler):
             as_dict (bool): True이면 {코드: 이름} Dict 반환, False면 DataFrame 반환
 
         Returns:
-            pd.DataFrame | Dict[str, str]: 업종코드 데이터
+            Union[pd.DataFrame, Dict[str, str]]: 업종코드 데이터
                 - DataFrame: columns = ['market_div', 'sector_code', 'full_code', 'sector_name']
                 - Dict: {sector_code: sector_name}
 
