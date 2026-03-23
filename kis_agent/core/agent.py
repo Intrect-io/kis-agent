@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 import pandas as pd
 
@@ -767,7 +767,7 @@ class Agent(TechnicalAnalysisMixin, MethodDiscoveryMixin, BaseExceptionHandler):
     def get_sector_codes(
         self,
         as_dict: bool = False,
-    ) -> pd.DataFrame | Dict[str, str]:
+    ) -> Union[pd.DataFrame, Dict[str, str]]:
         """
         업종코드 마스터 데이터를 조회합니다.
 
