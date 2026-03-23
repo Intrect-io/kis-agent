@@ -1,0 +1,6 @@
+#!/Users/unohee/dev/kis-agent/worktree/636722f6-4f1d-437c-ab9a-c4f01b80c908/.venv/bin/python
+import sys
+from pygments.cmdline import main
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(main())
